@@ -54,6 +54,7 @@ struct map_job {
 	uint32_t size;
 	char cache_key[48];
 	char where[64];
+	char path[192];
 };
 
 static int suffix_ci(char const *name, char const *suffix)
@@ -321,6 +322,30 @@ static void identify_job(
 		(unsigned long)(identity.tag_data_size / 1024u),
 		status == _cache_file_status_ok ? fit : cache_file_status_describe(status));
 	add_line(stats, line);
+
+	if (status == _cache_file_status_ok
+		&& (identity.format == _cache_file_format_xbox_cache
+			|| identity.format == _cache_file_format_custom_edition_cache)
+		&& stats->map_count < WII_MAP_CAPACITY) {
+		struct wii_map_entry *entry = &stats->maps[stats->map_count++];
+		static char const *campaign_names[] = {
+			"a10", "a30", "a50", "b30", "b40", "c10", "c20", "c40", "d20", "d40", 0
+		};
+		int index;
+
+		memset(entry, 0, sizeof(*entry));
+		copy_cap(entry->name, sizeof(entry->name), identity.name[0] ? identity.name : job->where);
+		copy_cap(entry->path, sizeof(entry->path), job->path[0] ? job->path : job->where);
+		entry->base = job->base;
+		entry->size = job->size;
+		entry->tag_data_offset = identity.tag_data_offset;
+		entry->tag_data_size = identity.tag_data_size;
+		entry->main_menu = name_is_ci(entry->name, "ui");
+		for (index = 0; campaign_names[index]; index++) {
+			if (name_is_ci(entry->name, campaign_names[index]))
+				entry->campaign = 1;
+		}
+	}
 }
 
 static int collect_visit(void *context, char const *name, int is_directory, uint32_t sector, uint32_t size)
@@ -376,6 +401,7 @@ static void consider_loose(char const *path, struct wii_stream_stats *stats, uin
 	job.size = size;
 	sanitize_key(job.cache_key, sizeof(job.cache_key), path);
 	copy_cap(job.where, sizeof(job.where), path);
+	copy_cap(job.path, sizeof(job.path), path);
 	identify_job(&job, stats, lz4_buffer, lz4_capacity);
 	fclose(file);
 }
@@ -488,7 +514,8 @@ static void consider_iso(char const *path, struct wii_stream_stats *stats, uint8
 		job.base = base;
 		job.size = map_hits.hit[index].size;
 		sanitize_key(job.cache_key, sizeof(job.cache_key), map_hits.hit[index].name);
-		snprintf(job.where, sizeof(job.where), "%s", map_hits.hit[index].name);
+		copy_cap(job.where, sizeof(job.where), map_hits.hit[index].name);
+		copy_cap(job.path, sizeof(job.path), path);
 		identify_job(&job, stats, lz4_buffer, lz4_capacity);
 	}
 	fclose(file);

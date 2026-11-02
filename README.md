@@ -8,7 +8,7 @@ Unofficial Wii homebrew **engine stub** for a future port of Halo: Combat Evolve
 
 ### What this repository is
 
-A libogc application (`TARGET=boot`) that initializes VIDEO, GX, and WPAD, prints `Halo CE Wii - engine stub`, and exits on HOME. It then reports the Wii's 24 MiB + 64 MiB ceiling and, if you placed your own maps on the card, runs OpenCE's `cache_file_identify` on each header. `make dist` writes the Homebrew Channel folder `dist/apps/halo-ce/` (`boot.dol`, `boot.elf`, `meta.xml`, `icon.png`).
+A libogc application (`TARGET=boot`) that initializes VIDEO, GX, and WPAD, prints `Halo CE Wii - engine stub`, and exits on HOME. The menu lists cache files you put on SD or USB. A draws that map's first structure BSP with an untextured GX pass (the map's positions and the engine's compressed normals). The campaign simulation, retail UI widgets, and shaders are not linked. `make dist` writes `dist/apps/halo-ce/`. Card layout: [docs/SD-LAYOUT.md](docs/SD-LAYOUT.md). Memory: [docs/RAM.md](docs/RAM.md).
 
 The icon is a generic placeholder drawn for this project. It is not the Halo logo.
 
@@ -71,7 +71,7 @@ docs/             Linux build notes and roadmap
 
 ### Qué es este repositorio
 
-Una aplicación libogc (`TARGET=boot`) que inicializa VIDEO, GX y WPAD, muestra `Halo CE Wii - engine stub` y vuelve al loader al pulsar HOME. Después informa el techo de 24 MiB + 64 MiB y, si pusiste tus propios mapas en la tarjeta, llama a `cache_file_identify` de OpenCE sobre cada cabecera. `make dist` genera la carpeta del Homebrew Channel `dist/apps/halo-ce/` (`boot.dol`, `boot.elf`, `meta.xml`, `icon.png`).
+Una aplicación libogc (`TARGET=boot`) que inicializa VIDEO, GX y WPAD, muestra `Halo CE Wii - engine stub` y sale con HOME. El menú lista los cache que pongas en la SD o el USB. A dibuja el primer structure BSP de ese mapa con un pase GX sin texturas (las posiciones del mapa y las normales comprimidas del motor). La simulación de la campaña, los widgets del menú original y los shaders no están enlazados. `make dist` escribe `dist/apps/halo-ce/`. La tarjeta: [docs/SD-LAYOUT.md](docs/SD-LAYOUT.md). La memoria: [docs/RAM.md](docs/RAM.md).
 
 El icono es un marcador genérico de este proyecto. No es el logotipo de Halo.
 

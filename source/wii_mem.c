@@ -84,7 +84,7 @@ typedef char wii_ram_ceiling_is_88mib[
 typedef char wii_caps_fit_in_mem2[
 	(WII_TAG_RESIDENT_CAP_BYTES + WII_TEXTURE_CAP_BYTES + WII_SOUND_CAP_BYTES
 		+ WII_STREAM_WINDOW_BYTES + WII_LZ4_CAPACITY + WII_CATALOG_BYTES
-		+ WII_MEM2_GUARD_BYTES < WII_MEM2_HARDWARE_BYTES) ? 1 : -1];
+		+ WII_PREVIEW_BYTES + WII_MEM2_GUARD_BYTES < WII_MEM2_HARDWARE_BYTES) ? 1 : -1];
 
 int wii_mem_tag_would_fit(uint32_t tag_bytes)
 {

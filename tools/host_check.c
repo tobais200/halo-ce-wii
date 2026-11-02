@@ -3,6 +3,7 @@
  * handling inside OpenCE's cache_file_identify, an XDVDFS walk, the LZ4
  * round trip, and the RAM ceiling constants. The image is synthetic.
  */
+#include "bsp_preview.h"
 #include "cache_file_formats.h"
 #include "lz4.h"
 #include "wii_mem.h"
@@ -176,6 +177,87 @@ int main(void)
 		return fail("synthetic header should not claim tag bytes");
 	if (0x1600000u <= WII_TAG_RESIDENT_CAP_BYTES)
 		return fail("xbox tag cache was not capped");
+
+	{
+		uint8_t map_bytes[0x1800];
+		struct image map;
+		float positions[12];
+		uint8_t colors[16];
+		uint16_t indices[12];
+		struct bsp_preview_store store;
+		struct bsp_preview_info info;
+		uint32_t const tag = 0x800;
+		uint32_t const scenario = 0x900;
+		uint32_t const reference = 0xF00;
+		uint32_t const bsp = 0x1200;
+		uint32_t const bsp_va = 0x80400000u;
+
+		memset(map_bytes, 0, sizeof(map_bytes));
+		map_bytes[0] = 'h';
+		map_bytes[1] = 'e';
+		map_bytes[2] = 'a';
+		map_bytes[3] = 'd';
+		map_bytes[4] = 5;
+		write_u32(map_bytes + 0x08, (uint32_t)sizeof(map_bytes));
+		write_u32(map_bytes + 0x10, tag);
+		write_u32(map_bytes + 0x14, 0x720);
+		memcpy(map_bytes + 0x20, "a10", 4);
+		memcpy(map_bytes + 0x40, "01.01.14.2342", 14);
+		map_bytes[0x7FC] = 'f';
+		map_bytes[0x7FD] = 'o';
+		map_bytes[0x7FE] = 'o';
+		map_bytes[0x7FF] = 't';
+		write_u32(map_bytes + tag + 0x00, 0x803A6000u + (0x828 - tag));
+		write_u32(map_bytes + tag + 0x04, 0);
+		write_u32(map_bytes + tag + 0x0C, 1);
+		write_u32(map_bytes + tag + 0x20, 0x73676174u);
+		write_u32(map_bytes + 0x828, 0x726e6373u);
+		write_u32(map_bytes + 0x828 + 0x14, 0x803A6000u + (scenario - tag));
+		write_u32(map_bytes + scenario + 0x5A4, 1);
+		write_u32(map_bytes + scenario + 0x5A8, 0x803A6000u + (reference - tag));
+		write_u32(map_bytes + reference + 0x00, bsp);
+		write_u32(map_bytes + reference + 0x04, 0x428);
+		write_u32(map_bytes + reference + 0x08, bsp_va);
+		write_u32(map_bytes + bsp + 0x00, bsp_va + 0x18);
+		write_u32(map_bytes + bsp + 0x14, 0x70736273u);
+		write_u32(map_bytes + bsp + 0x18 + 0xF8, 1);
+		write_u32(map_bytes + bsp + 0x18 + 0xFC, bsp_va + 0x2A0);
+		write_u32(map_bytes + bsp + 0x18 + 0x104, 1);
+		write_u32(map_bytes + bsp + 0x18 + 0x108, bsp_va + 0x2A8);
+		map_bytes[bsp + 0x2A0] = 0;
+		map_bytes[bsp + 0x2A2] = 1;
+		map_bytes[bsp + 0x2A4] = 2;
+		write_u32(map_bytes + bsp + 0x2A8 + 0x14, 1);
+		write_u32(map_bytes + bsp + 0x2A8 + 0x18, bsp_va + 0x2C8);
+		write_u32(map_bytes + bsp + 0x2C8 + 0x14, 0);
+		write_u32(map_bytes + bsp + 0x2C8 + 0x18, 1);
+		map_bytes[bsp + 0x2C8 + 0xB0] = 1;
+		write_u32(map_bytes + bsp + 0x2C8 + 0xB4, 3);
+		write_u32(map_bytes + bsp + 0x2C8 + 0xEC, 0x60);
+		write_u32(map_bytes + bsp + 0x2C8 + 0xEC + 12, bsp_va + 0x3C8);
+		write_u32(map_bytes + bsp + 0x3C8 + 32, 0x3f800000u);
+		write_u32(map_bytes + bsp + 0x3C8 + 64 + 4, 0x3f800000u);
+
+		map.bytes = map_bytes;
+		map.size = (uint32_t)sizeof(map_bytes);
+		source.context = &map;
+		source.read = opence_read;
+		source.size = map.size;
+		status = cache_file_identify(&source, &identity);
+		if (status != _cache_file_status_ok)
+			return fail("bsp map identify");
+		store.positions = positions;
+		store.colors = colors;
+		store.indices = indices;
+		store.vertex_cap = 4;
+		store.triangle_cap = 4;
+		if (bsp_preview_load(image_read, &map, map.size, identity.tag_data_offset, identity.tag_data_size, &store, &info) != 0)
+			return fail(info.message[0] ? info.message : "bsp preview");
+		if (info.triangles != 1 || info.vertices != 3)
+			return fail("bsp triangle count");
+		if (positions[3] != 1.0f || positions[7] != 1.0f)
+			return fail("bsp positions");
+	}
 
 	stored = LZ4_compress_default("halo-ce-wii", compressed, 11, (int)sizeof(compressed));
 	decoded = LZ4_decompress_safe(compressed, restored, stored, (int)sizeof(restored));

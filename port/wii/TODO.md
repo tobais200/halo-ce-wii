@@ -16,7 +16,7 @@ The reference port is `third_party/OpenCE/port/linux` (`port.json`, `src/d3d8_gl
 - [ ] PowerPC defines that replace the Linux port's `DEBUG` / `xbox` pair without pulling `<xtl.h>` through the host SDK headers.
 - [x] MEM1 / MEM2 split for the bring-up. See `source/wii_mem.c` and `docs/RAM.md`. OpenCE's `physical_memory_allocate` is still not used.
 - [ ] Case-insensitive Xbox path translate (`d:\maps\...`) onto the SD directory. libfat mounts `sd:/halo-ce/maps` and an XISO `maps/` directory; the drive-letter translate is not the Linux port's `platform_translate_path` yet. Missing cards fail soft.
-- [ ] `d3d8_gx.c` covering the table in `source/gx_stub.h`. Start from Clear, viewport, textures (tiled GX formats), and Present. TEV comes after a single untextured draw works.
+- [ ] `d3d8_gx.c` covering the table in `source/gx_stub.h`. Untextured triangles from the first structure BSP are in `source/gx_draw.c` (TEV color pass, no bitmap sampling). Textures, pixel shaders, and the rest of the D3D8 device are still absent.
 - [ ] CPU skinning for multi-influence vertices. GX will not do that in hardware.
 - [ ] Audio: the calls `dsound_sdl.c` satisfies, aimed at AESND, after a silent device succeeds.
 - [ ] WPAD / Classic Controller / GameCube pad into the controller remap. Buttons only; no claim about motion aiming.

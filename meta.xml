@@ -2,12 +2,12 @@
 <app version="1">
 	<name>Halo CE Wii</name>
 	<coder>halo-ce-wii</coder>
-	<version>0.2.0-bringup</version>
+	<version>0.3.0-bsp</version>
 	<release_date>20261102000000</release_date>
 	<short_description>Engine stub. Not playable.</short_description>
 	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
 
-This build shows a status screen, reports the Wii memory budget, and can read map headers from your own Xbox maps or XISO on SD or USB. It does not run a campaign and it does not include any game data. Tag data is not copied into RAM.
+This build shows a map menu, and when you press A it draws the first structure BSP of a cache you supply. It does not run the campaign simulation, the retail menu widgets, or shaders. No game data is included.
 
 Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
 

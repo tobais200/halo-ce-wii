@@ -17,7 +17,7 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE`. `make` links `cache_file_formats.c` only and calls `cache_file_identify`. The rest of `source/` stays uncompiled. `make opence` exits 2.
 2. `port/wii/` skeleton remains (`"playable_campaign": false`). The bring-up that does run lives in `source/wii_mem.c`, `source/wii_stream.c`, and `source/xdvdfs.c`.
-3. Memory budget and SD/USB header streaming are in [RAM.md](RAM.md). Tag data is not copied into RAM.
+3. Memory budget, SD/USB header streaming, and an untextured GX draw of the first structure BSP (3072 vertices, 4096 triangles) are in [RAM.md](RAM.md) and [SD-LAYOUT.md](SD-LAYOUT.md). The game loop, shaders, and retail menu widgets are not linked.
 
 ### Later, each one blocked until the previous exists
 
@@ -50,7 +50,7 @@ JojoXDK's Halo Wii port is a private work in progress. It is not a branch of thi
 
 1. Submódulo de OpenCE. `make` solo enlaza `cache_file_formats.c` y llama a `cache_file_identify`. `make opence` sale con código 2.
 2. El esqueleto `port/wii/` sigue con la campaña en false. El arranque que sí corre está en `source/wii_stream.c`.
-3. Presupuesto de RAM y lectura de cabeceras desde SD/USB: [RAM.md](RAM.md). Los tags no se copian a RAM.
+3. Presupuesto de RAM, lectura desde SD/USB y un dibujo GX sin texturas del primer structure BSP (3072 vértices, 4096 triángulos): [RAM.md](RAM.md) y [SD-LAYOUT.md](SD-LAYOUT.md). El bucle de juego, los shaders y los widgets del menú original no están enlazados.
 
 ### Después
 

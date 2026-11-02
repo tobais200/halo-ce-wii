@@ -33,7 +33,8 @@
  * CreateVertexBuffer                memalign(32) in MEM1
  * Multi-weight skinning             CPU. GX has no multi-influence skinning.
  *
- * None of those draw paths are implemented in this file.
+ * None of the textured or shader paths are implemented in this file.
+ * Untextured environment triangles from a structure BSP are drawn by gx_draw.c.
  */
 #ifndef GX_STUB_H
 #define GX_STUB_H

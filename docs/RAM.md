@@ -44,6 +44,8 @@ The large `.bss` objects are libogc, not the map loader: `memb_mem_pool_pbufs` 0
 
 ### Streaming
 
+The menu can draw the first structure BSP. Resident geometry is capped at 3072 vertices and 4096 triangles (`WII_PREVIEW_BYTES`, about 72 KiB in MEM2), read in small slices. The rest of the BSP stays on the card. Textures are not uploaded. See [SD-LAYOUT.md](SD-LAYOUT.md).
+
 Loose maps: `sd:/halo-ce/maps/*.map`, `sd:/apps/halo-ce/maps`, `sd:/maps`, and the same under `usb:`.
 
 XISO: `sd:/halo-ce/game.iso` (also `usb:/halo-ce/game.iso` and `*.iso` directly inside `sd:/halo-ce` or `usb:/halo-ce`). The Xbox volume descriptor is read at byte `0x10000`. Directories bigger than the 256 KiB window are skipped. Only `.map` headers are identified.
@@ -64,4 +66,4 @@ No se llama a `custom_edition_cache_load` ni a `physical_memory_allocate`. El pr
 
 El `boot.dol` de esta compilación pesa 494944 bytes. El `.bss` de unos 516 KiB es sobre todo BTE/libogc (`memb_mem_pool_pbufs`, pila principal), no el cargador de mapas.
 
-La lectura es por trozos. Solo la cabecera de 2 KiB entra en RAM y puede guardarse comprimida con LZ4 en `sd:/halo-ce/cache/`. `fseek` aquí es de 32 bits: un offset por encima de 2 GiB se rechaza.
+La lectura es por trozos. El menú puede dibujar el primer structure BSP, con tope de 3072 vértices y 4096 triángulos (unos 72 KiB en MEM2). El resto del BSP sigue en la tarjeta. Solo la cabecera de 2 KiB se guarda comprimida con LZ4 en `sd:/halo-ce/cache/`. `fseek` aquí es de 32 bits: un offset por encima de 2 GiB se rechaza.

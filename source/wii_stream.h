@@ -8,6 +8,18 @@
 
 #define WII_STREAM_LINES 8
 #define WII_STREAM_LINE_BYTES 96
+#define WII_MAP_CAPACITY 8
+
+struct wii_map_entry {
+	char name[32];
+	char path[192];
+	uint64_t base;
+	uint32_t size;
+	uint32_t tag_data_offset;
+	uint32_t tag_data_size;
+	int campaign;
+	int main_menu;
+};
 
 struct wii_stream_stats {
 	int sd_mounted;
@@ -25,6 +37,8 @@ struct wii_stream_stats {
 	int catalog_stored;
 	char lines[WII_STREAM_LINES][WII_STREAM_LINE_BYTES];
 	int line_count;
+	struct wii_map_entry maps[WII_MAP_CAPACITY];
+	int map_count;
 };
 
 void wii_stream_bringup(struct wii_stream_stats *stats);

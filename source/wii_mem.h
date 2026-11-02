@@ -22,13 +22,18 @@
 #define WII_LZ4_CAPACITY (WII_STREAM_WINDOW_BYTES + (WII_STREAM_WINDOW_BYTES) / 255u + 16u)
 #define WII_CATALOG_BYTES (32u * 1024u)
 
-/* Ceilings for a later renderer. Not allocated by this bring-up.
-   Xbox tag cache is 22 MiB, desktop texture cache is 256 MiB, desktop
-   sound cache is 16 MiB. These are smaller on purpose. */
+/* Ceilings for a later full renderer. The BSP preview below is what this
+   build actually allocates. Xbox tag cache is 22 MiB, desktop texture cache
+   is 256 MiB, desktop sound cache is 16 MiB. */
 #define WII_TAG_RESIDENT_CAP_BYTES (8u * 1024u * 1024u)
 #define WII_TEXTURE_CAP_BYTES (8u * 1024u * 1024u)
 #define WII_SOUND_CAP_BYTES (2u * 1024u * 1024u)
 #define WII_MEM2_GUARD_BYTES (1u * 1024u * 1024u)
+
+/* First structure BSP, streamed. Not the whole map. */
+#define WII_PREVIEW_VERTICES 3072u
+#define WII_PREVIEW_TRIANGLES 4096u
+#define WII_PREVIEW_BYTES (WII_PREVIEW_VERTICES * 16u + WII_PREVIEW_TRIANGLES * 6u)
 
 /* newlib off_t / fseek on this devkitPPC is 32-bit. */
 #define WII_MAX_FILE_OFFSET 0x7FFFFFFFu
