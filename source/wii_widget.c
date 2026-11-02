@@ -300,6 +300,142 @@ static int paint_bitmap(bsp_read_fn read, void *context, uint32_t file_size, uin
 	return wii_tex_load_group(read, context, file_size, tag_offset, tag_size, group, 0, image);
 }
 
+static void blit_alpha(uint8_t *canvas, uint16_t canvas_w, uint16_t canvas_h, int x, int y, uint8_t const *alpha, int gw, int gh)
+{
+	int row;
+	int col;
+
+	for (row = 0; row < gh; row++) {
+		if (y + row < 0 || y + row >= canvas_h)
+			continue;
+		for (col = 0; col < gw; col++) {
+			uint8_t a;
+			uint8_t *dst;
+			if (x + col < 0 || x + col >= canvas_w)
+				continue;
+			a = alpha[row * gw + col];
+			if (!a)
+				continue;
+			dst = canvas + ((uint32_t)(y + row) * canvas_w + (uint32_t)(x + col)) * 4u;
+			dst[0] = dst[1] = dst[2] = a;
+			dst[3] = 255;
+		}
+	}
+}
+
+static void wii_widget_draw_label(
+	bsp_read_fn read, void *context, uint32_t file_size, uint32_t tag_offset, uint32_t tag_size,
+	uint8_t const *definition, uint8_t *canvas, uint16_t canvas_w, uint16_t canvas_h)
+{
+	uint8_t header[4];
+	uint8_t instance[0x20];
+	uint8_t list_head[12];
+	uint8_t element[20];
+	uint8_t font_head[0x9c];
+	uint8_t codes[48];
+	uint32_t list_datum;
+	uint32_t font_datum;
+	int16_t string_index;
+	uint32_t instances;
+	uint32_t base;
+	uint32_t count;
+	uint32_t address;
+	uint32_t bytes;
+	uint32_t glyph;
+	int pen;
+	int top;
+
+	list_datum = read_u32(definition + 0xF8);
+	font_datum = read_u32(definition + 0x108);
+	string_index = (int16_t)read_u16(definition + 0x12E);
+	if (list_datum == 0xffffffffu || font_datum == 0xffffffffu || string_index < 0)
+		return;
+	if (pull(read, context, file_size, tag_offset, header, 4) != 0)
+		return;
+	instances = read_u32(header);
+	if (map_va(instances, tag_offset, tag_size, &instances) != 0)
+		return;
+	if (pull(read, context, file_size, instances + (list_datum & 0xffffu) * 0x20u, instance, sizeof(instance)) != 0)
+		return;
+	base = read_u32(instance + 0x14);
+	if (map_va(base, tag_offset, tag_size, &base) != 0)
+		return;
+	if (pull(read, context, file_size, base, list_head, sizeof(list_head)) != 0)
+		return;
+	count = read_u32(list_head);
+	address = read_u32(list_head + 4);
+	if ((uint32_t)string_index >= count || map_va(address, tag_offset, tag_size, &address) != 0)
+		return;
+	if (pull(read, context, file_size, address + (uint32_t)string_index * 20u, element, sizeof(element)) != 0)
+		return;
+	bytes = read_u32(element);
+	address = read_u32(element + 12);
+	if (!bytes || map_va(address, tag_offset, tag_size, &address) != 0)
+		return;
+	if (bytes > sizeof(codes))
+		bytes = sizeof(codes);
+	if (pull(read, context, file_size, address, codes, bytes) != 0)
+		return;
+	if (pull(read, context, file_size, instances + (font_datum & 0xffffu) * 0x20u, instance, sizeof(instance)) != 0)
+		return;
+	base = read_u32(instance + 0x14);
+	if (map_va(base, tag_offset, tag_size, &base) != 0)
+		return;
+	if (pull(read, context, file_size, base, font_head, sizeof(font_head)) != 0)
+		return;
+	pen = (int)(int16_t)read_u16(definition + 0x26) * canvas_w / 640;
+	top = (int)(int16_t)read_u16(definition + 0x24) * canvas_h / 480;
+	for (glyph = 0; glyph < bytes / 2u && glyph < 24u; glyph++) {
+		uint16_t code = (uint16_t)(codes[glyph * 2u] | (codes[glyph * 2u + 1u] << 8));
+		uint8_t table[12];
+		uint8_t character[0x14];
+		uint8_t index_bytes[2];
+		uint16_t which;
+		uint8_t alpha[64];
+		int width;
+		int height;
+		uint32_t pixels;
+		uint32_t tables;
+		uint32_t chars;
+
+		if (!code)
+			break;
+		if (code > 127)
+			continue;
+		tables = read_u32(font_head + 0x30);
+		address = read_u32(font_head + 0x34);
+		if (!tables || map_va(address, tag_offset, tag_size, &address) != 0)
+			break;
+		if (pull(read, context, file_size, address, table, sizeof(table)) != 0)
+			break;
+		if (read_u32(table) < 256 || map_va(read_u32(table + 4), tag_offset, tag_size, &address) != 0)
+			break;
+		if (pull(read, context, file_size, address + code * 2u, index_bytes, 2) != 0)
+			break;
+		which = (uint16_t)(index_bytes[0] | (index_bytes[1] << 8));
+		chars = read_u32(font_head + 0x7c);
+		address = read_u32(font_head + 0x80);
+		if (which >= chars || map_va(address, tag_offset, tag_size, &address) != 0)
+			break;
+		if (pull(read, context, file_size, address + which * 0x14u, character, sizeof(character)) != 0)
+			break;
+		width = (int)(int16_t)read_u16(character + 4);
+		height = (int)(int16_t)read_u16(character + 6);
+		pixels = read_u32(character + 16);
+		address = read_u32(font_head + 0x88 + 12);
+		if (width <= 0 || height <= 0 || width * height > (int)sizeof(alpha))
+			continue;
+		if (map_va(address, tag_offset, tag_size, &address) != 0)
+			continue;
+		if (pull(read, context, file_size, address + pixels, alpha, (uint32_t)(width * height)) != 0)
+			continue;
+		blit_alpha(canvas, canvas_w, canvas_h, pen, top, alpha, width, height);
+		pen += (int)(int16_t)read_u16(character + 2);
+		if (pen >= canvas_w)
+			break;
+	}
+}
+
 int wii_widget_compose(
 	bsp_read_fn read,
 	void *context,
@@ -380,6 +516,7 @@ int wii_widget_compose(
 		focus_edge(canvas, canvas_w, canvas_h, focus_box[0], focus_box[1], focus_box[2], focus_box[3]);
 	if (widget->focus >= widget->child_count)
 		widget->focus = 0;
+	wii_widget_draw_label(read, context, file_size, tag_offset, tag_size, definition, canvas, canvas_w, canvas_h);
 	snprintf(widget->message, sizeof(widget->message), "DeLa %.24s", widget->name);
 	return 0;
 }

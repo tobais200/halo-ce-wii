@@ -147,7 +147,8 @@ static int find_first_bsp(
 	uint32_t tag_size,
 	uint32_t *bsp_offset,
 	uint32_t *bsp_size,
-	uint32_t *bsp_va)
+	uint32_t *bsp_va,
+	uint32_t *scenario_file)
 {
 	uint8_t header[0x28];
 	uint8_t instance[0x20];
@@ -199,6 +200,8 @@ static int find_first_bsp(
 		| ((uint32_t)instance[0x16] << 16) | ((uint32_t)instance[0x17] << 24);
 	if (map_va(scenario_va, tag_offset, tag_size, 0, 0, 0, &file_offset) != 0)
 		return -1;
+	if (scenario_file)
+		*scenario_file = file_offset;
 	if (pull(reader, file_offset + SCENARIO_BSP_BLOCK, block, sizeof(block)) != 0)
 		return -1;
 	block_count = (uint32_t)block[0] | ((uint32_t)block[1] << 8)
@@ -460,7 +463,7 @@ int bsp_preview_load(
 		set_message(info, "tag data range is outside the file");
 		return -1;
 	}
-	if (find_first_bsp(&reader, tag_data_offset, tag_data_size, &bsp_offset, &bsp_size, &bsp_va) != 0) {
+	if (find_first_bsp(&reader, tag_data_offset, tag_data_size, &bsp_offset, &bsp_size, &bsp_va, &info->scenario_file) != 0) {
 		set_message(info, "no scenario structure BSP");
 		return -1;
 	}

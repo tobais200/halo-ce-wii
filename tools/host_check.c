@@ -8,6 +8,7 @@
 #include "lz4.h"
 #include "wii_mem.h"
 #include "wii_tex.h"
+#include "wii_sim.h"
 #include "wii_widget.h"
 #include "xdvdfs.h"
 
@@ -329,7 +330,18 @@ int main(void)
 		free(scratch);
 		free(canvas);
 	}
+	{
+		uint8_t record[WII_HS_SCRIPT_BYTES];
+		char name[32];
+		int type = -1;
+		if ((0x5A4 - 0x130 + 0x28) != WII_SCENARIO_HS_SCRIPTS)
+			return fail("script offset");
+		memset(record, 0, sizeof(record));
+		memcpy(record, "startup", 8);
+		if (wii_sim_script_record(record, name, sizeof(name), &type) != 0 || type != 0 || strcmp(name, "startup") != 0)
+			return fail("script record");
+	}
 
-	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela ok\n");
+	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela, scripts ok\n");
 	return 0;
 }

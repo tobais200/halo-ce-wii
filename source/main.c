@@ -16,6 +16,7 @@
 #include "wii_mem.h"
 #include "wii_menu.h"
 #include "wii_stream.h"
+#include "wii_sim.h"
 #include "wii_tex.h"
 #include "wii_widget.h"
 
@@ -90,6 +91,7 @@ int main(int argc, char **argv)
 	float pitch = 0.4f;
 	char note[96];
 	struct wii_widget widget;
+	struct wii_sim sim;
 	struct map_reader ui_reader;
 	uint8_t *widget_canvas = 0;
 	uint8_t *widget_scratch = 0;
@@ -138,6 +140,7 @@ int main(int argc, char **argv)
 	widget_scratch = wii_mem2_alloc(WII_GX_TEXTURE_BYTES);
 	memset(&ui_reader, 0, sizeof(ui_reader));
 	memset(&widget, 0, sizeof(widget));
+	memset(&sim, 0, sizeof(sim));
 	for (selected = 0; selected < stats.map_count; selected++) {
 		if (stats.maps[selected].main_menu)
 			ui_index = selected;
@@ -279,6 +282,9 @@ int main(int argc, char **argv)
 							showing = 1;
 							yaw = 0.8f;
 							pitch = 0.4f;
+							if (mesh_ok)
+								wii_sim_load(map_read, &reader, map->size, map->tag_data_offset,
+									map->tag_data_size, preview.scenario_file, &sim);
 							if (!mesh_ok)
 								snprintf(preview.message, sizeof(preview.message), "%s", image.message);
 						} else {
@@ -330,7 +336,9 @@ int main(int argc, char **argv)
 				else
 					gx_draw_mesh(rmode, console_xfb, &view);
 				printf("\x1b[2;0H%s  %u tris\n", stats.maps[selected].name, (unsigned)preview.triangles);
-				printf("%s\nB back  D-pad orbit  %s\n", preview.message,
+				wii_sim_frame(&sim);
+				printf("%s\n%s\n", preview.message, sim.message);
+				printf("B back  D-pad orbit  %s\n",
 					view.texture_mode ? "cache bitmap" : "no bitmap decoded");
 			}
 		}

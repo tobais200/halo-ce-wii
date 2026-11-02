@@ -29,6 +29,7 @@ struct bsp_preview_info {
 	uint32_t triangles_seen;
 	float center[3];
 	float radius;
+	uint32_t scenario_file;
 	int bitmap_group_found;
 	uint32_t bitmap_group_file;
 	uint16_t lightmap_bitmap_index;
