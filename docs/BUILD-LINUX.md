@@ -69,7 +69,7 @@ Copy that directory to the SD card as `sd:/apps/halo-ce/`. The Homebrew Channel 
 
 `make clean` removes `build/`, the ELF/DOL, `dist/`, and `port/wii/build/`.
 
-`make` also compiles `port/wii/build/wii_platform.o` and does not link it. `make opence` exits 2. That target does not compile OpenCE. Fetch the submodule first if you want `make opence-status` to report it present:
+`make` needs `python3`. It rewrites OpenCE fourcc constants into `build/cache_file_formats.c` (the submodule is not edited) and links that file. `make host-check` runs the synthetic header, XDVDFS, and LZ4 tests with the host `gcc`. `make` also compiles `port/wii/build/wii_platform.o` and does not link it. `make opence` exits 2 and does not compile the campaign. Fetch the submodule first if you want `make opence-status` to report it present:
 
 ```bash
 git submodule update --init third_party/OpenCE
@@ -146,7 +146,7 @@ Copia ese directorio a la SD como `sd:/apps/halo-ce/`. El Homebrew Channel abre 
 
 `make clean` borra `build/`, el ELF/DOL, `dist/` y `port/wii/build/`.
 
-`make` también compila `port/wii/build/wii_platform.o` y no lo enlaza. `make opence` sale con código 2 y no compila OpenCE. Para que `make opence-status` lo vea:
+`make` necesita `python3`. Reescribe las constantes fourcc de OpenCE en `build/cache_file_formats.c` (el submódulo no se edita) y enlaza ese archivo. `make host-check` prueba la cabecera sintética, XDVDFS y LZ4 con el `gcc` del host. `make` también compila `port/wii/build/wii_platform.o` y no lo enlaza. `make opence` sale con código 2 y no compila la campaña. Para que `make opence-status` lo vea:
 
 ```bash
 git submodule update --init third_party/OpenCE

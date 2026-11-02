@@ -1,7 +1,8 @@
 {
-  "comment": "Wii port skeleton for OpenCE. This file is a build hook, not a campaign configuration. make opence exits 2 and does not compile third_party/OpenCE.",
+  "comment": "Wii port skeleton. make links cache_file_identify from cache_file_formats.c. make opence still exits 2 and does not compile the campaign sources under third_party/OpenCE/source.",
   "status": "scaffold",
   "playable_campaign": false,
+  "linked_into_boot_dol": "third_party/OpenCE/port/linux/game/cache_file_formats.c via build/cache_file_formats.c (cache_file_identify only)",
   "upstream": {
     "repository": "https://github.com/OpenCommunityEdition/OpenCE",
     "submodule": "third_party/OpenCE",
@@ -17,6 +18,6 @@
   },
   "platform_sources": "port/wii/src",
   "platform_object": "port/wii/build/wii_platform.o",
-  "linked_into_boot_dol": false,
+  "platform_object_linked_into_boot_dol": false,
   "libraries_later": ["ogc", "wiiuse", "bte", "fat", "aesnd"]
 }

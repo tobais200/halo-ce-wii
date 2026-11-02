@@ -24,16 +24,21 @@ SOFTWARE.
 
 Additional note. This note does not change the MIT terms above.
 
-The engine stub in this repository is MIT. A later integration of Open
-Community Edition (https://github.com/OpenCommunityEdition/OpenCE) is
-expected to bring in code licensed under the GNU Affero General Public
-License, version 3 or any later version (AGPL-3.0-or-later).
+The Wii sources written in this repository are MIT. `make` links
+`third_party/OpenCE/port/linux/game/cache_file_formats.c` from Open
+Community Edition (https://github.com/OpenCommunityEdition/OpenCE). That
+file is AGPL-3.0-or-later. The resulting `boot.dol` / `boot.elf` is a
+combined work under the GNU Affero General Public License, version 3 or
+any later version, including the AGPL's source-offer rules for network use.
 
 OpenCE's own README describes the split: current OpenCE is AGPL-3.0-or-later,
 while snapshots from before that project's AGPL transition stay CC0 1.0.
-Linking AGPL OpenCE code into a binary of this project would make that
-combined work subject to the AGPL, including the AGPL's source-offer rules
-for network use. The MIT stub, taken by itself, stays MIT.
+The pinned submodule commit is the one recorded by the gitlink; read its
+LICENSE before assuming CC0. The MIT sources, taken by themselves and not
+linked with the AGPL file, stay MIT.
+
+`third_party/lz4` is Yann Collet's LZ4 library, BSD 2-Clause. See
+`third_party/lz4/LICENSE`.
 
 Neither license grants any right to Halo, its maps, or any other work owned
 by Microsoft. No game data is included here.

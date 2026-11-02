@@ -28,9 +28,9 @@ status:
 	@echo "playable campaign: no"
 
 opence:
-	@echo "port/wii: refusing to compile OpenCE into a Wii campaign."
-	@echo "No PowerPC/GX device exists yet. See port/wii/TODO.md."
-	@echo "The Homebrew Channel stub remains: make && make dist"
+	@echo "port/wii: refusing to compile the OpenCE campaign into boot.dol."
+	@echo "make already links cache_file_identify only. See port/wii/TODO.md."
+	@echo "There is still no PowerPC/GX device and no campaign DOL."
 	@exit 2
 
 clean:

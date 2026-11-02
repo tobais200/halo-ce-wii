@@ -13,10 +13,12 @@ include $(DEVKITPPC)/wii_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	boot
 BUILD		:=	build
-SOURCES		:=	source
+SOURCES		:=	source third_party/lz4
 DATA		:=	data
-INCLUDES	:=	source
+INCLUDES	:=	source third_party/lz4 third_party/OpenCE/port/linux/game
 DISTDIR		:=	dist/apps/halo-ce
+OPENCE_SRC	:=	$(CURDIR)/third_party/OpenCE/port/linux/game/cache_file_formats.c
+OPENCE_GEN	:=	$(CURDIR)/build/cache_file_formats.c
 
 #---------------------------------------------------------------------------------
 CFLAGS		=	-g -O2 -Wall -Wextra $(MACHDEP) $(INCLUDE)
@@ -24,8 +26,8 @@ CXXFLAGS	=	$(CFLAGS)
 
 LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
-# wiiuse before bte before ogc: each library depends on the next.
-LIBS		:=	-lwiiuse -lbte -logc -lm
+# fat before wiiuse before bte before ogc: each library depends on the next.
+LIBS		:=	-lfat -lwiiuse -lbte -logc -lm
 
 LIBDIRS		:=
 
@@ -54,7 +56,7 @@ endif
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
@@ -65,13 +67,25 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
 
 export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: $(BUILD) clean dist
+.PHONY: $(BUILD) clean dist host-check
+.DEFAULT_GOAL := $(BUILD)
+
+$(OPENCE_GEN): $(OPENCE_SRC) $(CURDIR)/tools/le_fourcc.py
+	@mkdir -p $(CURDIR)/build
+	python3 $(CURDIR)/tools/le_fourcc.py $(OPENCE_SRC) $(OPENCE_GEN)
 
 #---------------------------------------------------------------------------------
-$(BUILD):
+$(BUILD): $(OPENCE_GEN)
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 	@$(MAKE) --no-print-directory -C port/wii
+
+#---------------------------------------------------------------------------------
+host-check: $(OPENCE_GEN)
+	gcc -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
+		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c \
+		-o $(CURDIR)/build/host_check
+	$(CURDIR)/build/host_check
 
 #---------------------------------------------------------------------------------
 # Homebrew Channel layout: dist/apps/halo-ce/{boot.dol,boot.elf,meta.xml,icon.png}

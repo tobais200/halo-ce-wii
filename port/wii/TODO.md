@@ -14,8 +14,8 @@ The reference port is `third_party/OpenCE/port/linux` (`port.json`, `src/d3d8_gl
 ## Bring-up
 
 - [ ] PowerPC defines that replace the Linux port's `DEBUG` / `xbox` pair without pulling `<xtl.h>` through the host SDK headers.
-- [ ] Case-insensitive path translate (`platform_translate_path`) onto an SD directory the player chooses. libfat. Return a clear error when the maps directory is absent.
-- [ ] MEM1 / MEM2 split. The Linux port's `xbox_memory.c` is the behavior to re-read, not to compile unchanged.
+- [x] MEM1 / MEM2 split for the bring-up. See `source/wii_mem.c` and `docs/RAM.md`. OpenCE's `physical_memory_allocate` is still not used.
+- [ ] Case-insensitive Xbox path translate (`d:\maps\...`) onto the SD directory. libfat mounts `sd:/halo-ce/maps` and an XISO `maps/` directory; the drive-letter translate is not the Linux port's `platform_translate_path` yet. Missing cards fail soft.
 - [ ] `d3d8_gx.c` covering the table in `source/gx_stub.h`. Start from Clear, viewport, textures (tiled GX formats), and Present. TEV comes after a single untextured draw works.
 - [ ] CPU skinning for multi-influence vertices. GX will not do that in hardware.
 - [ ] Audio: the calls `dsound_sdl.c` satisfies, aimed at AESND, after a silent device succeeds.

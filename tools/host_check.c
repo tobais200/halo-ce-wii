@@ -1,0 +1,187 @@
+/*
+ * Host checks for the pieces that do not need a Wii: little-endian fourcc
+ * handling inside OpenCE's cache_file_identify, an XDVDFS walk, the LZ4
+ * round trip, and the RAM ceiling constants. The image is synthetic.
+ */
+#include "cache_file_formats.h"
+#include "lz4.h"
+#include "wii_mem.h"
+#include "xdvdfs.h"
+
+#include <stdio.h>
+#include <string.h>
+
+struct image {
+	uint8_t *bytes;
+	uint32_t size;
+};
+
+static int image_read(void *context, uint64_t offset, void *destination, uint32_t size)
+{
+	struct image *image = context;
+	if ((uint64_t)offset + size > image->size)
+		return -1;
+	memcpy(destination, image->bytes + offset, size);
+	return 0;
+}
+
+static int opence_read(void *context, uint32_t offset, uint32_t size, void *buffer)
+{
+	struct image *image = context;
+	if ((uint64_t)offset + size > image->size)
+		return 0;
+	memcpy(buffer, image->bytes + offset, size);
+	return 1;
+}
+
+static void write_u16(uint8_t *bytes, uint16_t value)
+{
+	bytes[0] = (uint8_t)value;
+	bytes[1] = (uint8_t)(value >> 8);
+}
+
+static void write_u32(uint8_t *bytes, uint32_t value)
+{
+	bytes[0] = (uint8_t)value;
+	bytes[1] = (uint8_t)(value >> 8);
+	bytes[2] = (uint8_t)(value >> 16);
+	bytes[3] = (uint8_t)(value >> 24);
+}
+
+static void put_entry(uint8_t *directory, uint32_t offset, uint16_t left, uint16_t right,
+	uint32_t sector, uint32_t size, int is_directory, char const *name)
+{
+	uint8_t length = (uint8_t)strlen(name);
+	write_u16(directory + offset, left);
+	write_u16(directory + offset + 2, right);
+	write_u32(directory + offset + 4, sector);
+	write_u32(directory + offset + 8, size);
+	directory[offset + 12] = is_directory ? 0x10 : 0;
+	directory[offset + 13] = length;
+	memcpy(directory + offset + 14, name, length);
+}
+
+struct walk_expect {
+	int maps_dir;
+	int map_files;
+};
+
+static int on_visit(void *context, char const *name, int is_directory, uint32_t sector, uint32_t size)
+{
+	struct walk_expect *expect = context;
+	(void)sector;
+	(void)size;
+	if (is_directory && strcmp(name, "maps") == 0)
+		expect->maps_dir++;
+	if (!is_directory && strcmp(name, "a.map") == 0)
+		expect->map_files++;
+	if (!is_directory && strcmp(name, "m.map") == 0)
+		expect->map_files++;
+	if (!is_directory && strcmp(name, "z.map") == 0)
+		expect->map_files++;
+	return 0;
+}
+
+static int fail(char const *message)
+{
+	fprintf(stderr, "host_check: %s\n", message);
+	return 1;
+}
+
+int main(void)
+{
+	uint8_t image_bytes[40 * XDVDFS_SECTOR_BYTES];
+	uint8_t header[CACHE_FILE_HEADER_BYTES];
+	struct image image;
+	struct xdvdfs_volume volume;
+	struct walk_expect expect;
+	struct cache_file_source source;
+	struct cache_file_identity identity;
+	enum cache_file_status status;
+	enum cache_file_format format;
+	char compressed[128];
+	char restored[64];
+	int stored;
+	int decoded;
+	uint8_t directory[96];
+
+	if (WII_RAM_HARDWARE_BYTES != 88u * 1024u * 1024u)
+		return fail("hardware ceiling is not 88 MiB");
+	if (WII_TAG_RESIDENT_CAP_BYTES + WII_TEXTURE_CAP_BYTES + WII_SOUND_CAP_BYTES
+		+ WII_STREAM_WINDOW_BYTES + WII_LZ4_CAPACITY + WII_CATALOG_BYTES
+		+ WII_MEM2_GUARD_BYTES >= WII_MEM2_HARDWARE_BYTES)
+		return fail("caps do not fit in MEM2");
+	if (WII_TAG_RESIDENT_CAP_BYTES >= 0x1600000u)
+		return fail("tag cap is not below the Xbox tag cache");
+	if (WII_TEXTURE_CAP_BYTES >= 0x1600000u)
+		return fail("texture cap is not below the Xbox texture cache");
+
+	memset(header, 0, sizeof(header));
+	header[0] = 'h';
+	header[1] = 'e';
+	header[2] = 'a';
+	header[3] = 'd';
+	header[4] = 5;
+	write_u32(header + 0x08, CACHE_FILE_HEADER_BYTES);
+	memcpy(header + 0x20, "synth", 6);
+	memcpy(header + 0x40, "wii-budget-check", 17);
+	header[0x7FC] = 'f';
+	header[0x7FD] = 'o';
+	header[0x7FE] = 'o';
+	header[0x7FF] = 't';
+	format = cache_file_header_format(header);
+	if (format != _cache_file_format_xbox_cache)
+		return fail("cache_file_header_format missed the synthetic header");
+
+	memset(image_bytes, 0, sizeof(image_bytes));
+	memcpy(image_bytes + XDVDFS_VOLUME_OFFSET, XDVDFS_MAGIC, XDVDFS_MAGIC_BYTES);
+	write_u32(image_bytes + XDVDFS_VOLUME_OFFSET + 0x14, 33);
+	write_u32(image_bytes + XDVDFS_VOLUME_OFFSET + 0x18, 96);
+	memset(directory, 0, sizeof(directory));
+	/* Root at offset 0 is m.map, left child a.map, right child the maps directory. */
+	put_entry(directory, 0, 32 / 4, 64 / 4, 34, CACHE_FILE_HEADER_BYTES, 0, "m.map");
+	put_entry(directory, 32, 0, 0, 35, CACHE_FILE_HEADER_BYTES, 0, "a.map");
+	put_entry(directory, 64, 0, 0, 36, 0, 1, "maps");
+	memcpy(image_bytes + 33 * XDVDFS_SECTOR_BYTES, directory, sizeof(directory));
+	memcpy(image_bytes + 34 * XDVDFS_SECTOR_BYTES, header, sizeof(header));
+
+	image.bytes = image_bytes;
+	image.size = (uint32_t)sizeof(image_bytes);
+	if (xdvdfs_probe(image_read, &image, image.size, &volume) != 0)
+		return fail("xdvdfs_probe");
+	if (volume.root_sector != 33 || volume.root_size != 96)
+		return fail("volume root");
+	memset(&expect, 0, sizeof(expect));
+	if (xdvdfs_walk(image_bytes + 33 * XDVDFS_SECTOR_BYTES, 96, on_visit, &expect) != 0)
+		return fail("walk");
+	if (expect.map_files != 2 || expect.maps_dir != 1)
+		return fail("walk did not see both maps and the maps directory");
+
+	source.context = &image;
+	source.read = opence_read;
+	source.size = CACHE_FILE_HEADER_BYTES;
+	/* Point the source at the embedded header by shifting the image view. */
+	image.bytes = image_bytes + 34 * XDVDFS_SECTOR_BYTES;
+	image.size = CACHE_FILE_HEADER_BYTES;
+	status = cache_file_identify(&source, &identity);
+	if (status != _cache_file_status_ok)
+		return fail(cache_file_status_describe(status));
+	if (identity.format != _cache_file_format_xbox_cache)
+		return fail("identify format");
+	if (strcmp(identity.name, "synth") != 0)
+		return fail("identify name");
+	if (strcmp(identity.build, "wii-budget-check") != 0)
+		return fail("identify build");
+	if (identity.tag_data_size != 0)
+		return fail("synthetic header should not claim tag bytes");
+	if (0x1600000u <= WII_TAG_RESIDENT_CAP_BYTES)
+		return fail("xbox tag cache was not capped");
+
+	stored = LZ4_compress_default("halo-ce-wii", compressed, 11, (int)sizeof(compressed));
+	decoded = LZ4_decompress_safe(compressed, restored, stored, (int)sizeof(restored));
+	if (stored <= 0 || decoded != 11 || memcmp(restored, "halo-ce-wii", 11) != 0)
+		return fail("lz4");
+
+	printf("host_check: identify, xdvdfs, lz4, caps ok\n");
+	return 0;
+}

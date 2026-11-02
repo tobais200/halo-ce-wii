@@ -1,7 +1,7 @@
 /*
- * Homebrew Channel entry for the Halo CE Wii engine stub.
- * VIDEO + GX + WPAD. The screen is a status line, not a campaign.
- * HOME returns to the launcher. No map, bitmap, or ISO is opened.
+ * Homebrew Channel entry. VIDEO, GX, and WPAD come up, then the bring-up
+ * prints the Wii memory budget and runs OpenCE's map-header identify on
+ * whatever the player stored on SD or USB. HOME returns to the launcher.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +10,7 @@
 #include <wiiuse/wpad.h>
 
 #include "gx_stub.h"
+#include "wii_bringup.h"
 
 static void *console_xfb = NULL;
 static GXRModeObj *rmode = NULL;
@@ -59,14 +60,10 @@ int main(int argc, char **argv)
 
 	printf("\x1b[2;0H");
 	printf("Halo CE Wii - engine stub\n\n");
-	printf("Build:   engine stub\n");
-	printf("Video:   VI console, GX %s\n",
+	printf("Video: VI console, GX %s\n",
 		gx_ok == 0 ? gx_stub_status(&gx) : "init failed");
-	printf("Input:   WPAD (HOME exits)\n");
-	printf("Game:    not linked\n");
-	printf("Data:    not included\n\n");
-	printf("This is not a playable campaign.\n");
-	printf("Press HOME to exit.\n");
+	wii_bringup_print();
+	printf("\nPress HOME to exit.\n");
 
 	while (SYS_MainLoop()) {
 		WPAD_ScanPads();

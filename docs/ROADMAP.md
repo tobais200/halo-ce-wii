@@ -15,9 +15,9 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Started, still not a game
 
-1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE` (Xbox build 2342 decompilation; chain punpckhdq/halo → bnunu/halo-1 → OpenCE). The gitlink pins one upstream commit. `make` does not compile it. No retail maps are added beside it.
-2. `port/wii/` skeleton: `TODO.md`, `port.json` (`"playable_campaign": false`), `wii_platform.o` of functions that return failure, `make opence-status`, and `make opence` (exit 2). Upstream ports are `port/linux`, `port/windows`, and `port/android` only.
-3. `make` / `make dist` still produce the Homebrew Channel DOL without linking OpenCE. The platform object is compiled and left unlinked.
+1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE`. `make` links `cache_file_formats.c` only and calls `cache_file_identify`. The rest of `source/` stays uncompiled. `make opence` exits 2.
+2. `port/wii/` skeleton remains (`"playable_campaign": false`). The bring-up that does run lives in `source/wii_mem.c`, `source/wii_stream.c`, and `source/xdvdfs.c`.
+3. Memory budget and SD/USB header streaming are in [RAM.md](RAM.md). Tag data is not copied into RAM.
 
 ### Later, each one blocked until the previous exists
 
@@ -48,9 +48,9 @@ JojoXDK's Halo Wii port is a private work in progress. It is not a branch of thi
 
 ### Empezado, y sigue sin ser un juego
 
-1. Submódulo de OpenCE en `third_party/OpenCE`. `make` no lo compila.
-2. Esqueleto `port/wii/`: TODOs, `port.json` con la campaña en false, y `make opence` que sale con código 2.
-3. `make` y `make dist` siguen generando el DOL del stub sin enlazar OpenCE.
+1. Submódulo de OpenCE. `make` solo enlaza `cache_file_formats.c` y llama a `cache_file_identify`. `make opence` sale con código 2.
+2. El esqueleto `port/wii/` sigue con la campaña en false. El arranque que sí corre está en `source/wii_stream.c`.
+3. Presupuesto de RAM y lectura de cabeceras desde SD/USB: [RAM.md](RAM.md). Los tags no se copian a RAM.
 
 ### Después
 
