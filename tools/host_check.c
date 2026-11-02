@@ -8,9 +8,11 @@
 #include "lz4.h"
 #include "wii_mem.h"
 #include "wii_tex.h"
+#include "wii_widget.h"
 #include "xdvdfs.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 struct image {
@@ -289,7 +291,45 @@ int main(void)
 		if (pixels[0] < 240)
 			return fail("r5g6b5 red");
 	}
+	{
+		uint8_t file[0x600];
+		struct image map;
+		struct wii_widget widget;
+		uint8_t *scratch;
+		uint8_t *canvas;
+		char const *root_name = "ui\\shell\\main_menu\\main_menu";
 
-	printf("host_check: identify, xdvdfs, lz4, bsp, texels ok\n");
+		memset(file, 0, sizeof(file));
+		write_u32(file + 0x00, 0x803A6000u + 0x28);
+		write_u32(file + 0x0c, 1);
+		write_u32(file + 0x28, 0x614c6544u);
+		write_u32(file + 0x28 + 0x10, 0x803A6000u + 0x500);
+		write_u32(file + 0x28 + 0x14, 0x803A6000u + 0x80);
+		memcpy(file + 0x500, root_name, strlen(root_name) + 1);
+		write_u32(file + 0x80 + 0x3e0, 1);
+		write_u32(file + 0x80 + 0x3e4, 0x803A6000u + 0x480);
+		write_u32(file + 0x480 + 0x0c, 0xffffffffu);
+		memcpy(file + 0x480 + 0x10, "a10", 4);
+		map.bytes = file;
+		map.size = (uint32_t)sizeof(file);
+		if (wii_widget_open_root(image_read, &map, map.size, 0, map.size, &widget) != 0)
+			return fail(widget.message);
+		scratch = (uint8_t *)malloc(128 * 128 * 4);
+		canvas = (uint8_t *)malloc(32 * 32 * 4);
+		if (!scratch || !canvas)
+			return fail("widget buffers");
+		if (wii_widget_compose(image_read, &map, map.size, 0, map.size, &widget, canvas, 32, 32, scratch, 128 * 128 * 4) != 0)
+			return fail("widget compose");
+		if (widget.child_count != 1 || strcmp(widget.child_name[0], "a10") != 0)
+			return fail("widget child");
+		if (wii_widget_input(&widget, 0, image_read, &map, map.size, 0, map.size) != 1)
+			return fail("widget A");
+		if (strcmp(widget.scenario, "a10") != 0)
+			return fail("widget scenario");
+		free(scratch);
+		free(canvas);
+	}
+
+	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela ok\n");
 	return 0;
 }

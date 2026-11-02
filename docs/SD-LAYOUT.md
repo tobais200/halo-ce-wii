@@ -28,7 +28,7 @@ usb:/game.iso
 
 `fseek` and libfat's `f_lseek` on this devkitPPC are 32-bit (`off_t` is signed, FatFs `FSIZE_t` is one PowerPC register). `fseeko64` is declared and not provided by newlib here, so an offset past 2 GiB still fails. Loose `.map` files are the layout that works. A file the FAT layer can describe only up to 4 GiB cannot be seeked further from this DOL.
 
-Cache files the header identify accepts are listed on the menu. Names `a10`, `a30`, `a50`, `b30`, `b40`, `c10`, `c20`, `c40`, `d20`, and `d40` are labelled campaign. `ui` is labelled main menu. That label is the cache's own scenario name. A draws the **first structure BSP** of the selected file (environment vertices, capped at 3072 vertices and 4096 triangles). It does not start the script VM, AI, or weapons.
+If `ui` is one of those caches, the DOL opens it and draws the DeLa widget `ui\shell\main_menu\main_menu` (or the first DeLa tag): its background bitmap and child bitmaps, from the tag. D-pad moves a focus box, A follows the child widget or a child named `a10`–`d40` into that scenario's BSP, and B returns to the file list. Event functions, fonts, and string lists are not executed. The file list is only the bootstrap that opens a cache. A on any other map still draws its first structure BSP. Scripts, AI, and weapons are not linked.
 
 Optional header cache, written by the DOL, not required:
 
@@ -56,4 +56,4 @@ sd:/halo-ce/game.iso
 
 También se buscan `sd:/apps/halo-ce/maps`, `sd:/maps` y las mismas rutas en `usb:`. Un `.iso` tiene que ser una imagen XDVDFS. El offset máximo de lectura es 2 GiB con este toolchain; los `.map` sueltos son la forma fiable.
 
-En el menú, A dibuja el primer structure BSP (como mucho 3072 vértices y 4096 triángulos). No arranca la simulación. Los nombres `a10`…`d40` se marcan como campaña y `ui` como menú principal, porque así se llama el escenario en la cabecera del cache. El mando es el Wiimote: cruceta, A, B y HOME.
+Si `ui` está en la tarjeta, el DOL lo abre y dibuja el widget DeLa `ui\shell\main_menu\main_menu` (o el primer tag DeLa): el bitmap de fondo y los de los hijos. La cruceta mueve el foco, A entra en el hijo o en un escenario `a10`–`d40`, y B vuelve a la lista de archivos. Las funciones de evento, las fuentes y las listas de texto no se ejecutan. La lista solo abre el cache. A en otro mapa sigue dibujando su primer BSP. Scripts, IA y armas no están enlazados.

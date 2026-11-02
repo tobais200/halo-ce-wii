@@ -36,7 +36,7 @@
 /* positions + rgba + lightmap uv */
 #define WII_PREVIEW_BYTES (WII_PREVIEW_VERTICES * 24u + WII_PREVIEW_TRIANGLES * 6u)
 /* One GX texture. The GPU reads MEM1 only, so this is not part of the MEM2 heap. */
-#define WII_GX_TEXTURE_MAX 128u
+#define WII_GX_TEXTURE_MAX 256u
 #define WII_GX_TEXTURE_BYTES (WII_GX_TEXTURE_MAX * WII_GX_TEXTURE_MAX * 4u)
 
 /* newlib off_t / fseek on this devkitPPC is 32-bit. */

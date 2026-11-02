@@ -44,7 +44,7 @@ The large `.bss` objects are libogc, not the map loader: `memb_mem_pool_pbufs` 0
 
 ### Streaming
 
-The menu can draw the first structure BSP with one cache bitmap. Resident geometry stays at 3072 vertices and 4096 triangles. The bitmap is at most 128×128 RGBA8, tiled for GX in MEM1 (`WII_GX_TEXTURE_BYTES`, 64 KiB) because the GPU does not read MEM2. Decode follows OpenCE `xbox_textures.c` (swizzle masks and DXT1/3/5 color blocks) for bitmap formats 0–3, 6, 8–11, and 14–16. Other formats are reported and skipped. See [SD-LAYOUT.md](SD-LAYOUT.md).
+The menu can draw the first structure BSP with one cache bitmap, and a DeLa screen composited into a 256×256 RGBA buffer in MEM2 (a second buffer holds the bitmap being decoded). Resident BSP geometry stays at 3072 vertices and 4096 triangles. The GX texture is at most 256×256 RGBA8 in MEM1 (`WII_GX_TEXTURE_BYTES`) because the GPU does not read MEM2. Decode follows OpenCE `xbox_textures.c` for bitmap formats 0–3, 6, 8–11, and 14–16. See [SD-LAYOUT.md](SD-LAYOUT.md).
 
 Loose maps: `sd:/halo-ce/maps/*.map`, `sd:/apps/halo-ce/maps`, `sd:/maps`, and the same under `usb:`.
 

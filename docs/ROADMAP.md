@@ -17,7 +17,7 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE`. `make` links `cache_file_formats.c` only and calls `cache_file_identify`. The rest of `source/` stays uncompiled. `make opence` exits 2.
 2. `port/wii/` skeleton remains (`"playable_campaign": false`). The bring-up that does run lives in `source/wii_mem.c`, `source/wii_stream.c`, and `source/xdvdfs.c`.
-3. Memory budget, SD/USB streaming, GX structure BSP, and one lightmap or `bitm` texture are in [RAM.md](RAM.md) and [SD-LAYOUT.md](SD-LAYOUT.md). `make opence` builds that subset into `boot.dol`. The campaign tick, widget VM, AI, and weapons are not compiled; they still need the Xbox SDK and the OpenGL device.
+3. `ui` hands off to DeLa widget tags (background and child bitmaps, A/B/dpad). A campaign id on a child loads that scenario's BSP. `make opence` builds this subset. The tick, script VM, AI, weapons, and widget event functions are not compiled.
 
 ### Later, each one blocked until the previous exists
 
@@ -50,7 +50,7 @@ JojoXDK's Halo Wii port is a private work in progress. It is not a branch of thi
 
 1. Submódulo de OpenCE. `make` solo enlaza `cache_file_formats.c` y llama a `cache_file_identify`. `make opence` sale con código 2.
 2. El esqueleto `port/wii/` sigue con la campaña en false. El arranque que sí corre está en `source/wii_stream.c`.
-3. Presupuesto de RAM, lectura SD/USB, BSP en GX y una textura de lightmap o `bitm`: [RAM.md](RAM.md) y [SD-LAYOUT.md](SD-LAYOUT.md). `make opence` construye ese subconjunto. El tick, los widgets, la IA y las armas no se compilan.
+3. `ui` pasa a los tags DeLa (bitmaps de fondo e hijos). Un id de campaña carga el BSP de ese escenario. `make opence` construye ese subconjunto. El tick, los scripts, la IA, las armas y las funciones de evento no se compilan.
 
 ### Después
 

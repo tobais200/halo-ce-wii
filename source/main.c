@@ -17,6 +17,7 @@
 #include "wii_menu.h"
 #include "wii_stream.h"
 #include "wii_tex.h"
+#include "wii_widget.h"
 
 static void *console_xfb = NULL;
 static GXRModeObj *rmode = NULL;
@@ -82,10 +83,17 @@ int main(int argc, char **argv)
 	struct gx_mesh_view view;
 	int selected = 0;
 	int showing = 0;
+	int mode = 0;
 	int menu_dirty = 1;
+	int widget_dirty = 0;
 	float yaw = 0.8f;
 	float pitch = 0.4f;
 	char note[96];
+	struct wii_widget widget;
+	struct map_reader ui_reader;
+	uint8_t *widget_canvas = 0;
+	uint8_t *widget_scratch = 0;
+	int ui_index = -1;
 
 	(void)argc;
 	(void)argv;
@@ -126,10 +134,34 @@ int main(int argc, char **argv)
 	wii_mem_sample(&sample);
 	if (!store.positions || !store.colors || !store.uvs || !store.indices)
 		snprintf(note, sizeof(note), "MEM2 preview buffers failed");
+	widget_canvas = wii_mem2_alloc(WII_GX_TEXTURE_BYTES);
+	widget_scratch = wii_mem2_alloc(WII_GX_TEXTURE_BYTES);
+	memset(&ui_reader, 0, sizeof(ui_reader));
+	memset(&widget, 0, sizeof(widget));
+	for (selected = 0; selected < stats.map_count; selected++) {
+		if (stats.maps[selected].main_menu)
+			ui_index = selected;
+	}
+	selected = 0;
+	if (ui_index >= 0 && widget_canvas && widget_scratch) {
+		ui_reader.file = fopen(stats.maps[ui_index].path, "rb");
+		ui_reader.base = stats.maps[ui_index].base;
+		ui_reader.size = stats.maps[ui_index].size;
+		if (ui_reader.file && wii_widget_open_root(map_read, &ui_reader, ui_reader.size,
+			stats.maps[ui_index].tag_data_offset, stats.maps[ui_index].tag_data_size, &widget) == 0) {
+			mode = 1;
+			widget_dirty = 1;
+		} else if (ui_reader.file) {
+			fclose(ui_reader.file);
+			ui_reader.file = 0;
+			snprintf(note, sizeof(note), "ui cache has no DeLa root");
+		}
+	}
 
 	while (SYS_MainLoop()) {
 		uint32_t down;
 		uint32_t held;
+		int launch_selected = 0;
 
 		WPAD_ScanPads();
 		down = buttons_down();
@@ -137,7 +169,66 @@ int main(int argc, char **argv)
 		if (home_pressed(down))
 			exit(0);
 
-		if (!showing) {
+		if (mode == 1) {
+			int action = -1;
+			if (down & WPAD_BUTTON_UP)
+				action = wii_widget_input(&widget, 8, map_read, &ui_reader, ui_reader.size,
+					stats.maps[ui_index].tag_data_offset, stats.maps[ui_index].tag_data_size);
+			else if (down & WPAD_BUTTON_DOWN)
+				action = wii_widget_input(&widget, 9, map_read, &ui_reader, ui_reader.size,
+					stats.maps[ui_index].tag_data_offset, stats.maps[ui_index].tag_data_size);
+			else if (down & WPAD_BUTTON_A)
+				action = wii_widget_input(&widget, 0, map_read, &ui_reader, ui_reader.size,
+					stats.maps[ui_index].tag_data_offset, stats.maps[ui_index].tag_data_size);
+			else if (down & WPAD_BUTTON_B)
+				action = wii_widget_input(&widget, 1, map_read, &ui_reader, ui_reader.size,
+					stats.maps[ui_index].tag_data_offset, stats.maps[ui_index].tag_data_size);
+			if (action == 0)
+				widget_dirty = 1;
+			if (action == 2) {
+				mode = 0;
+				menu_dirty = 1;
+				if (ui_reader.file) {
+					fclose(ui_reader.file);
+					ui_reader.file = 0;
+				}
+			}
+			if (action == 1) {
+				int map_index;
+				int found = 0;
+				for (map_index = 0; map_index < stats.map_count; map_index++) {
+					if (strcmp(stats.maps[map_index].name, widget.scenario) == 0) {
+						selected = map_index;
+						found = 1;
+					}
+				}
+				if (found) {
+					mode = 0;
+					launch_selected = 1;
+				} else {
+					snprintf(widget.message, sizeof(widget.message), "scenario %s is not on the card", widget.scenario);
+					widget_dirty = 1;
+				}
+			}
+			if (widget_dirty && ui_reader.file) {
+				struct wii_rgba screen;
+				if (wii_widget_compose(map_read, &ui_reader, ui_reader.size,
+					stats.maps[ui_index].tag_data_offset, stats.maps[ui_index].tag_data_size,
+					&widget, widget_canvas, WII_GX_TEXTURE_MAX, WII_GX_TEXTURE_MAX,
+					widget_scratch, WII_GX_TEXTURE_BYTES) == 0
+					&& gx_draw_set_rgba(widget_canvas, WII_GX_TEXTURE_MAX, WII_GX_TEXTURE_MAX) == 0) {
+					screen.pixels = widget_canvas;
+					(void)screen;
+				}
+				widget_dirty = 0;
+			}
+			if (ui_reader.file)
+				gx_draw_bitmap(rmode, console_xfb);
+			printf("\x1b[2;0H%s\n", widget.message);
+			printf("DeLa tags. Widget VM not linked. B picker.\n");
+		} else if (!showing) {
+			if (launch_selected)
+				down |= WPAD_BUTTON_A;
 			if (stats.map_count > 0) {
 				if (selected < 0)
 					selected = 0;
@@ -205,7 +296,13 @@ int main(int argc, char **argv)
 		} else {
 			if (down & WPAD_BUTTON_B) {
 				showing = 0;
-				menu_dirty = 1;
+				if (ui_reader.file) {
+					mode = 1;
+					widget_dirty = 1;
+				} else {
+					mode = 0;
+					menu_dirty = 1;
+				}
 				note[0] = 0;
 			} else {
 				if (held & WPAD_BUTTON_LEFT)

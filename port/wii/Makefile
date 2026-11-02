@@ -32,6 +32,7 @@ opence:
 	@echo "OpenCE subset is linked into boot.dol."
 	@echo "  cache_file_formats.c identify"
 	@echo "  BSP geometry and bitmap/lightmap decode (xbox_textures.c rules)"
+	@echo "  DeLa widget tags (background and child bitmaps, A/B/dpad)"
 	@echo "The campaign tick in source/ is not compiled. It still needs the Xbox SDK and OpenGL."
 
 clean:
