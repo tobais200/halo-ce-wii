@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+	<name>Halo CE Wii</name>
+	<coder>halo-ce-wii</coder>
+	<version>0.1.0-stub</version>
+	<release_date>20261102000000</release_date>
+	<short_description>Engine stub. Not playable.</short_description>
+	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
+
+This build shows a status screen and exits with HOME. It does not run a campaign and it does not include any game data. A later build that reads maps would still require your own Xbox copy of Halo: Combat Evolved.
+
+Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
+
+Stub no oficial del canal Homebrew. No es jugable y no incluye datos del juego. HOME sale al loader.
+	</long_description>
+</app>
