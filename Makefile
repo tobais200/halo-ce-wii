@@ -83,7 +83,7 @@ $(BUILD): $(OPENCE_GEN)
 #---------------------------------------------------------------------------------
 host-check: $(OPENCE_GEN)
 	gcc -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
-		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/bsp_preview.c \
+		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/bsp_preview.c $(CURDIR)/source/wii_tex.c \
 		-o $(CURDIR)/build/host_check
 	$(CURDIR)/build/host_check
 

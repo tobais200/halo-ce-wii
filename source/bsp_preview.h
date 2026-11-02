@@ -14,6 +14,7 @@ typedef int (*bsp_read_fn)(void *context, uint64_t offset, void *destination, ui
 struct bsp_preview_store {
 	float *positions;
 	uint8_t *colors;
+	float *uvs;
 	uint16_t *indices;
 	uint16_t vertex_cap;
 	uint16_t triangle_cap;
@@ -28,6 +29,9 @@ struct bsp_preview_info {
 	uint32_t triangles_seen;
 	float center[3];
 	float radius;
+	int bitmap_group_found;
+	uint32_t bitmap_group_file;
+	uint16_t lightmap_bitmap_index;
 	char message[96];
 };
 

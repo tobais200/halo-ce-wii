@@ -16,6 +16,7 @@
 #include "wii_mem.h"
 #include "wii_menu.h"
 #include "wii_stream.h"
+#include "wii_tex.h"
 
 static void *console_xfb = NULL;
 static GXRModeObj *rmode = NULL;
@@ -116,13 +117,14 @@ int main(int argc, char **argv)
 	if (wii_mem2_init() == 0) {
 		store.positions = wii_mem2_alloc(WII_PREVIEW_VERTICES * 12u);
 		store.colors = wii_mem2_alloc(WII_PREVIEW_VERTICES * 4u);
+		store.uvs = wii_mem2_alloc(WII_PREVIEW_VERTICES * 8u);
 		store.indices = wii_mem2_alloc(WII_PREVIEW_TRIANGLES * 6u);
 		store.vertex_cap = WII_PREVIEW_VERTICES;
 		store.triangle_cap = WII_PREVIEW_TRIANGLES;
 	}
 	wii_stream_bringup(&stats);
 	wii_mem_sample(&sample);
-	if (!store.positions || !store.colors || !store.indices)
+	if (!store.positions || !store.colors || !store.uvs || !store.indices)
 		snprintf(note, sizeof(note), "MEM2 preview buffers failed");
 
 	while (SYS_MainLoop()) {
@@ -154,22 +156,45 @@ int main(int argc, char **argv)
 				if ((down & WPAD_BUTTON_A) && store.positions) {
 					struct wii_map_entry const *map = &stats.maps[selected];
 					struct map_reader reader;
+					struct wii_rgba image;
+					static uint8_t *rgba;
 
 					reader.file = fopen(map->path, "rb");
 					reader.base = map->base;
 					reader.size = map->size;
+					gx_draw_clear_texture();
+					view.texture_mode = 0;
 					if (!reader.file) {
 						snprintf(note, sizeof(note), "could not reopen map");
-					} else if (bsp_preview_load(map_read, &reader, map->size, map->tag_data_offset,
-						map->tag_data_size, &store, &preview) == 0) {
-						showing = 1;
-						yaw = 0.8f;
-						pitch = 0.4f;
 					} else {
-						snprintf(note, sizeof(note), "%s", preview.message);
-					}
-					if (reader.file)
+						int mesh_ok = bsp_preview_load(map_read, &reader, map->size, map->tag_data_offset,
+							map->tag_data_size, &store, &preview) == 0;
+
+						if (!rgba)
+							rgba = wii_mem2_alloc(WII_GX_TEXTURE_BYTES);
+						memset(&image, 0, sizeof(image));
+						image.pixels = rgba;
+						image.cap = WII_GX_TEXTURE_MAX;
+						if (rgba && preview.bitmap_group_found && preview.lightmap_bitmap_index != 0xffffu
+							&& wii_tex_load_group(map_read, &reader, map->size, map->tag_data_offset,
+								map->tag_data_size, preview.bitmap_group_file, preview.lightmap_bitmap_index, &image) == 0
+							&& gx_draw_set_rgba(image.pixels, image.width, image.height) == 0)
+							view.texture_mode = 1;
+						else if (rgba && wii_tex_load_first_bitm(map_read, &reader, map->size, map->tag_data_offset,
+							map->tag_data_size, &image) == 0
+							&& gx_draw_set_rgba(image.pixels, image.width, image.height) == 0)
+							view.texture_mode = mesh_ok ? 1 : 2;
+						if (mesh_ok || view.texture_mode == 2) {
+							showing = 1;
+							yaw = 0.8f;
+							pitch = 0.4f;
+							if (!mesh_ok)
+								snprintf(preview.message, sizeof(preview.message), "%s", image.message);
+						} else {
+							snprintf(note, sizeof(note), "%s", preview.message[0] ? preview.message : image.message);
+						}
 						fclose(reader.file);
+					}
 					menu_dirty = 1;
 				}
 			}
@@ -193,6 +218,7 @@ int main(int argc, char **argv)
 					pitch -= 0.03f;
 				view.positions = store.positions;
 				view.colors = store.colors;
+				view.uvs = store.uvs;
 				view.indices = store.indices;
 				view.vertex_count = preview.vertices;
 				view.triangle_count = preview.triangles;
@@ -202,9 +228,13 @@ int main(int argc, char **argv)
 				view.radius = preview.radius;
 				view.yaw = yaw;
 				view.pitch = pitch;
-				gx_draw_mesh(rmode, console_xfb, &view);
+				if (view.texture_mode == 2 && !preview.triangles)
+					gx_draw_bitmap(rmode, console_xfb);
+				else
+					gx_draw_mesh(rmode, console_xfb, &view);
 				printf("\x1b[2;0H%s  %u tris\n", stats.maps[selected].name, (unsigned)preview.triangles);
-				printf("%s\nB back  D-pad orbit  shaders not linked\n", preview.message);
+				printf("%s\nB back  D-pad orbit  %s\n", preview.message,
+					view.texture_mode ? "cache bitmap" : "no bitmap decoded");
 			}
 		}
 		VIDEO_WaitVSync();

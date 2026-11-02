@@ -28,10 +28,11 @@ status:
 	@echo "playable campaign: no"
 
 opence:
-	@echo "port/wii: refusing to compile the OpenCE campaign into boot.dol."
-	@echo "make already links cache_file_identify only. See port/wii/TODO.md."
-	@echo "There is still no PowerPC/GX device and no campaign DOL."
-	@exit 2
+	$(MAKE) -C ../..
+	@echo "OpenCE subset is linked into boot.dol."
+	@echo "  cache_file_formats.c identify"
+	@echo "  BSP geometry and bitmap/lightmap decode (xbox_textures.c rules)"
+	@echo "The campaign tick in source/ is not compiled. It still needs the Xbox SDK and OpenGL."
 
 clean:
 	@rm -rf build

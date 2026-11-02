@@ -7,6 +7,7 @@
 #include "cache_file_formats.h"
 #include "lz4.h"
 #include "wii_mem.h"
+#include "wii_tex.h"
 #include "xdvdfs.h"
 
 #include <stdio.h>
@@ -110,7 +111,7 @@ int main(void)
 		return fail("hardware ceiling is not 88 MiB");
 	if (WII_TAG_RESIDENT_CAP_BYTES + WII_TEXTURE_CAP_BYTES + WII_SOUND_CAP_BYTES
 		+ WII_STREAM_WINDOW_BYTES + WII_LZ4_CAPACITY + WII_CATALOG_BYTES
-		+ WII_MEM2_GUARD_BYTES >= WII_MEM2_HARDWARE_BYTES)
+		+ WII_PREVIEW_BYTES + WII_MEM2_GUARD_BYTES >= WII_MEM2_HARDWARE_BYTES)
 		return fail("caps do not fit in MEM2");
 	if (WII_TAG_RESIDENT_CAP_BYTES >= 0x1600000u)
 		return fail("tag cap is not below the Xbox tag cache");
@@ -248,6 +249,7 @@ int main(void)
 			return fail("bsp map identify");
 		store.positions = positions;
 		store.colors = colors;
+		store.uvs = 0;
 		store.indices = indices;
 		store.vertex_cap = 4;
 		store.triangle_cap = 4;
@@ -264,6 +266,30 @@ int main(void)
 	if (stored <= 0 || decoded != 11 || memcmp(restored, "halo-ce-wii", 11) != 0)
 		return fail("lz4");
 
-	printf("host_check: identify, xdvdfs, lz4, caps ok\n");
+	{
+		uint8_t pixels[8 * 4];
+		struct wii_rgba image;
+		uint8_t swizzled[8];
+		uint8_t linear[2] = { 0x00, 0xf8 };
+		uint32_t index = wii_tex_swizzle_index(3, 1, 4, 2);
+
+		if (index != 7)
+			return fail("swizzle index");
+		memset(swizzled, 0, sizeof(swizzled));
+		swizzled[index] = 0xff;
+		memset(&image, 0, sizeof(image));
+		image.pixels = pixels;
+		image.cap = 8;
+		if (wii_tex_decode(swizzled, sizeof(swizzled), 1, 0, 4, 2, &image) != 0)
+			return fail(image.message);
+		if (pixels[(1 * 4 + 3) * 4] != 0xff)
+			return fail("swizzle decode");
+		if (wii_tex_decode(linear, sizeof(linear), 6, 1, 1, 1, &image) != 0)
+			return fail("r5g6b5");
+		if (pixels[0] < 240)
+			return fail("r5g6b5 red");
+	}
+
+	printf("host_check: identify, xdvdfs, lz4, bsp, texels ok\n");
 	return 0;
 }

@@ -342,6 +342,10 @@ static int append_material(
 		store->positions[slot * 3 + 1] = y;
 		store->positions[slot * 3 + 2] = z;
 		shade(up, store->colors + slot * 4);
+		if (store->uvs) {
+			store->uvs[slot * 2] = 0.0f;
+			store->uvs[slot * 2 + 1] = 0.0f;
+		}
 		add_point(bounds, x, y, z);
 	}
 	info->vertices = (uint16_t)(base_vertex + kept);
@@ -371,6 +375,46 @@ static int append_material(
 		store->indices[slot * 3 + 1] = (uint16_t)(base_vertex + b);
 		store->indices[slot * 3 + 2] = (uint16_t)(base_vertex + c);
 		info->triangles++;
+	}
+
+	if (store->uvs && kept) {
+		uint16_t lm_type = (uint16_t)(material[0xC4] | (material[0xC5] << 8));
+		uint32_t lm_count = (uint32_t)material[0xC8] | ((uint32_t)material[0xC9] << 8)
+			| ((uint32_t)material[0xCA] << 16) | ((uint32_t)material[0xCB] << 24);
+		uint32_t lm_off = (uint32_t)material[0xCC] | ((uint32_t)material[0xCD] << 8)
+			| ((uint32_t)material[0xCE] << 16) | ((uint32_t)material[0xCF] << 24);
+		uint32_t lm_base = (uint32_t)material[0xD0] | ((uint32_t)material[0xD1] << 8)
+			| ((uint32_t)material[0xD2] << 16) | ((uint32_t)material[0xD3] << 24);
+		uint32_t lm_file;
+		uint32_t stride = lm_type == 3 ? 8u : lm_type == 2 ? 20u : 0u;
+
+		if (stride && lm_count >= kept
+			&& map_va(lm_base, tag_offset, tag_size, bsp_offset, bsp_size, bsp_va, &lm_file) == 0) {
+			for (index = 0; index < kept; index++) {
+				uint8_t lm[20];
+				float u = 0.0f;
+				float v = 0.0f;
+				uint16_t slot = (uint16_t)(base_vertex + index);
+
+				if (pull(reader, lm_file + lm_off + index * stride, lm, stride) != 0)
+					break;
+				if (stride == 8u) {
+					int16_t su = (int16_t)(lm[4] | (lm[5] << 8));
+					int16_t sv = (int16_t)(lm[6] | (lm[7] << 8));
+					u = ((float)su * 2.0f + 1.0f) * (1.0f / 65535.0f);
+					v = ((float)sv * 2.0f + 1.0f) * (1.0f / 65535.0f);
+				} else {
+					uint32_t bits = (uint32_t)lm[12] | ((uint32_t)lm[13] << 8)
+						| ((uint32_t)lm[14] << 16) | ((uint32_t)lm[15] << 24);
+					memcpy(&u, &bits, 4);
+					bits = (uint32_t)lm[16] | ((uint32_t)lm[17] << 8)
+						| ((uint32_t)lm[18] << 16) | ((uint32_t)lm[19] << 24);
+					memcpy(&v, &bits, 4);
+				}
+				store->uvs[slot * 2] = u;
+				store->uvs[slot * 2 + 1] = v;
+			}
+		}
 	}
 	return 0;
 }
@@ -407,6 +451,7 @@ int bsp_preview_load(
 	memset(info, 0, sizeof(*info));
 	memset(&bounds, 0, sizeof(bounds));
 	info->radius = 1.0f;
+	info->lightmap_bitmap_index = 0xffffu;
 	reader.read = read;
 	reader.context = context;
 	reader.file_size = file_size;
@@ -434,6 +479,38 @@ int bsp_preview_load(
 	if (map_va(structure_va, tag_data_offset, tag_data_size, bsp_offset, bsp_size, bsp_va, &structure_file) != 0) {
 		set_message(info, "BSP body pointer is outside the file");
 		return -1;
+	}
+	{
+		uint8_t reference[16];
+		uint32_t tag_index;
+
+		if (pull(&reader, structure_file, reference, sizeof(reference)) == 0) {
+			tag_index = (uint32_t)reference[12] | ((uint32_t)reference[13] << 8)
+				| ((uint32_t)reference[14] << 16) | ((uint32_t)reference[15] << 24);
+			if (tag_index != 0xffffffffu) {
+				uint8_t tag_header[4];
+				uint8_t instance[0x20];
+				uint32_t instance_va;
+				uint32_t instance_file;
+				uint32_t base;
+
+				if (pull(&reader, tag_data_offset, tag_header, 4) == 0) {
+					instance_va = (uint32_t)tag_header[0] | ((uint32_t)tag_header[1] << 8)
+						| ((uint32_t)tag_header[2] << 16) | ((uint32_t)tag_header[3] << 24);
+					if (instance_va >= 0x803A6000u) {
+						instance_file = tag_data_offset + (instance_va - 0x803A6000u) + (tag_index & 0xffffu) * 0x20u;
+						if (pull(&reader, instance_file, instance, sizeof(instance)) == 0) {
+							base = (uint32_t)instance[0x14] | ((uint32_t)instance[0x15] << 8)
+								| ((uint32_t)instance[0x16] << 16) | ((uint32_t)instance[0x17] << 24);
+							if (base >= 0x803A6000u && (base - 0x803A6000u) < tag_data_size) {
+								info->bitmap_group_file = tag_data_offset + (base - 0x803A6000u);
+								info->bitmap_group_found = 1;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	if (pull(&reader, structure_file + BSP_SURFACES_BLOCK, block, sizeof(block)) != 0) {
 		set_message(info, "BSP surface block unreadable");
@@ -470,6 +547,8 @@ int bsp_preview_load(
 
 		if (pull(&reader, lightmap_file + lightmap * LIGHTMAP_BYTES, lightmap_bytes, sizeof(lightmap_bytes)) != 0)
 			break;
+		if (info->lightmap_bitmap_index == 0xffffu)
+			info->lightmap_bitmap_index = (uint16_t)(lightmap_bytes[0] | (lightmap_bytes[1] << 8));
 		material_count = (uint32_t)lightmap_bytes[LIGHTMAP_MATERIALS]
 			| ((uint32_t)lightmap_bytes[LIGHTMAP_MATERIALS + 1] << 8)
 			| ((uint32_t)lightmap_bytes[LIGHTMAP_MATERIALS + 2] << 16)

@@ -26,7 +26,7 @@ usb:/game.iso
 
 `*.iso` directly inside `sd:/halo-ce/` or `usb:/halo-ce/` is scanned too (up to eight images). An `.iso` must be an Xbox XDVDFS image. The loader reads the volume at byte `0x10000`, then `maps/*.map` inside it, and does not copy the image into RAM.
 
-`fseek` in this devkitPPC build is 32-bit. A byte offset past 2 GiB is rejected. Loose `.map` files are the reliable layout. A full DVD image whose maps sit past 2 GiB will not open until the filesystem seek is wider.
+`fseek` and libfat's `f_lseek` on this devkitPPC are 32-bit (`off_t` is signed, FatFs `FSIZE_t` is one PowerPC register). `fseeko64` is declared and not provided by newlib here, so an offset past 2 GiB still fails. Loose `.map` files are the layout that works. A file the FAT layer can describe only up to 4 GiB cannot be seeked further from this DOL.
 
 Cache files the header identify accepts are listed on the menu. Names `a10`, `a30`, `a50`, `b30`, `b40`, `c10`, `c20`, `c40`, `d20`, and `d40` are labelled campaign. `ui` is labelled main menu. That label is the cache's own scenario name. A draws the **first structure BSP** of the selected file (environment vertices, capped at 3072 vertices and 4096 triangles). It does not start the script VM, AI, or weapons.
 

@@ -43,6 +43,7 @@ void wii_menu_draw(
 	}
 	if (note && note[0])
 		printf("\n%s\n", note);
-	printf("\nA draw BSP   D-pad select   HOME exit\n");
-	printf("Textures and simulation are not linked.\n");
+	printf("\nA draw BSP/bitmap   D-pad select   HOME exit\n");
+	printf("Lightmaps and bitm tags come from the cache.\n");
+	printf("Scripts, AI and weapons are not linked.\n");
 }
