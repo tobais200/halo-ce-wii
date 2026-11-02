@@ -21,7 +21,15 @@ The icon is a generic placeholder drawn for this project. It is not the Halo log
 
 ### OpenCE
 
-The intended engine upstream is [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) (Halo CE decompilation of Xbox build 2342, ported to Linux, Windows, and Android). It is **not vendored in the stub commit**. See [docs/ROADMAP.md](docs/ROADMAP.md). OpenCE is currently AGPL-3.0-or-later; this stub is MIT. Linking the two later changes the obligations of the combined work. See [LICENSE](LICENSE).
+[OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) (Halo CE decompilation of Xbox build 2342, ported to Linux, Windows, and Android) is a submodule at `third_party/OpenCE`. It is not compiled into `boot.dol`.
+
+```bash
+git submodule update --init third_party/OpenCE
+make opence-status   # prints whether the checkout is present
+make opence          # exits 2; does not build a campaign
+```
+
+`port/wii/` is a skeleton: one object of failing stubs, a `port.json` with `"playable_campaign": false`, and the TODOs. Upstream has no Wii port. OpenCE is currently AGPL-3.0-or-later; this stub is MIT. Linking the two later changes the obligations of the combined work. See [LICENSE](LICENSE) and [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ### Build on Linux (devkitPro)
 
@@ -73,7 +81,15 @@ El icono es un marcador genérico de este proyecto. No es el logotipo de Halo.
 
 ### OpenCE
 
-El motor previsto es [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) (decompilación de Halo CE, build 2342 de Xbox, con ports a Linux, Windows y Android). **No está incluido** en el commit del stub. Mira [docs/ROADMAP.md](docs/ROADMAP.md). OpenCE actual es AGPL-3.0-or-later; este stub es MIT. Enlazarlos más adelante cambia las obligaciones de la obra combinada. Mira [LICENSE](LICENSE).
+[OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) (decompilación de Halo CE, build 2342 de Xbox, con ports a Linux, Windows y Android) es un submódulo en `third_party/OpenCE`. No se compila dentro de `boot.dol`.
+
+```bash
+git submodule update --init third_party/OpenCE
+make opence-status   # dice si el checkout está
+make opence          # sale con código 2; no construye una campaña
+```
+
+`port/wii/` es un esqueleto: un objeto con funciones que fallan, un `port.json` con `"playable_campaign": false` y los TODOs. Upstream no tiene port de Wii. OpenCE actual es AGPL-3.0-or-later; este stub es MIT. Enlazarlos más adelante cambia las obligaciones de la obra combinada. Mira [LICENSE](LICENSE) y [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ### Compilar en Linux (devkitPro)
 

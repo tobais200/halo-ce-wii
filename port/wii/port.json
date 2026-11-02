@@ -1,0 +1,22 @@
+{
+  "comment": "Wii port skeleton for OpenCE. This file is a build hook, not a campaign configuration. make opence exits 2 and does not compile third_party/OpenCE.",
+  "status": "scaffold",
+  "playable_campaign": false,
+  "upstream": {
+    "repository": "https://github.com/OpenCommunityEdition/OpenCE",
+    "submodule": "third_party/OpenCE",
+    "reference_port": "third_party/OpenCE/port/linux/port.json",
+    "platforms_upstream": ["port/linux", "port/windows", "port/android"],
+    "renderer_today": "third_party/OpenCE/port/linux/src/d3d8_gl.c (OpenGL 4.5) plus nv2a_vsh.c and nv2a_psh.c",
+    "renderer_needed": "a future d3d8_gx.c. Not started. See source/gx_stub.h in this repository."
+  },
+  "game": {
+    "root": "third_party/OpenCE/source",
+    "compile": false,
+    "reason": "Those sources expect the Xbox ABI and the Linux platform layer (SDL3, pthreads, OpenGL). powerpc-eabi-gcc cannot build that port.json as it stands."
+  },
+  "platform_sources": "port/wii/src",
+  "platform_object": "port/wii/build/wii_platform.o",
+  "linked_into_boot_dol": false,
+  "libraries_later": ["ogc", "wiiuse", "bte", "fat", "aesnd"]
+}

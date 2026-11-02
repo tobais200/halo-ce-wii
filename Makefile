@@ -71,6 +71,7 @@ export LIBPATHS	:=	-L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C port/wii
 
 #---------------------------------------------------------------------------------
 # Homebrew Channel layout: dist/apps/halo-ce/{boot.dol,boot.elf,meta.xml,icon.png}
@@ -86,10 +87,13 @@ dist: $(BUILD)
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).dol $(OUTPUT).map dist
+	@$(MAKE) --no-print-directory -C port/wii clean
 
 #---------------------------------------------------------------------------------
 run:
 	wiiload $(TARGET).dol
+
+include $(CURDIR)/port/wii/hooks.mk
 
 #---------------------------------------------------------------------------------
 else

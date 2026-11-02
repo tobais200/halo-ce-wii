@@ -67,7 +67,13 @@ dist/apps/halo-ce/icon.png
 
 Copy that directory to the SD card as `sd:/apps/halo-ce/`. The Homebrew Channel loads `boot.dol`. The screen must read `Halo CE Wii - engine stub`. HOME exits.
 
-`make clean` removes `build/`, the ELF/DOL, and `dist/`.
+`make clean` removes `build/`, the ELF/DOL, `dist/`, and `port/wii/build/`.
+
+`make` also compiles `port/wii/build/wii_platform.o` and does not link it. `make opence` exits 2. That target does not compile OpenCE. Fetch the submodule first if you want `make opence-status` to report it present:
+
+```bash
+git submodule update --init third_party/OpenCE
+```
 
 ### 4. What a failed environment looks like
 
@@ -138,7 +144,13 @@ dist/apps/halo-ce/icon.png
 
 Copia ese directorio a la SD como `sd:/apps/halo-ce/`. El Homebrew Channel abre `boot.dol`. La pantalla tiene que decir `Halo CE Wii - engine stub`. HOME sale.
 
-`make clean` borra `build/`, el ELF/DOL y `dist/`.
+`make clean` borra `build/`, el ELF/DOL, `dist/` y `port/wii/build/`.
+
+`make` también compila `port/wii/build/wii_platform.o` y no lo enlaza. `make opence` sale con código 2 y no compila OpenCE. Para que `make opence-status` lo vea:
+
+```bash
+git submodule update --init third_party/OpenCE
+```
 
 ### 4. Si el entorno falla
 

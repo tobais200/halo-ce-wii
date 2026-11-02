@@ -13,11 +13,11 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 - MIT license, with a note that linking current OpenCE would bring AGPL-3.0-or-later onto the combined work.
 - No Halo assets.
 
-### Next, still not a game
+### Started, still not a game
 
-1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE`. That tree is the maintained port of the Xbox build 2342 decompilation (upstream chain: punpckhdq/halo → bnunu/halo-1 → OpenCE). Do not vendor game data with it.
-2. Add `port/wii/` as a skeleton: TODOs, a `port.json` that refuses to compile the game, and a Make target that checks the submodule and stops. OpenCE today has `port/linux`, `port/windows`, and `port/android`. It has no Wii port.
-3. Keep the stub's `make` / `make dist` independent of that submodule so the Homebrew Channel DOL still builds when OpenCE is absent.
+1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE` (Xbox build 2342 decompilation; chain punpckhdq/halo → bnunu/halo-1 → OpenCE). The gitlink pins one upstream commit. `make` does not compile it. No retail maps are added beside it.
+2. `port/wii/` skeleton: `TODO.md`, `port.json` (`"playable_campaign": false`), `wii_platform.o` of functions that return failure, `make opence-status`, and `make opence` (exit 2). Upstream ports are `port/linux`, `port/windows`, and `port/android` only.
+3. `make` / `make dist` still produce the Homebrew Channel DOL without linking OpenCE. The platform object is compiled and left unlinked.
 
 ### Later, each one blocked until the previous exists
 
@@ -46,11 +46,11 @@ JojoXDK's Halo Wii port is a private work in progress. It is not a branch of thi
 - Licencia MIT, con una nota: enlazar el OpenCE actual arrastra AGPL-3.0-or-later a la obra combinada.
 - Sin assets de Halo.
 
-### Siguiente, y sigue sin ser un juego
+### Empezado, y sigue sin ser un juego
 
-1. Submódulo de OpenCE en `third_party/OpenCE`.
-2. Esqueleto `port/wii/` con TODOs y un target de Make que no compila la campaña.
-3. Dejar `make` y `make dist` del stub independientes del submódulo.
+1. Submódulo de OpenCE en `third_party/OpenCE`. `make` no lo compila.
+2. Esqueleto `port/wii/`: TODOs, `port.json` con la campaña en false, y `make opence` que sale con código 2.
+3. `make` y `make dist` siguen generando el DOL del stub sin enlazar OpenCE.
 
 ### Después
 
