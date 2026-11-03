@@ -47,5 +47,13 @@ struct scenario_structure_bsp_reference;
 struct render_fog;
 struct location;
 struct model;
+struct collision_bsp;
+struct collision_model;
+struct collision_plane;
+struct collision_model_instance;
+struct collision_feature_list;
+struct collision_bsp_test_vector_result;
+struct collision_bsp_test_pill_result;
+struct collision_bsp_test_sphere_result;
 
 #endif

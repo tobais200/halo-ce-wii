@@ -641,21 +641,6 @@ void ai_debug_communication_focus(long name_count, char const **names)
 	(void)names;
 }
 
-boolean collision_test_vector(
-	unsigned long flags,
-	real_point3d const *point,
-	real_vector3d const *vector,
-	long ignore_object_index,
-	struct collision_result *collision)
-{
-	(void)flags;
-	(void)point;
-	(void)vector;
-	(void)ignore_object_index;
-	(void)collision;
-	return FALSE;
-}
-
 void render_debug_string(boolean immediate, char const *string)
 {
 	(void)immediate;

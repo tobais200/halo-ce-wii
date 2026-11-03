@@ -31,6 +31,18 @@ SOURCES = {
     "model_animation_definitions.o": "models/model_animation_definitions.c",
     "first_person_weapons.o": "interface/first_person_weapons.c",
     "memory_pool.o": "memory/memory_pool.c",
+    "collisions.o": "physics/collisions.c",
+    "collision_bsp.o": "physics/collision_bsp.c",
+    "collision_models.o": "physics/collision_models.c",
+    "collision_features.o": "physics/collision_features.c",
+    "bsp2d.o": "physics/bsp2d.c",
+    "bsp3d.o": "physics/bsp3d.c",
+    "game_engine.o": "game/game_engine.c",
+}
+
+PORT = {
+    "wii_collision.o": "port/wii/src/wii_collision.c",
+    "wii_collision_host.o": "port/wii/src/wii_collision.c",
 }
 
 
@@ -42,6 +54,7 @@ def includes(root):
     dirs.append(os.path.join(root, "third_party", "OpenCE", "port", "linux", "game"))
     dirs.append(os.path.join(root, "port", "wii", "hs_shim"))
     dirs.append(os.path.join(root, "port", "wii", "include"))
+    dirs.append(os.path.join(root, "source"))
     return dirs
 
 
@@ -51,10 +64,15 @@ def main():
         return 2
     cc, root, outdir, obj = sys.argv[1:]
     rel = SOURCES.get(obj)
-    if not rel:
+    port = PORT.get(obj)
+    if rel:
+        src = os.path.join(root, "third_party", "OpenCE", "source", rel)
+    elif port:
+        src = os.path.join(root, port)
+        rel = port
+    else:
         sys.stderr.write("unknown %s\n" % obj)
         return 2
-    src = os.path.join(root, "third_party", "OpenCE", "source", rel)
     out = os.path.join(outdir, obj)
     cmd = cc.split() + [
         "-std=c99", "-O2", "-fshort-wchar", "-fno-strict-aliasing",

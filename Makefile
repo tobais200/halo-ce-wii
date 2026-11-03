@@ -59,8 +59,9 @@ export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(S
 export OPENCE_OBJS := game.o players.o cheats.o game_allegiance.o weapons.o projectiles.o equipment.o \
 	bipeds.o units.o vehicles.o ai.o actors.o encounters.o actions.o path.o props.o \
 	ai_communication.o ai_script.o objects.o object_types.o damage.o models.o \
-	model_animations.o model_animation_definitions.o first_person_weapons.o memory_pool.o
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o wii_game_stubs.o wii_player_spawn.o wii_tag_cache.o wii_link_stubs.o $(OPENCE_OBJS)
+	model_animations.o model_animation_definitions.o first_person_weapons.o memory_pool.o \
+	collisions.o collision_bsp.o collision_models.o collision_features.o bsp2d.o bsp3d.o game_engine.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o wii_game_stubs.o wii_player_spawn.o wii_tag_cache.o wii_collision.o wii_link_stubs.o $(OPENCE_OBJS)
 export WII_ROOT := $(CURDIR)
 export WII_HS_CFLAGS := -std=c99 -fno-strict-aliasing -DHALO_RELEASE \
 	-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
@@ -162,6 +163,7 @@ host-check: $(OPENCE_GEN)
 		-I$(CURDIR)/third_party/OpenCE/source/memory \
 		-I$(CURDIR)/source \
 		-c $(CURDIR)/port/wii/src/wii_tag_cache.c -o $(CURDIR)/build/wii_tag_cache_host.o
+	python3 $(CURDIR)/tools/compile_opence.py "gcc -m32" $(CURDIR) $(CURDIR)/build wii_collision_host.o
 	gcc -m32 -std=c99 -O2 -fshort-wchar -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
 		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
 		-I$(CURDIR)/port/wii/hs_shim \
@@ -172,7 +174,7 @@ host-check: $(OPENCE_GEN)
 	gcc -m32 -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
 		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/bsp_preview.c $(CURDIR)/source/wii_tex.c $(CURDIR)/source/wii_widget.c $(CURDIR)/source/wii_sim.c \
 		$(CURDIR)/build/hs_runtime_host.o $(CURDIR)/build/data_host.o $(CURDIR)/build/wii_hs_host_host.o \
-		$(CURDIR)/build/wii_game_stubs_host.o $(CURDIR)/build/wii_player_spawn_host.o $(CURDIR)/build/wii_tag_cache_host.o $(CURDIR)/build/wii_link_stubs_host.o \
+		$(CURDIR)/build/wii_game_stubs_host.o $(CURDIR)/build/wii_player_spawn_host.o $(CURDIR)/build/wii_tag_cache_host.o $(CURDIR)/build/wii_collision_host.o $(CURDIR)/build/wii_link_stubs_host.o \
 		$(addprefix $(CURDIR)/build/,$(OPENCE_OBJS)) \
 		-lm -o $(CURDIR)/build/host_check
 	$(CURDIR)/build/host_check
@@ -232,6 +234,9 @@ wii_player_spawn.o: $(WII_ROOT)/port/wii/src/wii_player_spawn.c
 
 wii_tag_cache.o: $(WII_ROOT)/port/wii/src/wii_tag_cache.c
 	$(CC) -MMD -MP -fshort-wchar $(CFLAGS) $(WII_HS_CFLAGS) -include $(WII_ROOT)/port/wii/include/wii_sys.h -MF $(DEPSDIR)/wii_tag_cache.d -c $< -o $@
+
+wii_collision.o: $(WII_ROOT)/port/wii/src/wii_collision.c
+	python3 $(WII_ROOT)/tools/compile_opence.py "$(CC) -DGEKKO" $(WII_ROOT) . wii_collision.o
 
 wii_link_stubs.o: $(WII_ROOT)/port/wii/src/wii_link_stubs.c
 	$(CC) -MMD -MP -fshort-wchar $(CFLAGS) $(WII_HS_CFLAGS) -MF $(DEPSDIR)/wii_link_stubs.d -c $< -o $@

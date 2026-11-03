@@ -11,6 +11,7 @@ void wii_game_tick(void);
 void wii_game_set_player_start(float x, float y, float z, float facing);
 long wii_game_player_unit(void);
 int wii_game_live_objects(void);
+long wii_game_spawn_projectile(void);
 
 extern int wii_game_unit_ticks;
 extern int wii_game_ai_ticks;

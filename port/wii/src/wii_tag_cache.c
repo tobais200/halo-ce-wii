@@ -13,7 +13,10 @@
 #include "items/weapon_definitions.h"
 #include "ai/ai_scenario_definitions.h"
 #include "ai/actor_definitions.h"
+#include "items/projectile_definitions.h"
+#include "items/equipment_definitions.h"
 #include "wii_tag_cache.h"
+#include "wii_collision.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +76,8 @@ static int weapon_published;
 static int encounter_published;
 static int location_published;
 static int magazine_rounds;
+static int grenade_count;
+static long projectile_index = -1;
 
 static uint32_t read_le32(uint8_t const *p)
 {
@@ -732,6 +737,77 @@ static int load_biped(int slot)
 	return 0;
 }
 
+static int load_projectile(int slot)
+{
+	struct projectile_definition *projectile;
+	uint8_t raw[16];
+
+	if (slot < 0 || slots[slot].group != FCC('p', 'r', 'o', 'j'))
+		return -1;
+	if (slots[slot].base)
+		return 0;
+	projectile = bump(sizeof(*projectile));
+	if (!projectile)
+		return -1;
+	if (pull_va(slots[slot].base_va, raw, 4) == 0)
+		projectile->object.type = read_les16(raw);
+	if (projectile->object.type == 0)
+		projectile->object.type = (short)_object_type_projectile;
+	projectile->object.bounding_radius = 0.05f;
+	projectile->object.acceleration_scale = 1.f;
+	projectile->object.forced_shader_permutation_index = NONE;
+	ref_clear(&projectile->object.model);
+	ref_clear(&projectile->object.animation_graph);
+	ref_clear(&projectile->object.collision_model);
+	ref_clear(&projectile->object.physics);
+	ref_clear(&projectile->object.creation_effect);
+	if (pull_va(slots[slot].base_va + offsetof(struct projectile_definition, projectile.initial_velocity), raw, 4) == 0)
+		projectile->projectile.initial_velocity = read_lef(raw);
+	if (pull_va(slots[slot].base_va + offsetof(struct projectile_definition, projectile.collision_radius), raw, 4) == 0)
+		projectile->projectile.collision_radius = read_lef(raw);
+	if (pull_va(slots[slot].base_va + offsetof(struct projectile_definition, projectile.timer_lower_bound), raw, 8) == 0) {
+		projectile->projectile.timer_lower_bound = read_lef(raw);
+		projectile->projectile.timer_upper_bound = read_lef(raw + 4);
+	}
+	ref_clear(&projectile->projectile.effect);
+	ref_clear(&projectile->projectile.detonation_started);
+	ref_clear(&projectile->projectile.flyby_sound);
+	ref_clear(&projectile->projectile.attached_detonation_damage);
+	ref_clear(&projectile->projectile.impact_damage);
+	ref_clear(&projectile->projectile.super_detonation);
+	slots[slot].base = projectile;
+	projectile_index = (long)slots[slot].datum;
+	return 0;
+}
+
+static int load_equipment(int slot)
+{
+	struct equipment_definition *equipment;
+	uint8_t raw[4];
+
+	if (slot < 0 || slots[slot].group != FCC('e', 'q', 'i', 'p'))
+		return -1;
+	if (slots[slot].base)
+		return 0;
+	equipment = bump(sizeof(*equipment));
+	if (!equipment)
+		return -1;
+	equipment->object.type = (short)_object_type_equipment;
+	equipment->object.bounding_radius = 0.2f;
+	equipment->object.acceleration_scale = 1.f;
+	equipment->object.forced_shader_permutation_index = NONE;
+	ref_clear(&equipment->object.model);
+	ref_clear(&equipment->object.animation_graph);
+	ref_clear(&equipment->object.collision_model);
+	ref_clear(&equipment->object.physics);
+	ref_clear(&equipment->object.creation_effect);
+	if (pull_va(slots[slot].base_va + offsetof(struct equipment_definition, equipment.powerup_type), raw, 2) == 0)
+		equipment->equipment.powerup_type = read_les16(raw);
+	ref_clear(&equipment->equipment.pickup_sound);
+	slots[slot].base = equipment;
+	return 0;
+}
+
 static int load_weapon(int slot)
 {
 	uint8_t raw[64];
@@ -797,14 +873,25 @@ static int load_weapon(int slot)
 			triggers = trigger_count ? bump((uint32_t)trigger_count * sizeof(*triggers)) : NULL;
 			if (trigger_count && !triggers)
 				return -1;
-			for (magazine_count = 0; magazine_count < trigger_count; magazine_count++)
+			for (magazine_count = 0; magazine_count < trigger_count; magazine_count++) {
+				uint8_t ref_raw[16];
+				uint32_t trigger_va = read_le32(block + 4);
+
 				ref_clear(&triggers[magazine_count].projectile);
+				if (pull_va(trigger_va + (uint32_t)magazine_count * sizeof(*triggers) + offsetof(struct weapon_trigger_definition, projectile), ref_raw, 16) != 0)
+					continue;
+				read_ref(ref_raw, &triggers[magazine_count].projectile);
+				if (load_projectile(find_datum((uint32_t)triggers[magazine_count].projectile.index)) != 0)
+					ref_clear(&triggers[magazine_count].projectile);
+			}
 			weapon->weapon.triggers.count = trigger_count;
 			weapon->weapon.triggers.address = triggers;
 		}
 	}
 	ref_clear(&weapon->object.model);
 	ref_clear(&weapon->object.animation_graph);
+	ref_clear(&weapon->weapon.interface_definition.first_person_animations);
+	ref_clear(&weapon->weapon.ready_effect);
 	ref_clear(&weapon->object.collision_model);
 	ref_clear(&weapon->object.physics);
 	ref_clear(&weapon->object.modifier_shader);
@@ -885,6 +972,36 @@ static int load_globals(int slot)
 	globals->falling_damage.address = falling;
 	slots[slot].base = globals;
 	native_globals = globals;
+	if (pull_va(slots[slot].base_va + offsetof(struct game_globals, grenades), block, 8) == 0) {
+		int count = read_les32(block);
+		uint32_t grenade_va = read_le32(block + 4);
+		struct game_globals_grenade *grenades;
+
+		if (count < 0)
+			count = 0;
+		if (count > 2)
+			count = 2;
+		grenades = count ? bump((uint32_t)count * sizeof(*grenades)) : NULL;
+		if (count && grenades) {
+			int grenade_index;
+
+			for (grenade_index = 0; grenade_index < count; grenade_index++) {
+				uint8_t grenade_raw[8];
+
+				if (pull_va(grenade_va + (uint32_t)grenade_index * sizeof(*grenades), grenade_raw, 4) != 0)
+					break;
+				grenades[grenade_index].maximum_count = read_les16(grenade_raw);
+				grenades[grenade_index].mp_spawn_default = read_les16(grenade_raw + 2);
+				ref_clear(&grenades[grenade_index].throwing_effect);
+				ref_clear(&grenades[grenade_index].hud_interface);
+				ref_clear(&grenades[grenade_index].item);
+				ref_clear(&grenades[grenade_index].projectile);
+			}
+			globals->grenades.count = count;
+			globals->grenades.address = grenades;
+			grenade_count = count;
+		}
+	}
 	return load_biped(find_datum((uint32_t)info->player_unit.index));
 }
 
@@ -924,13 +1041,43 @@ static int load_variant(int slot)
 		return -1;
 	read_ref(raw + offsetof(struct actor_variant_definition, actor_reference), &variant->actor_reference);
 	read_ref(raw + offsetof(struct actor_variant_definition, unit_reference), &variant->unit_reference);
-	ref_clear(&variant->major_upgrade_reference);
-	ref_clear(&variant->ranged_combat.reference);
-	ref_clear(&variant->items.equipment_reference);
-	variant->grenade_combat.grenade_type = NONE;
+	slots[slot].base = variant;
 	if (load_actor(find_datum((uint32_t)variant->actor_reference.index)) != 0)
 		ref_clear(&variant->actor_reference);
-	slots[slot].base = variant;
+	{
+		uint8_t ref_raw[16];
+		uint8_t counts[4];
+
+		ref_clear(&variant->major_upgrade_reference);
+		if (pull_va(slots[slot].base_va + offsetof(struct actor_variant_definition, major_upgrade_reference), ref_raw, 16) == 0) {
+			read_ref(ref_raw, &variant->major_upgrade_reference);
+			if (load_variant(find_datum((uint32_t)variant->major_upgrade_reference.index)) != 0)
+				ref_clear(&variant->major_upgrade_reference);
+		}
+		ref_clear(&variant->ranged_combat.reference);
+		if (pull_va(slots[slot].base_va + offsetof(struct actor_variant_definition, ranged_combat.reference), ref_raw, 16) == 0) {
+			read_ref(ref_raw, &variant->ranged_combat.reference);
+			if (load_weapon(find_datum((uint32_t)variant->ranged_combat.reference.index)) != 0)
+				ref_clear(&variant->ranged_combat.reference);
+		}
+		ref_clear(&variant->items.equipment_reference);
+		if (pull_va(slots[slot].base_va + offsetof(struct actor_variant_definition, items.equipment_reference), ref_raw, 16) == 0) {
+			read_ref(ref_raw, &variant->items.equipment_reference);
+			if (load_equipment(find_datum((uint32_t)variant->items.equipment_reference.index)) != 0)
+				ref_clear(&variant->items.equipment_reference);
+		}
+		variant->grenade_combat.grenade_type = NONE;
+		if (pull_va(slots[slot].base_va + offsetof(struct actor_variant_definition, grenade_combat.grenade_type), counts, 2) == 0) {
+			int grenade_type = read_les16(counts);
+
+			if (grenade_type >= 0 && grenade_type < 2)
+				variant->grenade_combat.grenade_type = (short)grenade_type;
+		}
+		if (pull_va(slots[slot].base_va + offsetof(struct actor_variant_definition, items.grenades_lower_bound), counts, 4) == 0) {
+			variant->items.grenades_lower_bound = read_les16(counts);
+			variant->items.grenades_upper_bound = read_les16(counts + 2);
+		}
+	}
 	return 0;
 }
 
@@ -1213,6 +1360,10 @@ int wii_tag_cache_mount(
 		return -1;
 	if (globals_slot >= 0 && load_globals(globals_slot) != 0)
 		return -1;
+	for (index = 0; index < slot_count; index++) {
+		if (slots[index].group == FCC('s', 'b', 's', 'p'))
+			wii_collision_load(slots[index].base_va);
+	}
 	cache_ready = native_biped != NULL;
 	if (!cache_ready)
 		return -1;
@@ -1235,6 +1386,9 @@ void wii_tag_cache_unmount(void)
 	encounter_published = 0;
 	location_published = 0;
 	magazine_rounds = 0;
+	grenade_count = 0;
+	projectile_index = -1;
+	wii_collision_reset();
 	memset(slots, 0, sizeof(slots));
 }
 
@@ -1273,6 +1427,21 @@ int wii_tag_cache_location_count(void)
 int wii_tag_cache_magazine_rounds(void)
 {
 	return magazine_rounds;
+}
+
+int wii_tag_cache_grenade_count(void)
+{
+	return grenade_count;
+}
+
+long wii_tag_cache_projectile_index(void)
+{
+	return projectile_index;
+}
+
+int wii_tag_cache_pull(uint32_t va, void *destination, uint32_t size)
+{
+	return pull_va(va, destination, size);
 }
 
 float wii_tag_cache_idle_rotation_w(void)
@@ -1386,7 +1555,7 @@ static int memory_read(void *context, uint64_t offset, void *destination, uint32
 
 int wii_tag_cache_self_test(void)
 {
-	static uint8_t file[0x10000];
+	static uint8_t file[0x20000];
 	uint32_t cursor;
 	uint32_t instances;
 	uint32_t scenario_at;
@@ -1413,14 +1582,26 @@ int wii_tag_cache_self_test(void)
 	uint32_t weapon_def_at;
 	uint32_t variant_at;
 	uint32_t actor_at;
-	uint32_t datum[8];
+	uint32_t sbsp_at;
+	uint32_t collide_at;
+	uint32_t plane_at;
+	uint32_t node3d_at;
+	uint32_t leaf_at;
+	uint32_t ref2d_at;
+	uint32_t surface_at;
+	uint32_t proj_at;
+	uint32_t eqip_at;
+	uint32_t upgrade_at;
+	uint32_t trigger_at;
+	uint32_t grenade_at;
+	uint32_t datum[12];
 	float x;
 	float y;
 	float z;
 	int index;
 
 	memset(file, 0, sizeof(file));
-	cursor = 0x40 + 8u * 0x20u;
+	cursor = 0x40 + 12u * 0x20u;
 	instances = 0x40;
 	scenario_at = cursor;
 	cursor += 0x800;
@@ -1470,13 +1651,37 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct actor_variant_definition);
 	actor_at = cursor;
 	cursor += sizeof(struct actor_definition);
+	upgrade_at = cursor;
+	cursor += sizeof(struct actor_variant_definition);
+	proj_at = cursor;
+	cursor += sizeof(struct projectile_definition);
+	eqip_at = cursor;
+	cursor += sizeof(struct equipment_definition);
+	trigger_at = cursor;
+	cursor += sizeof(struct weapon_trigger_definition);
+	grenade_at = cursor;
+	cursor += sizeof(struct game_globals_grenade);
+	sbsp_at = cursor;
+	cursor += 648u;
+	collide_at = cursor;
+	cursor += 96u;
+	plane_at = cursor;
+	cursor += 16u;
+	node3d_at = cursor;
+	cursor += 12u;
+	leaf_at = cursor;
+	cursor += 8u;
+	ref2d_at = cursor;
+	cursor += 8u;
+	surface_at = cursor;
+	cursor += 12u;
 	if (cursor > sizeof(file))
 		return -1;
-	for (index = 0; index < 8; index++)
+	for (index = 0; index < 12; index++)
 		datum[index] = 0x12340000u | (uint32_t)index;
 	put_u32(file, TAG_BASE + instances);
 	put_u32(file + 4, datum[0]);
-	put_u32(file + 0x0c, 8);
+	put_u32(file + 0x0c, 12);
 	file[0x20] = 't';
 	file[0x21] = 'a';
 	file[0x22] = 'g';
@@ -1487,7 +1692,7 @@ int wii_tag_cache_self_test(void)
 			char a, b, c, d;
 			char p0a, p0b, p0c, p0d;
 			char p1a, p1b, p1c, p1d;
-		} rows[8] = {
+		} rows[12] = {
 			{ scenario_at, 's', 'c', 'n', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ globals_at, 'm', 'a', 't', 'g', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ biped_at, 'b', 'i', 'p', 'd', 'u', 'n', 'i', 't', 'o', 'b', 'j', 'e' },
@@ -1495,10 +1700,14 @@ int wii_tag_cache_self_test(void)
 			{ graph_at, 'a', 'n', 't', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ weapon_def_at, 'w', 'e', 'a', 'p', 'i', 't', 'e', 'm', 'o', 'b', 'j', 'e' },
 			{ variant_at, 'a', 'c', 't', 'v', 0, 0, 0, 0, 0, 0, 0, 0 },
-			{ actor_at, 'a', 'c', 't', 'r', 0, 0, 0, 0, 0, 0, 0, 0 }
+			{ actor_at, 'a', 'c', 't', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ upgrade_at, 'a', 'c', 't', 'v', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ proj_at, 'p', 'r', 'o', 'j', 'o', 'b', 'j', 'e', 0, 0, 0, 0 },
+			{ eqip_at, 'e', 'q', 'i', 'p', 'i', 't', 'e', 'm', 'o', 'b', 'j', 'e' },
+			{ sbsp_at, 's', 'b', 's', 'p', 0, 0, 0, 0, 0, 0, 0, 0 }
 		};
 
-		for (index = 0; index < 8; index++) {
+		for (index = 0; index < 12; index++) {
 			uint8_t *instance = file + instances + (uint32_t)index * 0x20u;
 
 			instance[0] = (uint8_t)rows[index].a;
@@ -1574,9 +1783,39 @@ int wii_tag_cache_self_test(void)
 	file[variant_at + offsetof(struct actor_variant_definition, unit_reference) + 2] = 'p';
 	file[variant_at + offsetof(struct actor_variant_definition, unit_reference) + 3] = 'd';
 	put_u32(file + variant_at + offsetof(struct actor_variant_definition, unit_reference) + 12, datum[2]);
-	put_u32(file + variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 12, 0xffffffffu);
-	put_u32(file + variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference) + 12, 0xffffffffu);
-	put_u16(file + variant_at + offsetof(struct actor_variant_definition, grenade_combat.grenade_type), 0xffffu);
+	file[variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference)] = 'a';
+	file[variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 1] = 'c';
+	file[variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 2] = 't';
+	file[variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 3] = 'v';
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 12, datum[8]);
+	file[upgrade_at + offsetof(struct actor_variant_definition, actor_reference)] = 'a';
+	file[upgrade_at + offsetof(struct actor_variant_definition, actor_reference) + 1] = 'c';
+	file[upgrade_at + offsetof(struct actor_variant_definition, actor_reference) + 2] = 't';
+	file[upgrade_at + offsetof(struct actor_variant_definition, actor_reference) + 3] = 'r';
+	put_u32(file + upgrade_at + offsetof(struct actor_variant_definition, actor_reference) + 12, datum[7]);
+	file[upgrade_at + offsetof(struct actor_variant_definition, unit_reference)] = 'b';
+	file[upgrade_at + offsetof(struct actor_variant_definition, unit_reference) + 1] = 'i';
+	file[upgrade_at + offsetof(struct actor_variant_definition, unit_reference) + 2] = 'p';
+	file[upgrade_at + offsetof(struct actor_variant_definition, unit_reference) + 3] = 'd';
+	put_u32(file + upgrade_at + offsetof(struct actor_variant_definition, unit_reference) + 12, datum[2]);
+	put_u32(file + upgrade_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 12, 0xffffffffu);
+	file[variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference)] = 'w';
+	file[variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference) + 1] = 'e';
+	file[variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference) + 2] = 'a';
+	file[variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference) + 3] = 'p';
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference) + 12, datum[5]);
+	file[variant_at + offsetof(struct actor_variant_definition, items.equipment_reference)] = 'e';
+	file[variant_at + offsetof(struct actor_variant_definition, items.equipment_reference) + 1] = 'q';
+	file[variant_at + offsetof(struct actor_variant_definition, items.equipment_reference) + 2] = 'i';
+	file[variant_at + offsetof(struct actor_variant_definition, items.equipment_reference) + 3] = 'p';
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, items.equipment_reference) + 12, datum[10]);
+	put_u16(file + variant_at + offsetof(struct actor_variant_definition, grenade_combat.grenade_type), 0);
+	put_u16(file + variant_at + offsetof(struct actor_variant_definition, items.grenades_lower_bound), 1);
+	put_u16(file + variant_at + offsetof(struct actor_variant_definition, items.grenades_upper_bound), 1);
+	put_u32(file + globals_at + offsetof(struct game_globals, grenades), 1);
+	put_u32(file + globals_at + offsetof(struct game_globals, grenades) + 4, TAG_BASE + grenade_at);
+	put_u16(file + grenade_at, 4);
+	wii_collision_write_floor(file, sbsp_at, collide_at, plane_at, node3d_at, leaf_at, ref2d_at, surface_at);
 	put_u16(file + globals_at + offsetof(struct game_globals, player_information), 1);
 	put_u32(file + globals_at + offsetof(struct game_globals, player_information) + 4, TAG_BASE + info_at);
 	file[info_at] = 'b';
@@ -1639,7 +1878,18 @@ int wii_tag_cache_self_test(void)
 	put_u16(file + weapon_def_at + sizeof(struct weapon_definition) - 32u + 8, 36);
 	put_u16(file + weapon_def_at + sizeof(struct weapon_definition) - 32u + 10, 36);
 	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.triggers), 1);
-	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.triggers) + 4, TAG_BASE + weapon_def_at + sizeof(struct weapon_definition) - 16u);
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.triggers) + 4, TAG_BASE + trigger_at);
+	file[trigger_at + offsetof(struct weapon_trigger_definition, projectile)] = 'p';
+	file[trigger_at + offsetof(struct weapon_trigger_definition, projectile) + 1] = 'r';
+	file[trigger_at + offsetof(struct weapon_trigger_definition, projectile) + 2] = 'o';
+	file[trigger_at + offsetof(struct weapon_trigger_definition, projectile) + 3] = 'j';
+	put_u32(file + trigger_at + offsetof(struct weapon_trigger_definition, projectile) + 12, datum[9]);
+	put_u16(file + proj_at, (uint16_t)_object_type_projectile);
+	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.initial_velocity), 20.f);
+	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.collision_radius), 0.05f);
+	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.timer_lower_bound), 1.f);
+	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.timer_upper_bound), 1.f);
+	put_u16(file + eqip_at + offsetof(struct equipment_definition, equipment.powerup_type), 1);
 	if (wii_tag_cache_mount(memory_read, file, sizeof(file), 0, sizeof(file)) != 0)
 		return -1;
 	wii_tag_cache_player(&x, &y, &z);
@@ -1652,6 +1902,10 @@ int wii_tag_cache_self_test(void)
 	if (wii_tag_cache_location_count() != 1 || wii_tag_cache_magazine_rounds() != 36)
 		return -1;
 	if (wii_tag_cache_idle_rotation_w() < 0.9f)
+		return -1;
+	if (!wii_collision_ready() || !wii_collision_hits_floor())
+		return -1;
+	if (wii_tag_cache_projectile_index() == -1 || wii_tag_cache_grenade_count() < 1)
 		return -1;
 	if (!wii_tag_cache_get((long)FCC('b', 'i', 'p', 'd'), (long)datum[2]))
 		return -1;

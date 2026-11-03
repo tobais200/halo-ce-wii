@@ -197,3 +197,22 @@ long wii_game_player_unit(void)
 		return NONE;
 	return player->unit_index;
 }
+
+long wii_game_spawn_projectile(void)
+{
+	/* object_placement_data is 136 bytes in objects.h. position.z is at 32.
+	   The hs_shim objects.h hides that struct from this file. */
+	unsigned char placement[256];
+	long definition;
+	float height = 1.f;
+	void object_placement_data_new(void *data, long definition_index, long owner_object_index);
+	long object_new(void *data);
+
+	definition = wii_tag_cache_projectile_index();
+	if (definition == NONE || definition == -1)
+		return NONE;
+	memset(placement, 0, sizeof(placement));
+	object_placement_data_new(placement, definition, NONE);
+	memcpy(placement + 32, &height, sizeof(height));
+	return object_new(placement);
+}

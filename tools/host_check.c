@@ -12,6 +12,7 @@ unsigned char game_map_loaded(void);
 
 #include "wii_game.h"
 #include "wii_tag_cache.h"
+#include "wii_collision.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
 #include "wii_widget.h"
@@ -437,6 +438,10 @@ int main(void)
 			return fail("player biped was not spawned");
 		if (wii_tag_cache_location_count() < 1 || wii_tag_cache_magazine_rounds() < 1)
 			return fail("encounter or magazine");
+		if (!wii_collision_ready() || !wii_collision_hits_floor())
+			return fail("collision bsp");
+		if (wii_tag_cache_grenade_count() < 1 || wii_game_spawn_projectile() == -1)
+			return fail("projectile or grenade");
 		if (wii_tag_cache_idle_rotation_w() < 0.9f)
 			return fail("biped idle animation");
 		if (wii_game_live_objects() < 3)

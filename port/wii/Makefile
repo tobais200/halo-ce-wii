@@ -38,7 +38,10 @@ opence:
 	@echo "  tag cache working set is streamed; the 23 MiB Xbox cache is not mapped"
 	@echo "  ai_place spawns actors from squad starting locations"
 	@echo "  weapon magazines are resident; animation_get_node_orientations samples up to 64 KiB of frame data"
-	@echo "Bink, networking, the rasterizer, collisions.c, and game_engine.c are not compiled."
+	@echo "  collisions.c tests a streamed structure collision BSP (4 MiB cap)"
+	@echo "  projectile, equipment, grenade, and major-upgrade tags are resident"
+	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
+	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:
 	@rm -rf build

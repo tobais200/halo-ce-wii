@@ -305,7 +305,8 @@ int bots_initialize_for_new_map(void) { return 0; }
 int bots_update_actions(void) { return 0; }
 int breakable_surface_damage(void) { return 0; }
 int breakable_surface_damage_area_of_effect(void) { return 0; }
-int breakable_surface_flags_get(void) { return 0; }
+static unsigned char wii_breakable_surface_flags[256];
+void *breakable_surface_flags_get(void) { return wii_breakable_surface_flags; }
 void *cheat;
 int cinematic_in_progress(void) { return 0; }
 int cluster_partition_delete(void) { return 0; }
@@ -318,29 +319,13 @@ int cluster_partition_make_invalid(void) { return 0; }
 int cluster_partition_make_valid(void) { return 0; }
 int cluster_partition_new(void) { return 0; }
 int cluster_partition_reconnect(void) { return 0; }
-int collision_bsp_test_sphere(void) { return 0; }
-int collision_bsp_test_vector(void) { return 0; }
-int collision_bsp_valid_surface_index(void) { return 0; }
 void *collision_debug_height;
 void *collision_debug_length;
 void *collision_debug_point;
 void *collision_debug_repeat;
 void *collision_debug_vector;
 void *collision_debug_width;
-int collision_features_test_vector(void) { return 0; }
-int collision_fix_pill(void) { return 0; }
-int collision_get_features_in_sphere(void) { return 0; }
-int collision_model_instance_new(void) { return 0; }
-int collision_model_test_pill(void) { return 0; }
-int collision_model_test_vector(void) { return 0; }
-int collision_move_pill(void) { return 0; }
-int collision_surface_edge_ring_continues(void) { return 0; }
-int collision_surface_find_closest_point2d(void) { return 0; }
-int collision_surface_project_point2d(void) { return 0; }
-int collision_surface_test_point2d(void) { return 0; }
 int collision_test_line(void) { return 0; }
-int collision_test_pill(void) { return 0; }
-int collision_test_point(void) { return 0; }
 int component_vectors_from_direction3d(void) { return 0; }
 int component_vectors_from_normal3d(void) { return 0; }
 int config_boolean(void) { return 0; }
@@ -393,23 +378,6 @@ int rasterizer_transparent_geometry_is_enclosure(void) { return 0; }
 int game_connection(void) { return 0; }
 int game_difficulty_get_team_value(void) { return 0; }
 int game_difficulty_get_value(void) { return 0; }
-int game_engine_allow_integrated_lights(void) { return 0; }
-int game_engine_allow_pick_up(void) { return 0; }
-int game_engine_can_score(void) { return 0; }
-int game_engine_client_respawn_countdown(void) { return 0; }
-int game_engine_force_autopickup(void) { return 0; }
-int game_engine_friendly_damage(void) { return 0; }
-int game_engine_get_damage_multiplier(void) { return 0; }
-int game_engine_has_teams(void) { return 0; }
-int game_engine_infinite_grenades(void) { return 0; }
-int game_engine_picking_up(void) { return 0; }
-int game_engine_player_damaged_player(void) { return 0; }
-int game_engine_player_killed(void) { return 0; }
-int game_engine_postspawn_player_update(void) { return 0; }
-int game_engine_prespawn_player_update(void) { return 0; }
-int game_engine_remap_object_definition(void) { return 0; }
-int game_engine_should_spawn_player(void) { return 0; }
-int game_engine_weapon_fired(void) { return 0; }
 int game_looping_sound_delete(void) { return 0; }
 int game_looping_sound_new(void) { return 0; }
 int game_modes_headshot_kills(void) { return 0; }
@@ -422,11 +390,7 @@ int get_global_local_random_seed_address(void) { return 0; }
 /* No structure tag is resident. A zeroed bsp keeps objects_update's cluster
 walk at count 0 until the map's sbsp is fixed up. */
 static unsigned char wii_structure_bsp[0x1000];
-static unsigned char wii_collision_bsp[0x200];
-static unsigned char wii_bsp3d[0x200];
 void *global_structure_bsp_get(void) { return wii_structure_bsp; }
-void *global_collision_bsp_get(void) { return wii_collision_bsp; }
-void *global_bsp3d_get(void) { return wii_bsp3d; }
 int global_scenario_try_and_get(void) { return 0; }
 int global_structure_bsp_index_get(void) { return 0; }
 int halo_interpolation_enabled(void) { return 0; }
@@ -461,7 +425,6 @@ int lights_dispose_from_old_map(void) { return 0; }
 int lights_illumination_at_point(void) { return 0; }
 int lights_initialize(void) { return 0; }
 int lights_initialize_for_new_map(void) { return 0; }
-int list_index_to_weapon_definition_index(void) { return 0; }
 int machine_get_elevator_position(void) { return 0; }
 int machine_move_elevator_riders(void) { return 0; }
 int machine_try_to_open_with_damage(void) { return 0; }
@@ -603,7 +566,6 @@ int real_random_range(void) { return 0; }
 int real_rgb_color_brightness(void) { return 0; }
 int recorded_animation_controlling_unit(void) { return 0; }
 int reflect_vector3d(void) { return 0; }
-int render_debug_collision_model(void) { return 0; }
 int render_debug_line(void) { return 0; }
 int render_debug_matrix(void) { return 0; }
 int render_debug_physics(void) { return 0; }
@@ -726,19 +688,6 @@ float real_seed_random_range(unsigned long *seed, float lower, float upper)
 	(void)seed;
 	return (lower + upper) * 0.5f;
 }
-float game_engine_get_starting_location_rating(long player_index, void const *location)
-{
-	(void)player_index;
-	(void)location;
-	return 1.f;
-}
-void *game_engine_player_get_change_color(void *color, long player_index)
-{
-	(void)player_index;
-	if (color)
-		memset(color, 0, 12);
-	return color;
-}
 int network_objects_new_object_index(void) { return -1; }
 static unsigned char wii_cinematic_globals_bytes[64];
 void *cinematic_globals = wii_cinematic_globals_bytes;
@@ -761,8 +710,6 @@ int devices_dispose_from_old_map(void) { return 0; }
 int devices_initialize(void) { return 0; }
 int devices_initialize_for_new_map(void) { return 0; }
 int device_update(void) { return 0; }
-int game_engine_vehicle_placement_allowed(void) { return 0; }
-int game_engine_vehicle_placement_begin(void) { return 0; }
 int garbage_new(void) { return 0; }
 int garbage_update(void) { return 0; }
 int item_delete(void) { return 0; }
@@ -807,3 +754,137 @@ int scenery_update(void) { return 0; }
 int sound_scenery_delete(void) { return 0; }
 int sound_scenery_new(void) { return 0; }
 int unit_notify_impulse_sound(void) { return 0; }
+
+/* Collision BSP projection and the multiplayer engine's globals.
+   Campaign leaves game_engine NULL, so these bodies are not called. */
+short const global_projection3d_mappings[3][2][2] = {
+	{ { 2, 1 }, { 1, 2 } },
+	{ { 0, 2 }, { 2, 0 } },
+	{ { 1, 0 }, { 0, 1 } }
+};
+static float wii_rgb_blue[3] = { 0.f, 0.f, 1.f };
+static float wii_rgb_red[3] = { 1.f, 0.f, 0.f };
+const float *global_real_rgb_blue = wii_rgb_blue;
+const float *global_real_rgb_red = wii_rgb_red;
+unsigned char game_engine_globals[0x24];
+unsigned char global_stage[192];
+long timeout_for_endgame_sound;
+void *game_engines[32];
+void *hud_globals;
+int autoaim_compute_target(void) { return 0; }
+int bitmap_group_try_and_get_bitmap(void) { return 0; }
+int collision_log_end_time(void) { return 0; }
+int collision_log_start_time(void) { return 0; }
+int collision_log_usage(void) { return 0; }
+int config_string(void) { return 0; }
+int convex_polygon3d_clip_to_plane(void) { return 0; }
+int custom_edition_cache_tags_loaded(void) { return 0; }
+int custom_edition_vehicles_by_placement(void) { return 0; }
+int custom_render_nav_point(void) { return 0; }
+int draw_bitmap_in_rect(void) { return 0; }
+int draw_quad(void) { return 0; }
+int draw_string_and_hack_in_icons(void) { return 0; }
+int draw_string_set_draw_mode(void) { return 0; }
+int draw_unicode_string_capital_middle(void) { return 0; }
+int draw_unicode_string_compute_bounds(void) { return 0; }
+int find_nav_point(void) { return 0; }
+int game_engine_ctf_read_network_state(void) { return 0; }
+int game_engine_ctf_write_network_state(void) { return 0; }
+int game_engine_intialize_queued_sounds(void) { return 0; }
+int game_engine_king_read_network_state(void) { return 0; }
+int game_engine_king_write_network_state(void) { return 0; }
+int game_engine_oddball_read_network_state(void) { return 0; }
+int game_engine_oddball_write_network_state(void) { return 0; }
+int game_engine_play_multiplayer_sound(void) { return 0; }
+int game_engine_race_read_network_state(void) { return 0; }
+int game_engine_race_write_network_state(void) { return 0; }
+int game_engine_slayer_read_network_state(void) { return 0; }
+int game_engine_slayer_write_network_state(void) { return 0; }
+int game_engine_update_multiplayer_sound(void) { return 0; }
+int game_modes_engine(void) { return 0; }
+int game_modes_motion_sensor_hidden(void) { return 0; }
+int game_modes_options_default(void) { return 0; }
+int game_modes_player_killed(void) { return 0; }
+int game_modes_postspawn(void) { return 0; }
+int game_modes_variant_mode(void) { return 0; }
+int global_network_game_client_get(void) { return 0; }
+int global_network_game_server_get(void) { return 0; }
+int halo_scoreboard_pointer_update(void) { return 0; }
+int halo_server_mode(void) { return 0; }
+int hud_get_font_index(void) { return 0; }
+int hud_get_nav_point_render_type(void) { return 0; }
+int hud_get_text_color(void) { return 0; }
+int hud_player_name_color(void) { return 0; }
+int infection_enabled(void) { return 0; }
+int infection_read_network_state(void) { return 0; }
+int infection_remaining_ticks(void) { return 0; }
+int infection_write_network_state(void) { return 0; }
+int interface_get_tag_index(void) { return 0; }
+int latency_meter_color(void) { return 0; }
+int latency_meter_player_ping(void) { return 0; }
+int latency_meter_shown(void) { return 0; }
+int line_from_planes3d(void) { return 0; }
+int main_get_multiplayer_map_name(void) { return 0; }
+int main_get_seconds_elapsed(void) { return 0; }
+int main_reset_map(void) { return 0; }
+int main_set_multiplayer_map_name(void) { return 0; }
+int matrix4x3_inverse_transform_point(void) { return 0; }
+int network_chat_host_mute(void) { return 0; }
+int network_chat_host_mute_minutes(void) { return 0; }
+int network_coop_ally_friendly_fire(void) { return 0; }
+int network_coop_players_friendly_fire(void) { return 0; }
+int network_damage_killer_score(void) { return 0; }
+int network_distributed_player_killed(void) { return 0; }
+int network_game_abort(void) { return 0; }
+int network_game_get_game(void) { return 0; }
+int network_game_is_active(void) { return 0; }
+int network_game_server_get_game(void) { return 0; }
+int network_game_server_reset_to_pregame(void) { return 0; }
+int network_game_server_switch_to_postgame(void) { return 0; }
+int network_voice_available(void) { return 0; }
+int network_voice_draw_icon(void) { return 0; }
+int network_voice_machine_muted(void) { return 0; }
+int network_voice_machine_speaking(void) { return 0; }
+int network_voice_mute_machine(void) { return 0; }
+int network_votekick_available(void) { return 0; }
+int network_votekick_get_status(void) { return 0; }
+int network_votekick_host(void) { return 0; }
+int network_votekick_host_kick(void) { return 0; }
+int network_votekick_request(void) { return 0; }
+int object_bounds_cache_missed_by_vector(void) { return 0; }
+int object_bounds_cache_out_of_reach(void) { return 0; }
+int offset_rectangle2d(void) { return 0; }
+int perpendicular2d(void) { return 0; }
+int physics_get_features_in_sphere(void) { return 0; }
+int physics_test_point(void) { return 0; }
+int physics_test_vector(void) { return 0; }
+int platform_scoreboard_scroll(void) { return 0; }
+int player_control_get_facing_direction(void) { return 0; }
+int player_control_get_target_object_index(void) { return 0; }
+struct wii_rgb { float r, g, b; };
+struct wii_rgb player_profile_get_rgb_color(long index)
+{
+	struct wii_rgb color = { 1.f, 1.f, 1.f };
+
+	(void)index;
+	return color;
+}
+int player_ui_game_variant_specified(void) { return 0; }
+int point_from_planes3d(void) { return 0; }
+int rasterizer_draw_unicode_string(void) { return 0; }
+int rasterizer_text_set_scale(void) { return 0; }
+int render_debug_cylinder(void) { return 0; }
+int render_ui_widgets_postgame(void) { return 0; }
+int rumble_clear_all_now(void) { return 0; }
+int rumble_player_clear(void) { return 0; }
+int server_director_first_level(void) { return 0; }
+int sound_class_set_gain(void) { return 0; }
+int structure_cluster_mark(void) { return 0; }
+int structure_cluster_marker_begin(void) { return 0; }
+int structure_cluster_marker_end(void) { return 0; }
+int system_milliseconds(void) { return 0; }
+int touch_postgame_draw(void) { return 0; }
+int touch_postgame_pressed(void) { return 0; }
+int usnprintf(void) { return 0; }
+int usprintf(void) { return 0; }
+int ustring_format_checked(void) { return 0; }

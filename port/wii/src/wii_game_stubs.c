@@ -76,14 +76,6 @@ int scenario_load(char const *name)
 	return 1;
 }
 
-struct game_variant *game_engine_get_variant_by_name(struct game_variant *variant, char const *name)
-{
-	(void)name;
-	if (variant)
-		memset(variant, 0, sizeof(*variant));
-	return variant;
-}
-
 void wii_game_boot(void)
 {
 	struct game_options options;
@@ -115,21 +107,6 @@ void game_time_initialize_for_new_map(void) {}
 void game_time_dispose_from_old_map(void) {}
 void game_time_dispose(void) {}
 void game_statistics_start(void) {}
-void game_engine_dispose(void) {}
-void game_engine_dispose_from_old_map(void) {}
-void game_engine_game_starting(void) {}
-void game_engine_initialize(struct game_variant *variant) { (void)variant; }
-void game_engine_initialize_for_new_map(void) {}
-void game_engine_player_added(long player_index) { (void)player_index; }
-boolean game_engine_running(void) { return FALSE; }
-void game_engine_update(void) {}
-void game_variant_options_default(struct game_variant const *variant, struct game_variant_options *options)
-{
-	(void)variant;
-	if (options)
-		memset(options, 0, sizeof(*options));
-}
-
 int antennas_update(void) { return 0; }
 int bink_playback_dispose(void) { return 0; }
 int bink_playback_initialize(void) { return 0; }
