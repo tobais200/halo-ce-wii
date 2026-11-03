@@ -15,6 +15,9 @@
 #include "ai/actor_definitions.h"
 #include "items/projectile_definitions.h"
 #include "items/equipment_definitions.h"
+#include "objects/damage_effect_definitions.h"
+#include "physics/collision_model_definitions.h"
+#include "physics/collision_bsp_definitions.h"
 #include "wii_tag_cache.h"
 #include "wii_collision.h"
 
@@ -78,6 +81,12 @@ static int location_published;
 static int magazine_rounds;
 static int grenade_count;
 static long projectile_index = -1;
+static long damage_index = -1;
+struct projectile_material_response_definition default_projectile_material_response = {
+	.default_effect.index = -1,
+	.potential_effect.index = -1,
+	.detonation_effect.index = -1
+};
 
 static uint32_t read_le32(uint8_t const *p)
 {
@@ -699,7 +708,23 @@ static int load_biped(int slot)
 	biped->object.forced_shader_permutation_index = NONE;
 	read_ref(raw + offsetof(struct biped_definition, object.model), &biped->object.model);
 	read_ref(raw + offsetof(struct biped_definition, object.animation_graph), &biped->object.animation_graph);
-	ref_clear(&biped->object.collision_model);
+	{
+		uint8_t coll_raw[16];
+		void *model;
+
+		ref_clear(&biped->object.collision_model);
+		if (pull_va(slots[slot].base_va + offsetof(struct biped_definition, object.collision_model), coll_raw, 16) == 0) {
+			int coll_slot;
+
+			read_ref(coll_raw, &biped->object.collision_model);
+			coll_slot = find_datum((uint32_t)biped->object.collision_model.index);
+			model = coll_slot >= 0 ? wii_collision_load_model(slots[coll_slot].base_va) : NULL;
+			if (model)
+				slots[coll_slot].base = model;
+			else
+				ref_clear(&biped->object.collision_model);
+		}
+	}
 	ref_clear(&biped->object.physics);
 	ref_clear(&biped->object.modifier_shader);
 	ref_clear(&biped->object.creation_effect);
@@ -734,6 +759,36 @@ static int load_biped(int slot)
 		ref_clear(&biped->object.animation_graph);
 	slots[slot].base = biped;
 	native_biped = biped;
+	return 0;
+}
+
+static int load_damage(int slot)
+{
+	struct damage_effect_definition *effect;
+	uint8_t raw[12];
+
+	if (slot < 0 || slots[slot].group != FCC('j', 'p', 't', '!'))
+		return -1;
+	if (slots[slot].base)
+		return 0;
+	effect = bump(sizeof(*effect));
+	if (!effect)
+		return -1;
+	if (pull_va(slots[slot].base_va + offsetof(struct damage_effect_definition, damage.damage_minimum), raw, 12) == 0) {
+		int modifier;
+
+		effect->damage.damage_minimum = read_lef(raw);
+		effect->damage.damage_lower_bound = read_lef(raw + 4);
+		effect->damage.damage_upper_bound = read_lef(raw + 8);
+		for (modifier = 0; modifier < MAXIMUM_NUMBER_OF_MATERIAL_TYPES; modifier++) {
+			if (pull_va(slots[slot].base_va + offsetof(struct damage_effect_definition, damage.material_modifiers) + (uint32_t)modifier * 4u, raw, 4) != 0)
+				break;
+			effect->damage.material_modifiers[modifier] = read_lef(raw);
+		}
+	}
+	ref_clear(&effect->sound);
+	slots[slot].base = effect;
+	damage_index = (long)slots[slot].datum;
 	return 0;
 }
 
@@ -772,8 +827,27 @@ static int load_projectile(int slot)
 	ref_clear(&projectile->projectile.effect);
 	ref_clear(&projectile->projectile.detonation_started);
 	ref_clear(&projectile->projectile.flyby_sound);
-	ref_clear(&projectile->projectile.attached_detonation_damage);
-	ref_clear(&projectile->projectile.impact_damage);
+	{
+		uint8_t damage_raw[16];
+
+		ref_clear(&projectile->projectile.attached_detonation_damage);
+		ref_clear(&projectile->projectile.impact_damage);
+		if (pull_va(slots[slot].base_va + offsetof(struct projectile_definition, projectile.impact_damage), damage_raw, 16) == 0) {
+			int damage_slot;
+
+			read_ref(damage_raw, &projectile->projectile.impact_damage);
+			damage_slot = find_datum((uint32_t)projectile->projectile.impact_damage.index);
+			if (damage_slot >= 0 && slots[damage_slot].group == FCC('j', 'p', 't', '!'))
+				load_damage(damage_slot);
+			else
+				ref_clear(&projectile->projectile.impact_damage);
+		}
+		if (pull_va(slots[slot].base_va + offsetof(struct projectile_definition, projectile.attached_detonation_damage), damage_raw, 16) == 0) {
+			read_ref(damage_raw, &projectile->projectile.attached_detonation_damage);
+			if (find_datum((uint32_t)projectile->projectile.attached_detonation_damage.index) < 0)
+				ref_clear(&projectile->projectile.attached_detonation_damage);
+		}
+	}
 	ref_clear(&projectile->projectile.super_detonation);
 	slots[slot].base = projectile;
 	projectile_index = (long)slots[slot].datum;
@@ -890,7 +964,16 @@ static int load_weapon(int slot)
 	}
 	ref_clear(&weapon->object.model);
 	ref_clear(&weapon->object.animation_graph);
-	ref_clear(&weapon->weapon.interface_definition.first_person_animations);
+	{
+		uint8_t anim_raw[16];
+
+		ref_clear(&weapon->weapon.interface_definition.first_person_animations);
+		if (pull_va(slots[slot].base_va + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations), anim_raw, 16) == 0) {
+			read_ref(anim_raw, &weapon->weapon.interface_definition.first_person_animations);
+			if (load_animation(find_datum((uint32_t)weapon->weapon.interface_definition.first_person_animations.index)) != 0)
+				ref_clear(&weapon->weapon.interface_definition.first_person_animations);
+		}
+	}
 	ref_clear(&weapon->weapon.ready_effect);
 	ref_clear(&weapon->object.collision_model);
 	ref_clear(&weapon->object.physics);
@@ -1388,6 +1471,7 @@ void wii_tag_cache_unmount(void)
 	magazine_rounds = 0;
 	grenade_count = 0;
 	projectile_index = -1;
+	damage_index = -1;
 	wii_collision_reset();
 	memset(slots, 0, sizeof(slots));
 }
@@ -1437,6 +1521,11 @@ int wii_tag_cache_grenade_count(void)
 long wii_tag_cache_projectile_index(void)
 {
 	return projectile_index;
+}
+
+long wii_tag_cache_damage_index(void)
+{
+	return damage_index;
 }
 
 int wii_tag_cache_pull(uint32_t va, void *destination, uint32_t size)
@@ -1583,6 +1672,10 @@ int wii_tag_cache_self_test(void)
 	uint32_t variant_at;
 	uint32_t actor_at;
 	uint32_t sbsp_at;
+	uint32_t coll_at;
+	uint32_t coll_node_at;
+	uint32_t material_at;
+	uint32_t damage_at;
 	uint32_t collide_at;
 	uint32_t plane_at;
 	uint32_t node3d_at;
@@ -1594,14 +1687,14 @@ int wii_tag_cache_self_test(void)
 	uint32_t upgrade_at;
 	uint32_t trigger_at;
 	uint32_t grenade_at;
-	uint32_t datum[12];
+	uint32_t datum[14];
 	float x;
 	float y;
 	float z;
 	int index;
 
 	memset(file, 0, sizeof(file));
-	cursor = 0x40 + 12u * 0x20u;
+	cursor = 0x40 + 14u * 0x20u;
 	instances = 0x40;
 	scenario_at = cursor;
 	cursor += 0x800;
@@ -1675,13 +1768,21 @@ int wii_tag_cache_self_test(void)
 	cursor += 8u;
 	surface_at = cursor;
 	cursor += 12u;
+	coll_at = cursor;
+	cursor += sizeof(struct collision_model);
+	coll_node_at = cursor;
+	cursor += sizeof(struct collision_node);
+	material_at = cursor;
+	cursor += sizeof(struct damage_resistance_material);
+	damage_at = cursor;
+	cursor += sizeof(struct damage_effect_definition);
 	if (cursor > sizeof(file))
 		return -1;
-	for (index = 0; index < 12; index++)
+	for (index = 0; index < 14; index++)
 		datum[index] = 0x12340000u | (uint32_t)index;
 	put_u32(file, TAG_BASE + instances);
 	put_u32(file + 4, datum[0]);
-	put_u32(file + 0x0c, 12);
+	put_u32(file + 0x0c, 14);
 	file[0x20] = 't';
 	file[0x21] = 'a';
 	file[0x22] = 'g';
@@ -1692,7 +1793,7 @@ int wii_tag_cache_self_test(void)
 			char a, b, c, d;
 			char p0a, p0b, p0c, p0d;
 			char p1a, p1b, p1c, p1d;
-		} rows[12] = {
+		} rows[14] = {
 			{ scenario_at, 's', 'c', 'n', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ globals_at, 'm', 'a', 't', 'g', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ biped_at, 'b', 'i', 'p', 'd', 'u', 'n', 'i', 't', 'o', 'b', 'j', 'e' },
@@ -1704,10 +1805,12 @@ int wii_tag_cache_self_test(void)
 			{ upgrade_at, 'a', 'c', 't', 'v', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ proj_at, 'p', 'r', 'o', 'j', 'o', 'b', 'j', 'e', 0, 0, 0, 0 },
 			{ eqip_at, 'e', 'q', 'i', 'p', 'i', 't', 'e', 'm', 'o', 'b', 'j', 'e' },
-			{ sbsp_at, 's', 'b', 's', 'p', 0, 0, 0, 0, 0, 0, 0, 0 }
+			{ sbsp_at, 's', 'b', 's', 'p', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ coll_at, 'c', 'o', 'l', 'l', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ damage_at, 'j', 'p', 't', '!', 0, 0, 0, 0, 0, 0, 0, 0 }
 		};
 
-		for (index = 0; index < 12; index++) {
+		for (index = 0; index < 14; index++) {
 			uint8_t *instance = file + instances + (uint32_t)index * 0x20u;
 
 			instance[0] = (uint8_t)rows[index].a;
@@ -1845,6 +1948,25 @@ int wii_tag_cache_self_test(void)
 	file[biped_at + offsetof(struct biped_definition, object.animation_graph) + 2] = 't';
 	file[biped_at + offsetof(struct biped_definition, object.animation_graph) + 3] = 'r';
 	put_u32(file + biped_at + offsetof(struct biped_definition, object.animation_graph) + 12, datum[4]);
+	file[biped_at + offsetof(struct biped_definition, object.collision_model)] = 'c';
+	file[biped_at + offsetof(struct biped_definition, object.collision_model) + 1] = 'o';
+	file[biped_at + offsetof(struct biped_definition, object.collision_model) + 2] = 'l';
+	file[biped_at + offsetof(struct biped_definition, object.collision_model) + 3] = 'l';
+	put_u32(file + biped_at + offsetof(struct biped_definition, object.collision_model) + 12, datum[12]);
+	put_f32(file + coll_at + offsetof(struct collision_model, resistance.maximum_body_vitality), 1.f);
+	put_f32(file + coll_at + offsetof(struct collision_model, resistance.maximum_shield_vitality), 1.f);
+	put_u32(file + coll_at + offsetof(struct collision_model, resistance.materials), 1);
+	put_u32(file + coll_at + offsetof(struct collision_model, resistance.materials) + 4, TAG_BASE + material_at);
+	put_f32(file + material_at + offsetof(struct damage_resistance_material, shield_damage_multiplier), 1.f);
+	put_f32(file + material_at + offsetof(struct damage_resistance_material, body_damage_multiplier), 1.f);
+	put_u32(file + coll_at + offsetof(struct collision_model, nodes), 1);
+	put_u32(file + coll_at + offsetof(struct collision_model, nodes) + 4, TAG_BASE + coll_node_at);
+	put_u16(file + coll_node_at + offsetof(struct collision_node, region_index), 0);
+	put_u16(file + coll_node_at + offsetof(struct collision_node, parent_node_index), 0xffffu);
+	put_u16(file + coll_node_at + offsetof(struct collision_node, next_sibling_node_index), 0xffffu);
+	put_u16(file + coll_node_at + offsetof(struct collision_node, first_child_node_index), 0xffffu);
+	put_u32(file + coll_node_at + offsetof(struct collision_node, bsps), 1);
+	put_u32(file + coll_node_at + offsetof(struct collision_node, bsps) + 4, TAG_BASE + collide_at);
 	put_u32(file + biped_at + offsetof(struct biped_definition, biped.flags), 1u << _biped_uses_player_physics_bit);
 	put_f32(file + biped_at + offsetof(struct biped_definition, biped.standing_camera_height), 0.62f);
 	put_f32(file + biped_at + offsetof(struct biped_definition, biped.crouching_camera_height), 0.4f);
@@ -1889,6 +2011,30 @@ int wii_tag_cache_self_test(void)
 	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.collision_radius), 0.05f);
 	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.timer_lower_bound), 1.f);
 	put_f32(file + proj_at + offsetof(struct projectile_definition, projectile.timer_upper_bound), 1.f);
+	file[proj_at + offsetof(struct projectile_definition, projectile.impact_damage)] = 'j';
+	file[proj_at + offsetof(struct projectile_definition, projectile.impact_damage) + 1] = 'p';
+	file[proj_at + offsetof(struct projectile_definition, projectile.impact_damage) + 2] = 't';
+	file[proj_at + offsetof(struct projectile_definition, projectile.impact_damage) + 3] = '!';
+	put_u32(file + proj_at + offsetof(struct projectile_definition, projectile.impact_damage) + 12, datum[13]);
+	file[proj_at + offsetof(struct projectile_definition, projectile.attached_detonation_damage)] = 'j';
+	file[proj_at + offsetof(struct projectile_definition, projectile.attached_detonation_damage) + 1] = 'p';
+	file[proj_at + offsetof(struct projectile_definition, projectile.attached_detonation_damage) + 2] = 't';
+	file[proj_at + offsetof(struct projectile_definition, projectile.attached_detonation_damage) + 3] = '!';
+	put_u32(file + proj_at + offsetof(struct projectile_definition, projectile.attached_detonation_damage) + 12, datum[13]);
+	put_f32(file + damage_at + offsetof(struct damage_effect_definition, damage.damage_minimum), 1.f);
+	put_f32(file + damage_at + offsetof(struct damage_effect_definition, damage.damage_lower_bound), 1.f);
+	put_f32(file + damage_at + offsetof(struct damage_effect_definition, damage.damage_upper_bound), 1.f);
+	{
+		int modifier;
+
+		for (modifier = 0; modifier < MAXIMUM_NUMBER_OF_MATERIAL_TYPES; modifier++)
+			put_f32(file + damage_at + offsetof(struct damage_effect_definition, damage.material_modifiers) + (uint32_t)modifier * 4u, 1.f);
+	}
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations)] = 'a';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 1] = 'n';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 2] = 't';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 3] = 'r';
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 12, datum[4]);
 	put_u16(file + eqip_at + offsetof(struct equipment_definition, equipment.powerup_type), 1);
 	if (wii_tag_cache_mount(memory_read, file, sizeof(file), 0, sizeof(file)) != 0)
 		return -1;
@@ -1906,6 +2052,10 @@ int wii_tag_cache_self_test(void)
 	if (!wii_collision_ready() || !wii_collision_hits_floor())
 		return -1;
 	if (wii_tag_cache_projectile_index() == -1 || wii_tag_cache_grenade_count() < 1)
+		return -1;
+	if (wii_tag_cache_damage_index() == -1)
+		return -1;
+	if (!wii_collision_model_hits(wii_tag_cache_get((long)FCC('c', 'o', 'l', 'l'), (long)datum[12])))
 		return -1;
 	if (!wii_tag_cache_get((long)FCC('b', 'i', 'p', 'd'), (long)datum[2]))
 		return -1;

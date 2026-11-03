@@ -3,11 +3,19 @@
  * global_collision_bsp at it. A tree that does not fit is left unloaded.
  */
 #include "cseries/cseries.h"
+#include "game/game_globals.h"
+#include "objects/damage.h"
+#include "objects/damage_effect_definitions.h"
+#include "objects/objects.h"
+#include "physics/collision_bsp.h"
 #include "physics/collision_bsp_definitions.h"
+#include "physics/collision_model_definitions.h"
+#include "physics/collision_models.h"
 #include "physics/collisions.h"
 #include "wii_collision.h"
 #include "wii_tag_cache.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,7 +32,9 @@ enum {
 	WII_COLLIDE_MAX_BSP2D = 32768,
 	WII_COLLIDE_MAX_SURFACES = 32768,
 	WII_COLLIDE_MAX_EDGES = 65536,
-	WII_COLLIDE_MAX_VERTICES = 32768
+	WII_COLLIDE_MAX_VERTICES = 32768,
+	WII_COLLIDE_MAX_MODEL_NODES = 32,
+	WII_COLLIDE_MAX_NODE_BSPS = 2
 };
 
 struct collision_leaf {
@@ -302,6 +312,103 @@ static int read_bsp(uint32_t bsp_va, struct collision_bsp *bsp)
 	return 0;
 }
 
+static void ref_clear(struct tag_reference *reference)
+{
+	reference->group_tag = 0;
+	reference->name = NULL;
+	reference->name_length = 0;
+	reference->index = NONE;
+}
+
+void *wii_collision_load_model(uint32_t coll_va)
+{
+	struct collision_model *model;
+	uint8_t raw[8];
+	int node_count;
+	uint32_t node_va;
+	struct collision_node *nodes;
+	int node_index;
+
+	if (ensure_arena() != 0)
+		return NULL;
+	model = bump(sizeof(*model));
+	if (!model)
+		return NULL;
+	if (wii_tag_cache_pull(coll_va + offsetof(struct collision_model, resistance.maximum_body_vitality), raw, 4) == 0)
+		model->resistance.maximum_body_vitality = read_lef(raw);
+	if (wii_tag_cache_pull(coll_va + offsetof(struct collision_model, resistance.maximum_shield_vitality), raw, 4) == 0)
+		model->resistance.maximum_shield_vitality = read_lef(raw);
+	ref_clear(&model->resistance.localized_damage_effect);
+	ref_clear(&model->resistance.area_damage_effect);
+	ref_clear(&model->resistance.body_damaged_effect);
+	ref_clear(&model->resistance.body_depleted_effect);
+	ref_clear(&model->resistance.body_destroyed_effect);
+	ref_clear(&model->resistance.shield_damaged_effect);
+	ref_clear(&model->resistance.shield_depleted_effect);
+	ref_clear(&model->resistance.shield_recharging_effect);
+	if (pull_block(coll_va + offsetof(struct collision_model, resistance.materials), &node_count, &node_va) == 0 && node_count > 0) {
+		struct damage_resistance_material *materials;
+		int count = node_count > 4 ? 4 : node_count;
+
+		materials = bump((uint32_t)count * sizeof(*materials));
+		if (materials) {
+			for (node_index = 0; node_index < count; node_index++) {
+				uint8_t material_raw[0x48];
+
+				if (wii_tag_cache_pull(node_va + (uint32_t)node_index * sizeof(*materials), material_raw, sizeof(material_raw)) != 0)
+					break;
+				materials[node_index].shield_damage_multiplier = read_lef(material_raw + offsetof(struct damage_resistance_material, shield_damage_multiplier));
+				materials[node_index].body_damage_multiplier = read_lef(material_raw + offsetof(struct damage_resistance_material, body_damage_multiplier));
+				materials[node_index].material_type = read_les16(material_raw + offsetof(struct damage_resistance_material, material_type));
+			}
+			model->resistance.materials.count = count;
+			model->resistance.materials.address = materials;
+		}
+	}
+	model->resistance.indirect_damage_material_index = 0;
+	if (pull_block(coll_va + offsetof(struct collision_model, nodes), &node_count, &node_va) != 0 || node_count < 1)
+		return model;
+	if (node_count > WII_COLLIDE_MAX_MODEL_NODES)
+		node_count = WII_COLLIDE_MAX_MODEL_NODES;
+	nodes = bump((uint32_t)node_count * sizeof(*nodes));
+	if (!nodes)
+		return model;
+	for (node_index = 0; node_index < node_count; node_index++) {
+		uint8_t node_raw[sizeof(struct collision_node)];
+		int bsp_count;
+		uint32_t bsp_va;
+		struct collision_bsp *bsps;
+		int bsp_index;
+
+		if (wii_tag_cache_pull(node_va + (uint32_t)node_index * sizeof(node_raw), node_raw, sizeof(node_raw)) != 0)
+			break;
+		memcpy(nodes[node_index].name, node_raw, 32);
+		nodes[node_index].region_index = read_les16(node_raw + offsetof(struct collision_node, region_index));
+		nodes[node_index].parent_node_index = read_les16(node_raw + offsetof(struct collision_node, parent_node_index));
+		nodes[node_index].next_sibling_node_index = read_les16(node_raw + offsetof(struct collision_node, next_sibling_node_index));
+		nodes[node_index].first_child_node_index = read_les16(node_raw + offsetof(struct collision_node, first_child_node_index));
+		nodes[node_index].runtime_damage_part = read_les16(node_raw + offsetof(struct collision_node, runtime_damage_part));
+		bsp_count = read_les32(node_raw + offsetof(struct collision_node, bsps));
+		bsp_va = read_le32(node_raw + offsetof(struct collision_node, bsps) + 4);
+		if (bsp_count < 0)
+			bsp_count = 0;
+		if (bsp_count > WII_COLLIDE_MAX_NODE_BSPS)
+			bsp_count = WII_COLLIDE_MAX_NODE_BSPS;
+		bsps = bsp_count ? bump((uint32_t)bsp_count * sizeof(*bsps)) : NULL;
+		if (bsp_count && !bsps)
+			bsp_count = 0;
+		for (bsp_index = 0; bsp_index < bsp_count; bsp_index++) {
+			if (read_bsp(bsp_va + (uint32_t)bsp_index * sizeof(*bsps), &bsps[bsp_index]) != 0)
+				memset(&bsps[bsp_index], 0, sizeof(bsps[bsp_index]));
+		}
+		nodes[node_index].bsps.count = bsp_count;
+		nodes[node_index].bsps.address = bsps;
+	}
+	model->nodes.count = node_count;
+	model->nodes.address = nodes;
+	return model;
+}
+
 static void put_u32(uint8_t *p, uint32_t value)
 {
 	p[0] = (uint8_t)value;
@@ -414,4 +521,64 @@ int wii_collision_hits_floor(void)
 	if (!collision_test_vector(flags, &point, &vector, NONE, &result))
 		return 0;
 	return result.type == _collision_result_structure && result.t > 0.2f && result.t < 0.8f;
+}
+
+int wii_collision_model_hits(void *model_pointer)
+{
+	struct collision_model *model = model_pointer;
+	struct collision_model_instance instance;
+	struct real_matrix4x3 matrix;
+	byte permutations[8];
+	struct collision_model_test_vector_result result;
+	real_point3d point;
+	real_vector3d vector;
+
+	if (!model || model->nodes.count < 1)
+		return 0;
+	memset(&matrix, 0, sizeof(matrix));
+	matrix.scale = 1.f;
+	matrix.forward.i = 1.f;
+	matrix.left.j = 1.f;
+	matrix.up.k = 1.f;
+	memset(permutations, 0, sizeof(permutations));
+	memset(&instance, 0, sizeof(instance));
+	instance.model = model;
+	instance.region_permutation_indices = permutations;
+	instance.matrices = &matrix;
+	instance.node_count = 1;
+	point.x = 0.f;
+	point.y = 0.f;
+	point.z = 2.f;
+	vector.i = 0.f;
+	vector.j = 0.f;
+	vector.k = -4.f;
+	memset(&result, 0, sizeof(result));
+	result.bsp_result.t = 1.f;
+	return collision_model_test_vector(&instance,
+		(1u << _collision_test_front_facing_surfaces_bit) | (1u << _collision_test_back_facing_surfaces_bit),
+		&point, &vector, &result)
+		&& result.bsp_result.t > 0.2f && result.bsp_result.t < 0.8f;
+}
+
+int wii_damage_hurts(long object_index, long damage_definition)
+{
+	struct object_datum *object;
+	float before;
+	struct damage_data damage;
+	real_vector3d down;
+
+	if (object_index == NONE || damage_definition == NONE)
+		return 0;
+	object = object_get(object_index);
+	if (!object)
+		return 0;
+	before = object->object.body_vitality + object->object.shield_vitality;
+	damage_data_new(&damage, damage_definition);
+	damage.scale = 1.f;
+	damage.multiplier = 1.f;
+	down.i = 0.f;
+	down.j = 0.f;
+	down.k = -1.f;
+	object_cause_damage(&damage, object_index, 0, NONE, 0, &down);
+	return object->object.body_vitality + object->object.shield_vitality < before;
 }

@@ -442,6 +442,8 @@ int main(void)
 			return fail("collision bsp");
 		if (wii_tag_cache_grenade_count() < 1 || wii_game_spawn_projectile() == -1)
 			return fail("projectile or grenade");
+		if (!wii_damage_hurts(wii_game_player_unit(), wii_tag_cache_damage_index()))
+			return fail("projectile damage");
 		if (wii_tag_cache_idle_rotation_w() < 0.9f)
 			return fail("biped idle animation");
 		if (wii_game_live_objects() < 3)

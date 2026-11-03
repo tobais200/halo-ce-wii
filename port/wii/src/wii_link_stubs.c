@@ -350,7 +350,6 @@ int csstrtok(void) { return 0; }
 int debug_objects_biped_autoaim_pills(void) { return 0; }
 int debug_objects_biped_physics_pills(void) { return 0; }
 int debug_objects_vehicle_powered_mass_points(void) { return 0; }
-int default_projectile_material_response(void) { return 0; }
 void *depths_of_hell;
 int device_can_change_position(void) { return 0; }
 int device_frontfacing(void) { return 0; }
@@ -376,8 +375,17 @@ int fast_vector_intersects_sphere(void) { return 0; }
 int first_person_legs_reset(void) { return 0; }
 int rasterizer_transparent_geometry_is_enclosure(void) { return 0; }
 int game_connection(void) { return 0; }
-int game_difficulty_get_team_value(void) { return 0; }
-int game_difficulty_get_value(void) { return 0; }
+float game_difficulty_get_team_value(short value_type, short team_index)
+{
+	(void)value_type;
+	(void)team_index;
+	return 1.f;
+}
+float game_difficulty_get_value(short value_type)
+{
+	(void)value_type;
+	return 1.f;
+}
 int game_looping_sound_delete(void) { return 0; }
 int game_looping_sound_new(void) { return 0; }
 int game_modes_headshot_kills(void) { return 0; }
@@ -443,7 +451,68 @@ int matrix3x3_transpose(void) { return 0; }
 int matrix4x3_from_orientation(void) { return 0; }
 int matrix4x3_from_point_and_quaternion(void) { return 0; }
 int matrix4x3_identity(void) { return 0; }
-int matrix4x3_inverse(void) { return 0; }
+struct wii_matrix4x3 {
+	float scale;
+	float n[4][3];
+};
+void matrix4x3_inverse(struct wii_matrix4x3 const *matrix, struct wii_matrix4x3 *result)
+{
+	float x;
+	float y;
+	float z;
+	float temp;
+
+	if (!matrix || !result || matrix->scale == 0.f) {
+		if (result)
+			memset(result, 0, sizeof(*result));
+		return;
+	}
+	x = -matrix->n[3][0];
+	y = -matrix->n[3][1];
+	z = -matrix->n[3][2];
+	if (matrix->scale != 1.f) {
+		float scale = 1.f / matrix->scale;
+
+		result->scale = scale;
+		x *= scale;
+		y *= scale;
+		z *= scale;
+	} else {
+		result->scale = 1.f;
+	}
+	result->n[0][0] = matrix->n[0][0];
+	result->n[1][1] = matrix->n[1][1];
+	result->n[2][2] = matrix->n[2][2];
+	temp = matrix->n[1][0];
+	result->n[1][0] = matrix->n[0][1];
+	result->n[0][1] = temp;
+	temp = matrix->n[2][0];
+	result->n[2][0] = matrix->n[0][2];
+	result->n[0][2] = temp;
+	temp = matrix->n[2][1];
+	result->n[2][1] = matrix->n[1][2];
+	result->n[1][2] = temp;
+	result->n[3][0] = x * result->n[0][0] + y * result->n[1][0] + z * result->n[2][0];
+	result->n[3][1] = x * result->n[0][1] + y * result->n[1][1] + z * result->n[2][1];
+	result->n[3][2] = x * result->n[0][2] + y * result->n[1][2] + z * result->n[2][2];
+}
+struct wii_point3 { float x, y, z; };
+struct wii_point3 *matrix4x3_transform_point(struct wii_matrix4x3 const *matrix, struct wii_point3 const *point, struct wii_point3 *result)
+{
+	float x = point->x;
+	float y = point->y;
+	float z = point->z;
+
+	if (matrix->scale != 1.f) {
+		x *= matrix->scale;
+		y *= matrix->scale;
+		z *= matrix->scale;
+	}
+	result->x = matrix->n[2][0] * z + matrix->n[1][0] * y + matrix->n[0][0] * x + matrix->n[3][0];
+	result->y = matrix->n[2][1] * z + matrix->n[1][1] * y + matrix->n[0][1] * x + matrix->n[3][1];
+	result->z = matrix->n[2][2] * z + matrix->n[1][2] * y + matrix->n[0][2] * x + matrix->n[3][2];
+	return result;
+}
 int matrix4x3_inverse_transform_normal(void) { return 0; }
 int matrix4x3_inverse_transform_vector(void) { return 0; }
 int matrix4x3_multiply(void) { return 0; }
@@ -453,7 +522,6 @@ int matrix4x3_rotation_to_quaternion(void) { return 0; }
 int matrix4x3_to_point_and_vectors(void) { return 0; }
 int matrix4x3_transform_normal(void) { return 0; }
 int matrix4x3_transform_plane(void) { return 0; }
-int matrix4x3_transform_point(void) { return 0; }
 int matrix4x3_translation(void) { return 0; }
 int model_detail_geometry_index(void) { return 0; }
 int model_detail_rules(void) { return 0; }
@@ -478,7 +546,7 @@ int network_coop_player_has_structure_bsp(void) { return 0; }
 int network_coop_tell_bsp_switch_waiting(void) { return 0; }
 int network_coop_vehicle_dropped(void) { return 0; }
 int network_damage_aftermath(void) { return 0; }
-int network_damage_deals(void) { return 0; }
+int network_damage_deals(void) { return 1; }
 int network_damage_note_grenade(void) { return 0; }
 int network_damage_player_effect(void) { return 0; }
 int network_damage_replaying_kill(void) { return 0; }
@@ -828,7 +896,13 @@ int main_get_multiplayer_map_name(void) { return 0; }
 int main_get_seconds_elapsed(void) { return 0; }
 int main_reset_map(void) { return 0; }
 int main_set_multiplayer_map_name(void) { return 0; }
-int matrix4x3_inverse_transform_point(void) { return 0; }
+struct wii_point3 *matrix4x3_inverse_transform_point(struct wii_matrix4x3 const *matrix, struct wii_point3 const *point, struct wii_point3 *result)
+{
+	struct wii_matrix4x3 inverse;
+
+	matrix4x3_inverse(matrix, &inverse);
+	return matrix4x3_transform_point(&inverse, point, result);
+}
 int network_chat_host_mute(void) { return 0; }
 int network_chat_host_mute_minutes(void) { return 0; }
 int network_coop_ally_friendly_fire(void) { return 0; }

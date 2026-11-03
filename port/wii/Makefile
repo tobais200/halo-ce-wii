@@ -39,6 +39,7 @@ opence:
 	@echo "  ai_place spawns actors from squad starting locations"
 	@echo "  weapon magazines are resident; animation_get_node_orientations samples up to 64 KiB of frame data"
 	@echo "  collisions.c tests a streamed structure collision BSP (4 MiB cap)"
+	@echo "  biped collision models (up to 32 nodes) and projectile damage effects are resident"
 	@echo "  projectile, equipment, grenade, and major-upgrade tags are resident"
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
 	@echo "Bink, networking, and the rasterizer are not compiled."
