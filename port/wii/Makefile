@@ -34,8 +34,9 @@ opence:
 	@echo "  BSP geometry and bitmap/lightmap decode (xbox_textures.c rules)"
 	@echo "  DeLa widget tags, string-list glyphs, event-handler flags"
 	@echo "  hs_runtime.c special forms on the scenario script-node array"
-	@echo "  game.c tick order; unit/weapon/AI calls are device stubs"
-	@echo "Bink, networking, the rasterizer, and players.c are not compiled."
+	@echo "  game.c tick calls players, units, bipeds, weapons, ai, objects"
+	@echo "  player_spawn places a biped at the scenario start; the tag body is a stand-in"
+	@echo "Bink, networking, the rasterizer, collisions.c, and game_engine.c are not compiled."
 
 clean:
 	@rm -rf build

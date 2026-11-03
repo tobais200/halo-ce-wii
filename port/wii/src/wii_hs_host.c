@@ -153,6 +153,28 @@ struct hs_enum_definition const hs_enum_table[] = {
 };
 
 static struct scenario wii_scenario;
+static struct player_starting_location wii_player_start;
+static int wii_have_player_start;
+
+static void apply_player_start(void)
+{
+	if (!wii_have_player_start)
+		return;
+	wii_scenario.players.count = 1;
+	wii_scenario.players.address = &wii_player_start;
+}
+
+void wii_game_set_player_start(float x, float y, float z, float facing)
+{
+	memset(&wii_player_start, 0, sizeof(wii_player_start));
+	wii_player_start.position.x = x;
+	wii_player_start.position.y = y;
+	wii_player_start.position.z = z;
+	wii_player_start.facing = facing;
+	wii_player_start.team_index = (short)NONE;
+	wii_have_player_start = 1;
+	apply_player_start();
+}
 static struct hs_script wii_scripts[WII_HS_SCRIPTS];
 static struct hs_global wii_globals[WII_HS_GLOBALS];
 static uint8_t wii_syntax[WII_HS_SYNTAX_BYTES];
@@ -349,6 +371,13 @@ struct data_array *game_state_data_new(char const *name, short maximum_count, sh
 	return data_new(name, maximum_count, size);
 }
 
+struct memory_pool;
+struct memory_pool *memory_pool_new(char const *name, long size);
+struct memory_pool *game_state_memory_pool_new(char const *name, long size)
+{
+	return memory_pool_new(name, size);
+}
+
 long game_time_get(void)
 {
 	return wii_time;
@@ -533,12 +562,6 @@ short seed_random_range(unsigned long *seed, short lower_bound, short upper_boun
 	return (short)(lower_bound + (short)(seed_random(seed) % (unsigned short)span));
 }
 
-long object_list_from_ai_reference(long ai_reference)
-{
-	(void)ai_reference;
-	wii_unlinked++;
-	return NONE;
-}
 
 long object_list_new(void)
 {
@@ -576,11 +599,6 @@ struct object_datum *wii_object_get(long index)
 	return &missing;
 }
 
-long object_index_from_name_index(short name_index)
-{
-	(void)name_index;
-	return NONE;
-}
 
 char *tag_get_name(long tag_index)
 {
@@ -809,6 +827,7 @@ int wii_hs_mount(
 	}
 	if (!syntax_le || swap_syntax(syntax_le, syntax_bytes) != 0) {
 		note("syntax data is not a script node array");
+		apply_player_start();
 		return -1;
 	}
 	if (scripts_le && script_count > 0)
@@ -821,11 +840,13 @@ int wii_hs_mount(
 	}
 	if (!wii_runtime_ready) {
 		note("no script threads");
+		apply_player_start();
 		return -1;
 	}
 	global_scenario_index = 0;
 	hs_runtime_initialize_for_new_map();
 	wii_mounted = 1;
+	apply_player_start();
 	hs_runtime_update();
 	return 0;
 }

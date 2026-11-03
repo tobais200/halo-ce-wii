@@ -32,14 +32,14 @@ Measured with `powerpc-eabi-size` / `powerpc-eabi-readelf` on the `boot.elf` pro
 
 | Section | Bytes |
 | --- | --- |
-| `boot.dol` file | 592640 |
-| `powerpc-eabi-size` text | 461308 |
-| `powerpc-eabi-size` data | 130990 |
-| `powerpc-eabi-size` bss | 1071040 |
+| `boot.dol` file | 1357440 |
+| `powerpc-eabi-size` text | 1066148 |
+| `powerpc-eabi-size` data | 290990 |
+| `powerpc-eabi-size` bss | 1295040 |
 
-`.bss` includes libogc (`memb_mem_pool_pbufs` 0x32280, `s_mainStack` 0x20000, `ram_block` 0x10010) and the script VM's fixed buffers: the retail node array (`0x38 + 19001 * 0x14` = 380076 bytes), 64 KiB of script strings, and the script and global tables (512 records each). Thread storage (`0x100 * 0x218`) and the global datum array (`0x400 * 8`) are `malloc`'d when a map's scripts mount, on the MEM1 heap. The 256 KiB stream window is still allocated at runtime from MEM2.
+`.bss` includes libogc (`memb_mem_pool_pbufs` 0x32280, `s_mainStack` 0x20000, `ram_block` 0x10010) and the script VM's fixed buffers: the retail node array (`0x38 + 19001 * 0x14` = 380076 bytes), 64 KiB of script strings, and the script and global tables (512 records each). Thread storage (`0x100 * 0x218`) and the global datum array (`0x400 * 8`) are `malloc`'d when a map's scripts mount, on the MEM1 heap. The 256 KiB stream window is still allocated at runtime from MEM2. `objects_initialize` also `malloc`s the object pool at the Xbox size, 1 MiB (`0x100000`), instead of the desktop 8 MiB. That pool is not in `.bss`. A MEM1 `malloc` of 1 MiB can still fail once the DOL, framebuffers, and script VM are up; this tree was not booted on hardware, so that failure is not measured.
 
-`make host-check` does not boot a Wii. It checks the little-endian fourcc fix, a synthetic XDVDFS image, LZ4, DeLa, and that `hs_runtime.c` evaluates `(set n (+ 1 2))` to 3. The caps still fit in 64 MiB.
+`make host-check` does not boot a Wii. It checks the little-endian fourcc fix, a synthetic XDVDFS image, LZ4, DeLa, that `hs_runtime.c` evaluates `(set n (+ 1 2))` to 3, and that one `game_tick` leaves a player unit after `player_spawn` at a synthetic start `(1, 2, 3)`. The caps still fit in 64 MiB.
 
 ### Streaming
 
@@ -63,6 +63,6 @@ La pantalla imprime el techo y luego el tamaño real de las arenas. Esas arenas 
 
 No se llama a `custom_edition_cache_load` ni a `physical_memory_allocate`. El primero pide 23 MiB de tags y puede reservar un BSP entero. El segundo usa direcciones fijas de Xbox dentro de MEM1.
 
-El `boot.dol` de esta compilación pesa 592640 bytes. El `.bss` es de unos 1046 KiB: libogc/BTE más el arreglo fijo de 19001 nodos de script (380076 bytes) y 64 KiB de cadenas. Los hilos de script se piden con `malloc` al montar un mapa. `game.c` añade poco BSS: sus sustitutos no reservan los pools de objetos ni de IA.
+El `boot.dol` de esta compilación pesa 1357440 bytes. El `.bss` es de 1295040 bytes: libogc/BTE más el arreglo fijo de 19001 nodos de script (380076 bytes) y 64 KiB de cadenas. Los hilos de script se piden con `malloc` al montar un mapa. El pool de objetos es otro `malloc`, de 1 MiB (el tamaño de Xbox, no los 8 MiB de escritorio). Cabe en el techo de MEM1 solo si el heap todavía tiene ese bloque; esta compilación no se arrancó en hardware.
 
 La lectura es por trozos. El menú puede dibujar el primer structure BSP, con tope de 3072 vértices y 4096 triángulos (unos 72 KiB en MEM2). El resto del BSP sigue en la tarjeta. Solo la cabecera de 2 KiB se guarda comprimida con LZ4 en `sd:/halo-ce/cache/`. `fseek` aquí es de 32 bits: un offset por encima de 2 GiB se rechaza.

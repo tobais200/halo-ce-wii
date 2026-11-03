@@ -246,6 +246,8 @@ int wii_sim_load(
 	if (syntax && wii_hs_mount(syntax, sim->syntax_bytes, scripts, sim->script_count,
 		globals, global_count, strings, string_bytes) == 0)
 		sim->vm = 1;
+	if (sim->have_player)
+		wii_game_set_player_start(sim->player_x, sim->player_y, sim->player_z, sim->player_facing);
 	free(syntax);
 	free(scripts);
 	free(globals);
@@ -269,14 +271,12 @@ void wii_sim_frame(struct wii_sim *sim)
 	wii_game_tick();
 	note = wii_hs_note();
 	snprintf(sim->message, sizeof(sim->message),
-		"tick %u %.12s %s unlinked %d  unit %d ai %d gun %d%s%s",
+		"tick %u %.12s %s unlinked %d  unit %ld%s%s",
 		(unsigned)sim->ticks,
 		sim->startup_name[0] ? sim->startup_name : "no startup",
 		sim->vm ? "game" : "vm off",
 		sim->vm ? wii_hs_unlinked() : 0,
-		wii_game_unit_ticks,
-		wii_game_ai_ticks,
-		wii_game_weapon_ticks,
+		(long)wii_game_player_unit(),
 		sim->have_camera_height ? "  eye" : "",
 		note && note[0] ? "  " : "");
 	if (note && note[0]) {

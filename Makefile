@@ -56,7 +56,10 @@ endif
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o game.o wii_game_stubs.o
+export OPENCE_OBJS := game.o players.o cheats.o game_allegiance.o weapons.o projectiles.o equipment.o \
+	bipeds.o units.o vehicles.o ai.o actors.o encounters.o actions.o path.o props.o \
+	ai_communication.o ai_script.o objects.o object_types.o damage.o models.o first_person_weapons.o memory_pool.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o wii_game_stubs.o wii_player_spawn.o wii_link_stubs.o $(OPENCE_OBJS)
 export WII_ROOT := $(CURDIR)
 export WII_HS_CFLAGS := -std=c99 -fno-strict-aliasing -DHALO_RELEASE \
 	-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
@@ -121,25 +124,12 @@ host-check: $(OPENCE_GEN)
 		-I$(CURDIR)/third_party/OpenCE/source/memory \
 		-I$(CURDIR)/source \
 		-c $(CURDIR)/port/wii/src/wii_hs_host.c -o $(CURDIR)/build/wii_hs_host_host.o
+	@for obj in $(OPENCE_OBJS); do \
+		python3 $(CURDIR)/tools/compile_opence.py "gcc -m32" $(CURDIR) $(CURDIR)/build $$obj || exit 1; \
+	done
 	gcc -m32 -std=c99 -O2 -fshort-wchar -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
 		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
-		-include $(CURDIR)/port/wii/game_shim/wii_game_decls.h \
-		-I$(CURDIR)/port/wii/game_shim \
 		-I$(CURDIR)/port/wii/hs_shim \
-		-I$(CURDIR)/third_party/OpenCE/port/linux/include \
-		-I$(CURDIR)/third_party/OpenCE/port/linux/game \
-		-I$(CURDIR)/third_party/OpenCE/source \
-		-I$(CURDIR)/third_party/OpenCE/source/tag_files \
-		-I$(CURDIR)/third_party/OpenCE/source/math \
-		-I$(CURDIR)/third_party/OpenCE/source/cseries \
-		-I$(CURDIR)/third_party/OpenCE/source/memory \
-		-c $(CURDIR)/third_party/OpenCE/source/game/game.c -o $(CURDIR)/build/game_host.o
-	gcc -m32 -std=c99 -O2 -fshort-wchar -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
-		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
-		-I$(CURDIR)/port/wii/game_shim \
-		-I$(CURDIR)/port/wii/hs_shim \
-		-I$(CURDIR)/third_party/OpenCE/port/linux/include \
-		-I$(CURDIR)/third_party/OpenCE/port/linux/game \
 		-I$(CURDIR)/third_party/OpenCE/source \
 		-I$(CURDIR)/third_party/OpenCE/source/tag_files \
 		-I$(CURDIR)/third_party/OpenCE/source/math \
@@ -147,11 +137,31 @@ host-check: $(OPENCE_GEN)
 		-I$(CURDIR)/third_party/OpenCE/source/memory \
 		-I$(CURDIR)/source \
 		-c $(CURDIR)/port/wii/src/wii_game_stubs.c -o $(CURDIR)/build/wii_game_stubs_host.o
+	gcc -m32 -std=c99 -O2 -fshort-wchar -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
+		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
+		-include $(CURDIR)/port/wii/include/wii_sys.h \
+		-I$(CURDIR)/port/wii/hs_shim \
+		-I$(CURDIR)/port/wii/include \
+		-I$(CURDIR)/third_party/OpenCE/source \
+		-I$(CURDIR)/third_party/OpenCE/source/tag_files \
+		-I$(CURDIR)/third_party/OpenCE/source/math \
+		-I$(CURDIR)/third_party/OpenCE/source/cseries \
+		-I$(CURDIR)/third_party/OpenCE/source/memory \
+		-I$(CURDIR)/source \
+		-c $(CURDIR)/port/wii/src/wii_player_spawn.c -o $(CURDIR)/build/wii_player_spawn_host.o
+	gcc -m32 -std=c99 -O2 -fshort-wchar -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
+		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
+		-I$(CURDIR)/port/wii/hs_shim \
+		-I$(CURDIR)/third_party/OpenCE/source \
+		-I$(CURDIR)/third_party/OpenCE/source/math \
+		-I$(CURDIR)/third_party/OpenCE/source/cseries \
+		-c $(CURDIR)/port/wii/src/wii_link_stubs.c -o $(CURDIR)/build/wii_link_stubs_host.o
 	gcc -m32 -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
 		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/bsp_preview.c $(CURDIR)/source/wii_tex.c $(CURDIR)/source/wii_widget.c $(CURDIR)/source/wii_sim.c \
 		$(CURDIR)/build/hs_runtime_host.o $(CURDIR)/build/data_host.o $(CURDIR)/build/wii_hs_host_host.o \
-		$(CURDIR)/build/game_host.o $(CURDIR)/build/wii_game_stubs_host.o \
-		-o $(CURDIR)/build/host_check
+		$(CURDIR)/build/wii_game_stubs_host.o $(CURDIR)/build/wii_player_spawn_host.o $(CURDIR)/build/wii_link_stubs_host.o \
+		$(addprefix $(CURDIR)/build/,$(OPENCE_OBJS)) \
+		-lm -o $(CURDIR)/build/host_check
 	$(CURDIR)/build/host_check
 
 #---------------------------------------------------------------------------------
@@ -198,11 +208,17 @@ data.o: $(WII_ROOT)/third_party/OpenCE/source/memory/data.c
 wii_hs_host.o: $(WII_ROOT)/port/wii/src/wii_hs_host.c
 	$(WII_HS_COMPILE) -MF $(DEPSDIR)/wii_hs_host.d -c $< -o $@
 
-game.o: $(WII_ROOT)/third_party/OpenCE/source/game/game.c
-	$(CC) -MMD -MP -I$(WII_ROOT)/port/wii/game_shim -include $(WII_ROOT)/port/wii/game_shim/wii_game_decls.h -fshort-wchar $(CFLAGS) $(WII_HS_CFLAGS) -I$(WII_ROOT)/third_party/OpenCE/port/linux/include -I$(WII_ROOT)/third_party/OpenCE/port/linux/game -MF $(DEPSDIR)/game.d -c $< -o $@
+$(OPENCE_OBJS):
+	python3 $(WII_ROOT)/tools/compile_opence.py "$(CC)" $(WII_ROOT) . $@
 
 wii_game_stubs.o: $(WII_ROOT)/port/wii/src/wii_game_stubs.c
 	$(CC) -MMD -MP -fshort-wchar $(CFLAGS) $(WII_HS_CFLAGS) -MF $(DEPSDIR)/wii_game_stubs.d -c $< -o $@
+
+wii_player_spawn.o: $(WII_ROOT)/port/wii/src/wii_player_spawn.c
+	$(CC) -MMD -MP -fshort-wchar $(CFLAGS) $(WII_HS_CFLAGS) -include $(WII_ROOT)/port/wii/include/wii_sys.h -MF $(DEPSDIR)/wii_player_spawn.d -c $< -o $@
+
+wii_link_stubs.o: $(WII_ROOT)/port/wii/src/wii_link_stubs.c
+	$(CC) -MMD -MP -fshort-wchar $(CFLAGS) $(WII_HS_CFLAGS) -MF $(DEPSDIR)/wii_link_stubs.d -c $< -o $@
 
 #---------------------------------------------------------------------------------
 %.jpg.o %_jpg.h : %.jpg

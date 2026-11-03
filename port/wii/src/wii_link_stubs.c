@@ -1,0 +1,741 @@
+#include <string.h>
+short global_structure_bsp_index;
+float global_gravity;
+short global_current_collision_user_depth;
+short global_current_collision_users[32];
+void *conversation_data;
+static float wii_zero3[3];
+static float wii_up3[3] = {0.f, 0.f, 1.f};
+static float wii_down3[3] = {0.f, 0.f, -1.f};
+static float wii_fwd3[3] = {1.f, 0.f, 0.f};
+static float wii_left3[3] = {0.f, 1.f, 0.f};
+static float wii_right3[3] = {0.f, -1.f, 0.f};
+static float wii_origin3[3];
+static float wii_fwd2[2] = {1.f, 0.f};
+static float wii_zero2[2];
+static float wii_quat[4] = {0.f, 0.f, 0.f, 1.f};
+static float wii_angles[2];
+static float wii_color[4] = {1.f, 1.f, 1.f, 1.f};
+const float *global_zero_vector3d = wii_zero3;
+const float *global_up3d = wii_up3;
+const float *global_down3d = wii_down3;
+const float *global_forward3d = wii_fwd3;
+const float *global_left3d = wii_left3;
+const float *global_right3d = wii_right3;
+const float *global_origin3d = wii_origin3;
+const float *global_forward2d = wii_fwd2;
+const float *global_zero_vector2d = wii_zero2;
+const float *global_identity_quaternion = wii_quat;
+const float *global_zero_angles2d = wii_angles;
+const float *global_real_argb_aqua = wii_color;
+const float *global_real_argb_black = wii_color;
+const float *global_real_argb_cyan = wii_color;
+const float *global_real_argb_darkgreen = wii_color;
+const float *global_real_argb_green = wii_color;
+const float *global_real_argb_grey = wii_color;
+const float *global_real_argb_lightblue = wii_color;
+const float *global_real_argb_magenta = wii_color;
+const float *global_real_argb_orange = wii_color;
+const float *global_real_argb_purple = wii_color;
+const float *global_real_argb_salmon = wii_color;
+const float *global_real_rgb_white = wii_color;
+int accelerate_to_position(void) { return 0; }
+int action_alert_begin(void) { return 0; }
+int action_alert_control(void) { return 0; }
+int action_alert_flush_position_indices(void) { return 0; }
+int action_alert_flush_structure_indices(void) { return 0; }
+int action_alert_perform(void) { return 0; }
+int action_alert_setup(void) { return 0; }
+int action_alert_update(void) { return 0; }
+int action_avoid_begin(void) { return 0; }
+int action_avoid_control(void) { return 0; }
+int action_avoid_end(void) { return 0; }
+int action_avoid_perform(void) { return 0; }
+int action_avoid_setup(void) { return 0; }
+int action_avoid_update(void) { return 0; }
+int action_charge_begin(void) { return 0; }
+int action_charge_control(void) { return 0; }
+int action_charge_is_leaping(void) { return 0; }
+int action_charge_perform(void) { return 0; }
+int action_charge_setup(void) { return 0; }
+int action_charge_update(void) { return 0; }
+int action_converse_begin(void) { return 0; }
+int action_converse_control(void) { return 0; }
+int action_converse_end(void) { return 0; }
+int action_converse_perform(void) { return 0; }
+int action_converse_replace_prop(void) { return 0; }
+int action_converse_setup(void) { return 0; }
+int action_converse_update(void) { return 0; }
+int action_fight_begin(void) { return 0; }
+int action_fight_control(void) { return 0; }
+int action_fight_end(void) { return 0; }
+int action_fight_perform(void) { return 0; }
+int action_fight_setup(void) { return 0; }
+int action_fight_update(void) { return 0; }
+int action_flee_begin(void) { return 0; }
+int action_flee_control(void) { return 0; }
+int action_flee_end(void) { return 0; }
+int action_flee_flush_position_indices(void) { return 0; }
+int action_flee_modify_color(void) { return 0; }
+int action_flee_perform(void) { return 0; }
+int action_flee_replace_prop(void) { return 0; }
+int action_flee_setup(void) { return 0; }
+int action_flee_update(void) { return 0; }
+int action_guard_begin(void) { return 0; }
+int action_guard_control(void) { return 0; }
+int action_guard_end(void) { return 0; }
+int action_guard_flush_position_indices(void) { return 0; }
+int action_guard_flush_structure_indices(void) { return 0; }
+int action_guard_modify_color(void) { return 0; }
+int action_guard_perform(void) { return 0; }
+int action_guard_replace_prop(void) { return 0; }
+int action_guard_setup_current_position(void) { return 0; }
+int action_guard_setup_find_position(void) { return 0; }
+int action_guard_setup_from_combat_transition(void) { return 0; }
+int action_guard_setup_from_fleeing(void) { return 0; }
+int action_guard_setup_postcombat(void) { return 0; }
+int action_guard_update(void) { return 0; }
+int action_obey_advance_command_list(void) { return 0; }
+int action_obey_begin(void) { return 0; }
+int action_obey_command_list_setup(void) { return 0; }
+int action_obey_control(void) { return 0; }
+int action_obey_end(void) { return 0; }
+int action_obey_flush_command_indices(void) { return 0; }
+int action_obey_perform(void) { return 0; }
+int action_obey_update(void) { return 0; }
+int action_search_begin(void) { return 0; }
+int action_search_control(void) { return 0; }
+int action_search_flush_position_indices(void) { return 0; }
+int action_search_perform(void) { return 0; }
+int action_search_setup_pursuit(void) { return 0; }
+int action_search_setup_target(void) { return 0; }
+int action_search_setup_undirected(void) { return 0; }
+int action_search_update(void) { return 0; }
+int action_sleep_control(void) { return 0; }
+int action_uncover_begin(void) { return 0; }
+int action_uncover_control(void) { return 0; }
+int action_uncover_flush_position_indices(void) { return 0; }
+int action_uncover_modify_color(void) { return 0; }
+int action_uncover_perform(void) { return 0; }
+int action_uncover_setup_pursuit(void) { return 0; }
+int action_uncover_setup_target(void) { return 0; }
+int action_uncover_update(void) { return 0; }
+int action_vehicle_begin(void) { return 0; }
+int action_vehicle_control(void) { return 0; }
+int action_vehicle_perform(void) { return 0; }
+int action_vehicle_setup_impromptu(void) { return 0; }
+int action_vehicle_setup_specific(void) { return 0; }
+int action_vehicle_update(void) { return 0; }
+int action_wait_begin(void) { return 0; }
+int action_wait_control(void) { return 0; }
+int action_wait_perform(void) { return 0; }
+int action_wait_setup(void) { return 0; }
+int action_wait_update(void) { return 0; }
+int actor_aim_grenade(void) { return 0; }
+int actor_aim_jump(void) { return 0; }
+int actor_aim_projectile(void) { return 0; }
+int actor_audibility_at_point(void) { return 0; }
+int actor_berserk(void) { return 0; }
+int actor_clear_discarded_firing_positions(void) { return 0; }
+int actor_combat_check_collateral_damage(void) { return 0; }
+int actor_combat_disable_bursts(void) { return 0; }
+int actor_combat_find_grenade_target(void) { return 0; }
+int actor_combat_fire_wildly(void) { return 0; }
+int actor_combat_get_firing_variant_definition(void) { return 0; }
+int actor_combat_plan_grenade_trajectory(void) { return 0; }
+int actor_combat_update(void) { return 0; }
+int actor_compute_prop_target_weight(void) { return 0; }
+int actor_compute_prop_unopposable(void) { return 0; }
+int actor_conversation_control(void) { return 0; }
+void *actor_debug_array;
+int actor_destination_update(void) { return 0; }
+int actor_discard_firing_position(void) { return 0; }
+int actor_emotion_update(void) { return 0; }
+int actor_expected_acknowledgement(void) { return 0; }
+int actor_firing_blindly(void) { return 0; }
+int actor_get_firing_position_group(void) { return 0; }
+int actor_get_perception_knowledge(void) { return 0; }
+int actor_look_affect_movement(void) { return 0; }
+int actor_look_secondary(void) { return 0; }
+int actor_look_secondary_stop(void) { return 0; }
+int actor_look_update(void) { return 0; }
+int actor_move_animation_busy(void) { return 0; }
+int actor_move_animation_impulse(void) { return 0; }
+int actor_move_halt(void) { return 0; }
+int actor_move_initialize(void) { return 0; }
+int actor_move_try_evasion_direction(void) { return 0; }
+int actor_move_try_evasion_vector(void) { return 0; }
+int actor_move_update(void) { return 0; }
+int actor_nearby_firing_positions(void) { return 0; }
+int actor_path_at_destination(void) { return 0; }
+int actor_path_has_path(void) { return 0; }
+int actor_perception_abandoned_search(void) { return 0; }
+int actor_perception_acknowledge(void) { return 0; }
+int actor_perception_become_acknowledged(void) { return 0; }
+int actor_perception_create_orphan_from_friend(void) { return 0; }
+int actor_perception_desire_prop(void) { return 0; }
+int actor_perception_find_prop_pathfinding_location(void) { return 0; }
+int actor_perception_find_recent_damaging_prop_index(void) { return 0; }
+int actor_perception_find_sense_position(void) { return 0; }
+int actor_perception_tried_to_search(void) { return 0; }
+int actor_perception_tried_to_uncover(void) { return 0; }
+int actor_perception_update(void) { return 0; }
+int actor_select_firing_position(void) { return 0; }
+int actor_situation_try_new_target(void) { return 0; }
+int actor_situation_update(void) { return 0; }
+int actor_stimulus_bumped(void) { return 0; }
+int actor_stimulus_clear(void) { return 0; }
+int actor_stimulus_damage(void) { return 0; }
+int actor_stimulus_enter_combat_friend_in_combat(void) { return 0; }
+int actor_stimulus_environmental_noise(void) { return 0; }
+int actor_stimulus_heard_shooting(void) { return 0; }
+int actor_stimulus_maneuvering(void) { return 0; }
+int actor_stimulus_prop_fleeing(void) { return 0; }
+int actor_stimulus_prop_just_killed(void) { return 0; }
+int actor_stimulus_vehicle_eviction(void) { return 0; }
+int actor_stimulus_was_surprised(void) { return 0; }
+int actor_stimulus_weapon_detonation(void) { return 0; }
+int actor_stimulus_weapon_impact(void) { return 0; }
+int actor_type_decide_action(void) { return 0; }
+int actor_type_get_name(void) { return 0; }
+int actor_type_get_pursuit_controller(void) { return 0; }
+int actor_type_get_race(void) { return 0; }
+int actor_type_get_swarm(void) { return 0; }
+int actor_type_get_when_to_pursue(void) { return 0; }
+int actor_type_get_when_to_search_at_target(void) { return 0; }
+int actor_type_get_when_to_search_pursuit(void) { return 0; }
+int actor_type_initialize(void) { return 0; }
+int actor_types_initialize(void) { return 0; }
+int actor_type_swarm_control(void) { return 0; }
+int actor_visibility_at_point(void) { return 0; }
+/* selected_squad_index is the int at 0x34. NONE so spawn uses scenario->players. */
+int ai_debug[32] = { [13] = -1 };
+int ai_debug_actor_deleted(void) { return 0; }
+int ai_debug_describe_actor(void) { return 0; }
+int ai_debug_dispose(void) { return 0; }
+int ai_debug_dispose_from_old_map(void) { return 0; }
+int ai_debug_initialize(void) { return 0; }
+int ai_debug_initialize_for_new_map(void) { return 0; }
+int ai_debug_lineoffire_addpill(void) { return 0; }
+int ai_debug_lineoffire_new(void) { return 0; }
+int ai_debug_lineoffire_success(void) { return 0; }
+int ai_debug_lineofsight(void) { return 0; }
+int ai_debug_select_actor(void) { return 0; }
+int ai_debug_select_encounter(void) { return 0; }
+int ai_debug_update(void) { return 0; }
+void *ai_globals;
+int aiming_screen_apply(void) { return 0; }
+void *ai_profile;
+int ai_profile_dispose(void) { return 0; }
+int ai_profile_dispose_from_old_map(void) { return 0; }
+int ai_profile_initialize(void) { return 0; }
+int ai_profile_initialize_for_new_map(void) { return 0; }
+int ai_profile_update(void) { return 0; }
+int angle_between_vectors3d(void) { return 0; }
+int angular_accelerate_to_position(void) { return 0; }
+int animation_choose_random_permutation_internal(void) { return 0; }
+int animation_get_frame_info(void) { return 0; }
+int animation_get_node_orientations(void) { return 0; }
+int animation_get_root_matrix(void) { return 0; }
+int animation_get_root_velocity(void) { return 0; }
+int animation_get_x_offsets(void) { return 0; }
+int animation_graph_get_animation_by_name(void) { return 0; }
+int animation_graph_node_matrices_from_orientations(void) { return 0; }
+int animation_list_get_string(void) { return 0; }
+int animation_update_internal(void) { return 0; }
+int biped_limp_noodle_get_max_relaxation_iterations(void) { return 0; }
+int biped_limp_noodle_relax_nodes_onto_environment(void) { return 0; }
+int bit_vector_and(void) { return 0; }
+int bit_vector_or(void) { return 0; }
+int bots_dispose_from_old_map(void) { return 0; }
+int bots_initialize_for_new_map(void) { return 0; }
+int bots_update_actions(void) { return 0; }
+int breakable_surface_damage(void) { return 0; }
+int breakable_surface_damage_area_of_effect(void) { return 0; }
+int breakable_surface_flags_get(void) { return 0; }
+int build_damage_animation_index(void) { return 0; }
+void *cheat;
+int cinematic_in_progress(void) { return 0; }
+int cluster_partition_delete(void) { return 0; }
+int cluster_partition_disconnect(void) { return 0; }
+int cluster_partition_get_first_cluster(void) { return 0; }
+int cluster_partition_get_first_datum(void) { return 0; }
+int cluster_partition_get_next_cluster(void) { return 0; }
+int cluster_partition_get_next_datum(void) { return 0; }
+int cluster_partition_make_invalid(void) { return 0; }
+int cluster_partition_make_valid(void) { return 0; }
+int cluster_partition_new(void) { return 0; }
+int cluster_partition_reconnect(void) { return 0; }
+int collision_bsp_test_sphere(void) { return 0; }
+int collision_bsp_test_vector(void) { return 0; }
+int collision_bsp_valid_surface_index(void) { return 0; }
+void *collision_debug_height;
+void *collision_debug_length;
+void *collision_debug_point;
+void *collision_debug_repeat;
+void *collision_debug_vector;
+void *collision_debug_width;
+int collision_features_test_vector(void) { return 0; }
+int collision_fix_pill(void) { return 0; }
+int collision_get_features_in_sphere(void) { return 0; }
+int collision_model_instance_new(void) { return 0; }
+int collision_model_test_pill(void) { return 0; }
+int collision_model_test_vector(void) { return 0; }
+int collision_move_pill(void) { return 0; }
+int collision_surface_edge_ring_continues(void) { return 0; }
+int collision_surface_find_closest_point2d(void) { return 0; }
+int collision_surface_project_point2d(void) { return 0; }
+int collision_surface_test_point2d(void) { return 0; }
+int collision_test_line(void) { return 0; }
+int collision_test_pill(void) { return 0; }
+int collision_test_point(void) { return 0; }
+int component_vectors_from_direction3d(void) { return 0; }
+int component_vectors_from_normal3d(void) { return 0; }
+int config_boolean(void) { return 0; }
+int config_changes(void) { return 0; }
+int contrail_delete(void) { return 0; }
+int contrail_new(void) { return 0; }
+int contrail_owner_collision(void) { return 0; }
+int coop_enemies_extra_count(void) { return 0; }
+int coop_enemies_fallback_position(void) { return 0; }
+int coop_enemies_rider_seated(void) { return 0; }
+int coop_enemies_rider_unseated(void) { return 0; }
+int coop_enemies_spread_position(void) { return 0; }
+int coop_pickups_register(void) { return 0; }
+int coop_scripts_board_followers(void) { return 0; }
+int coop_scripts_exit_followers(void) { return 0; }
+int coop_scripts_suspend_followers(void) { return 0; }
+int coop_vehicles_register(void) { return 0; }
+int csmemmove(void) { return 0; }
+int csstrcpy(void) { return 0; }
+int csstrncmp(void) { return 0; }
+int csstrtok(void) { return 0; }
+int debug_objects_biped_autoaim_pills(void) { return 0; }
+int debug_objects_biped_physics_pills(void) { return 0; }
+int debug_objects_vehicle_powered_mass_points(void) { return 0; }
+int default_projectile_material_response(void) { return 0; }
+void *depths_of_hell;
+int device_can_change_position(void) { return 0; }
+int device_frontfacing(void) { return 0; }
+int device_touched(void) { return 0; }
+int dialogue_get_vocalization_name(void) { return 0; }
+int director_get_perspective(void) { return 0; }
+int director_inhibit_input(void) { return 0; }
+int draw_string_set_color(void) { return 0; }
+int draw_string_set_format(void) { return 0; }
+int effect_delete(void) { return 0; }
+int effect_new_attached_from_markers(void) { return 0; }
+int effect_new_from_object(void) { return 0; }
+int effect_new_looping(void) { return 0; }
+int effect_new_unattached_from_markers(void) { return 0; }
+int effects_start_on_first_person_weapon(void) { return 0; }
+int effects_stop_on_first_person_weapon(void) { return 0; }
+int effect_stop(void) { return 0; }
+int encounter_definition_get_platoon_by_name(void) { return 0; }
+int encounter_definition_get_squad_by_name(void) { return 0; }
+int euler_angles2d_from_vector3d(void) { return 0; }
+int fast_vector_intersection_with_sphere(void) { return 0; }
+int fast_vector_intersects_sphere(void) { return 0; }
+int first_person_legs_reset(void) { return 0; }
+int rasterizer_transparent_geometry_is_enclosure(void) { return 0; }
+int game_connection(void) { return 0; }
+int game_difficulty_get_team_value(void) { return 0; }
+int game_difficulty_get_value(void) { return 0; }
+int game_engine_allow_integrated_lights(void) { return 0; }
+int game_engine_allow_pick_up(void) { return 0; }
+int game_engine_can_score(void) { return 0; }
+int game_engine_client_respawn_countdown(void) { return 0; }
+int game_engine_force_autopickup(void) { return 0; }
+int game_engine_friendly_damage(void) { return 0; }
+int game_engine_get_damage_multiplier(void) { return 0; }
+int game_engine_has_teams(void) { return 0; }
+int game_engine_infinite_grenades(void) { return 0; }
+int game_engine_picking_up(void) { return 0; }
+int game_engine_player_damaged_player(void) { return 0; }
+int game_engine_player_killed(void) { return 0; }
+int game_engine_postspawn_player_update(void) { return 0; }
+int game_engine_prespawn_player_update(void) { return 0; }
+int game_engine_remap_object_definition(void) { return 0; }
+int game_engine_should_spawn_player(void) { return 0; }
+int game_engine_weapon_fired(void) { return 0; }
+int game_looping_sound_delete(void) { return 0; }
+int game_looping_sound_new(void) { return 0; }
+int game_modes_headshot_kills(void) { return 0; }
+int game_modes_kill_by_melee(void) { return 0; }
+int game_statistics_record_damage(void) { return 0; }
+int game_statistics_record_kill(void) { return 0; }
+int game_time_menu_scene(void) { return 0; }
+int game_time_reset_speed(void) { return 0; }
+int get_global_local_random_seed_address(void) { return 0; }
+/* No structure tag is resident. A zeroed bsp keeps objects_update's cluster
+walk at count 0 until the map's sbsp is fixed up. */
+static unsigned char wii_structure_bsp[0x1000];
+static unsigned char wii_collision_bsp[0x200];
+static unsigned char wii_bsp3d[0x200];
+void *global_structure_bsp_get(void) { return wii_structure_bsp; }
+void *global_collision_bsp_get(void) { return wii_collision_bsp; }
+void *global_bsp3d_get(void) { return wii_bsp3d; }
+int global_scenario_try_and_get(void) { return 0; }
+int global_structure_bsp_index_get(void) { return 0; }
+int halo_interpolation_enabled(void) { return 0; }
+int halo_model_detail_scale(void) { return 0; }
+int hs_compile_and_evaluate(void) { return 0; }
+int hud_fix_unit_data(void) { return 0; }
+int hud_fix_weapon_data(void) { return 0; }
+int hud_picked_up_ammunition(void) { return 0; }
+int hud_picked_up_grenade(void) { return 0; }
+int hud_picked_up_powerup(void) { return 0; }
+int hud_picked_up_weapon(void) { return 0; }
+int hud_print_message(void) { return 0; }
+int hud_tick_shield(void) { return 0; }
+int infection_allow_weapon_drop(void) { return 0; }
+int infection_can_delete_skull(void) { return 0; }
+int infection_melee_multiplier(void) { return 0; }
+int infection_melee_rider_target(void) { return 0; }
+int infection_reconcile_player(void) { return 0; }
+int infection_unit_is_zombie(void) { return 0; }
+int input_get_gamepad_state(void) { return 0; }
+int input_has_gamepad(void) { return 0; }
+int input_key_is_down(void) { return 0; }
+int interpolate_node_orientations(void) { return 0; }
+int inverse_kinematics_adjust_matrices(void) { return 0; }
+int item_accelerate(void) { return 0; }
+int item_detonate(void) { return 0; }
+int item_in_unit_inventory(void) { return 0; }
+int light_delete(void) { return 0; }
+int light_disconnect_from_map(void) { return 0; }
+int light_new(void) { return 0; }
+int light_reconnect_to_map(void) { return 0; }
+int lights_dispose(void) { return 0; }
+int lights_dispose_from_old_map(void) { return 0; }
+int lights_illumination_at_point(void) { return 0; }
+int lights_initialize(void) { return 0; }
+int lights_initialize_for_new_map(void) { return 0; }
+int list_index_to_weapon_definition_index(void) { return 0; }
+int machine_get_elevator_position(void) { return 0; }
+int machine_move_elevator_riders(void) { return 0; }
+int machine_try_to_open_with_damage(void) { return 0; }
+int main_lost_map(void) { return 0; }
+int main_menu_is_active(void) { return 0; }
+int main_respawn(void) { return 0; }
+int main_switch_structure_bsp(void) { return 0; }
+int material_effect_new(void) { return 0; }
+int material_effect_new_from_point(void) { return 0; }
+int material_effect_visible(void) { return 0; }
+int material_get_name(void) { return 0; }
+int matrix3x3_from_forward_and_up(void) { return 0; }
+int matrix3x3_multiply(void) { return 0; }
+int matrix3x3_rotation_to_quaternion(void) { return 0; }
+int matrix3x3_transpose(void) { return 0; }
+int matrix4x3_from_orientation(void) { return 0; }
+int matrix4x3_from_point_and_quaternion(void) { return 0; }
+int matrix4x3_identity(void) { return 0; }
+int matrix4x3_inverse(void) { return 0; }
+int matrix4x3_inverse_transform_normal(void) { return 0; }
+int matrix4x3_inverse_transform_vector(void) { return 0; }
+int matrix4x3_multiply(void) { return 0; }
+int matrix4x3_rotation_from_axis_and_angle(void) { return 0; }
+int matrix4x3_rotation_from_vectors(void) { return 0; }
+int matrix4x3_rotation_to_quaternion(void) { return 0; }
+int matrix4x3_to_point_and_vectors(void) { return 0; }
+int matrix4x3_transform_normal(void) { return 0; }
+int matrix4x3_transform_plane(void) { return 0; }
+int matrix4x3_transform_point(void) { return 0; }
+int matrix4x3_translation(void) { return 0; }
+int model_detail_geometry_index(void) { return 0; }
+int model_detail_rules(void) { return 0; }
+int network_actors_note_control(void) { return 0; }
+int network_actors_note_impulse(void) { return 0; }
+int network_actors_note_leap(void) { return 0; }
+int network_actors_note_melee(void) { return 0; }
+int network_actors_note_user_animation(void) { return 0; }
+int network_coop_bsp_switch_cooldown_ticks(void) { return 0; }
+int network_coop_bsp_switch_majority(void) { return 0; }
+int network_coop_devices_remote(void) { return 0; }
+int network_coop_host_dedicated(void) { return 0; }
+int network_coop_note_attach(void) { return 0; }
+int network_coop_note_bsp_switch(void) { return 0; }
+int network_coop_note_detach(void) { return 0; }
+int network_coop_note_unit_animation(void) { return 0; }
+int network_coop_note_unit_animation_frame(void) { return 0; }
+int network_coop_note_unit_open(void) { return 0; }
+int network_coop_player_away(void) { return 0; }
+int network_coop_player_collisions(void) { return 0; }
+int network_coop_player_has_structure_bsp(void) { return 0; }
+int network_coop_tell_bsp_switch_waiting(void) { return 0; }
+int network_coop_vehicle_dropped(void) { return 0; }
+int network_damage_aftermath(void) { return 0; }
+int network_damage_deals(void) { return 0; }
+int network_damage_note_grenade(void) { return 0; }
+int network_damage_player_effect(void) { return 0; }
+int network_damage_replaying_kill(void) { return 0; }
+int network_damage_static_target(void) { return 0; }
+int network_distributed_player_picked_up(void) { return 0; }
+int network_objects_client_deleting(void) { return 0; }
+int network_objects_client_picked_up_weapon(void) { return 0; }
+int network_objects_creating_host_object(void) { return 0; }
+int network_objects_damage_animation(void) { return 0; }
+int network_objects_may_delete(void) { return 0; }
+int normalize3d(void) { return 0; }
+int object_bounds_cache_update(void) { return 0; }
+int object_deleted_procs_call(void) { return 0; }
+int object_get_cached_render_lighting(void) { return 0; }
+int object_get_self_illumination(void) { return 0; }
+int object_impulse_sound_new(void) { return 0; }
+int object_list_get_first(void) { return 0; }
+int object_list_get_next(void) { return 0; }
+int observer_get_camera(void) { return 0; }
+int observer_obsolete_position(void) { return 0; }
+int orientations_interpolate(void) { return 0; }
+int overlay_animation_apply(void) { return 0; }
+int overlay_animation_apply_continuous(void) { return 0; }
+int overlay_animation_apply_continuous_scaled(void) { return 0; }
+int overlay_animation_apply_scaled(void) { return 0; }
+int overshield_effect_active(void) { return 0; }
+int overshield_effect_hit_effect_allowed(void) { return 0; }
+int overshield_effect_values(void) { return 0; }
+int pal_tags_first_person_advance(void) { return 0; }
+int pal_tags_first_person_fraction(void) { return 0; }
+int pal_tags_first_person_frames(void) { return 0; }
+int particles_stop_on_first_person_weapon(void) { return 0; }
+int particle_system_new_attached(void) { return 0; }
+int particle_system_orphan(void) { return 0; }
+int path_avoid_obstacles(void) { return 0; }
+int path_smooth(void) { return 0; }
+int periodic_function_evaluate(void) { return 0; }
+int perpendicular3d(void) { return 0; }
+int physics_instance_new(void) { return 0; }
+int physics_update(void) { return 0; }
+int physics_variable_position_update_seek(void) { return 0; }
+int physics_variable_speed_update_seek(void) { return 0; }
+int pitch_vectors(void) { return 0; }
+int player_aim_projectile(void) { return 0; }
+int player_aim_projectile_preview(void) { return 0; }
+void *player_autoaim_flag;
+int player_control_dispose(void) { return 0; }
+int player_control_get_autoaim_level(void) { return 0; }
+int player_control_get_unit_index(void) { return 0; }
+int player_control_get_zoom_level(void) { return 0; }
+int player_control_initialize(void) { return 0; }
+int player_control_new_unit(void) { return 0; }
+int player_control_set_desired_weapon(void) { return 0; }
+int player_control_set_facing(void) { return 0; }
+int player_control_unzoom(void) { return 0; }
+int player_effect_screen_flash(void) { return 0; }
+int player_effect_start(void) { return 0; }
+void *player_magnetism_flag;
+int player_telefrag_effect_start(void) { return 0; }
+int player_telefrag_effect_stop(void) { return 0; }
+int player_ui_get_single_player_local_player_controller(void) { return 0; }
+int point_from_line3d(void) { return 0; }
+int points_interpolate(void) { return 0; }
+int point_to_line_distance_squared3d(void) { return 0; }
+int predicted_resources_precache(void) { return 0; }
+int profile_enter_private(void) { return 0; }
+int profile_exit_private(void) { return 0; }
+void *profile_global_enable;
+void *prop_data;
+int prop_position_refresh(void) { return 0; }
+int prop_status_refresh(void) { return 0; }
+int quantize_real_to_byte_lower_bound(void) { return 0; }
+int quaternions_interpolate_and_normalize(void) { return 0; }
+int quaternion_to_angle_and_vector(void) { return 0; }
+int rasterizer_debug_model_vertices(void) { return 0; }
+int rasterizer_debug_options(void) { return 0; }
+int rasterizer_draw_string(void) { return 0; }
+int rasterizer_environment_shadow_model_begin(void) { return 0; }
+int rasterizer_environment_shadow_model_draw(void) { return 0; }
+int rasterizer_environment_shadow_model_end(void) { return 0; }
+int rasterizer_memory_alloc(void) { return 0; }
+int rasterizer_model_begin(void) { return 0; }
+int rasterizer_model_cortana_hack(void) { return 0; }
+int rasterizer_model_draw(void) { return 0; }
+int rasterizer_model_end(void) { return 0; }
+int rasterizer_model_transparent_geometry_submit(void) { return 0; }
+int real_local_random(void) { return 0; }
+int real_local_random_range(void) { return 0; }
+int real_random_range(void) { return 0; }
+int real_rgb_color_brightness(void) { return 0; }
+int recorded_animation_controlling_unit(void) { return 0; }
+int reflect_vector3d(void) { return 0; }
+int render_debug_collision_model(void) { return 0; }
+int render_debug_line(void) { return 0; }
+int render_debug_matrix(void) { return 0; }
+int render_debug_physics(void) { return 0; }
+int render_debug_pill(void) { return 0; }
+int render_debug_point(void) { return 0; }
+int render_debug_sphere(void) { return 0; }
+int render_debug_vector(void) { return 0; }
+int render_interpolation_first_person(void) { return 0; }
+int render_interpolation_fraction(void) { return 0; }
+int render_interpolation_object_node_matrices(void) { return 0; }
+int render_model_index_counts(void) { return 0; }
+void *render_model_markers;
+void *render_model_nodes;
+int render_model_no_geometry(void) { return 0; }
+int render_model_vertex_counts(void) { return 0; }
+int replacement_animation_apply(void) { return 0; }
+int rgb_colors_interpolate(void) { return 0; }
+int rintf(void) { return 0; }
+int rotate_vector_about_axis(void) { return 0; }
+int rumble_player_impulse(void) { return 0; }
+int scalars_interpolate(void) { return 0; }
+int scenario_ensure_point_within_world(void) { return 0; }
+int scenario_fog_at_point(void) { return 0; }
+int scenario_get_encounter_by_name(void) { return 0; }
+int scenario_leaf_index_from_point(void) { return 0; }
+int scenario_location_from_point(void) { return 0; }
+int scenario_location_underwater(void) { return 0; }
+int scenario_location_water_depth(void) { return 0; }
+int scenario_material_definition_get(void) { return 0; }
+int scenario_test_pvs(void) { return 0; }
+int scenario_trigger_volume_test_object(void) { return 0; }
+int scenario_trigger_volume_test_point(void) { return 0; }
+int scripted_sound_new(void) { return 0; }
+int scripted_sound_time(void) { return 0; }
+int seed_random_direction3d(void) { return 0; }
+int seed_random_vector_in_cone3d(void) { return 0; }
+int shader_get_and_verify_type(void) { return 0; }
+int shader_type_is_transparent(void) { return 0; }
+int shader_type_is_valid_for_model(void) { return 0; }
+int shader_type_is_valid_for_modifier(void) { return 0; }
+int shield_color_colors(void) { return 0; }
+int signed_angle_between_vectors2d(void) { return 0; }
+int signed_angular_difference(void) { return 0; }
+int sound_definition_get_maximum_distance(void) { return 0; }
+int sound_scripted_dialog_is_playing(void) { return 0; }
+int sound_stop_impulse(void) { return 0; }
+int strlwr(void) { return 0; }
+int structure_bsp_get_cluster_encoded_sound_distance(void) { return 0; }
+int structure_bsp_get_cluster_pvs(void) { return 0; }
+int structure_clusters_in_sphere(void) { return 0; }
+int structure_decals_update(void) { return 0; }
+int structure_test_line2d(void) { return 0; }
+int strupr(void) { return 0; }
+int tag_index_is_group(void) { return 0; }
+int tag_iterator_new(void) { return 0; }
+int tag_iterator_next(void) { return -1; }
+int tag_loaded(void) { return 0; }
+int tag_name_strip_path(void) { return 0; }
+int terminal_printf(void) { return 0; }
+int _texture_cache_bitmap_get_hardware_format(void) { return 0; }
+int transition_function_evaluate(void) { return 0; }
+int unattached_impulse_sound_new(void) { return 0; }
+int unicode_string_list_get_string(void) { return 0; }
+int unit_describe_speech(void) { return 0; }
+int unit_dialogue_determine_variant(void) { return 0; }
+int unit_dialogue_update(void) { return 0; }
+int unit_get_local_player_index(void) { return 0; }
+int unit_get_speech_priority_name(void) { return 0; }
+int unit_make_damage_sound(void) { return 0; }
+int unit_scream(void) { return 0; }
+int unit_seat_animation_list(void) { return 0; }
+int unit_speak(void) { return 0; }
+int unit_test_speech(void) { return 0; }
+int unspatialized_impulse_sound_new(void) { return 0; }
+int ustrncpy(void) { return 0; }
+int valid_real_normal2d(void) { return 0; }
+int vector3d_from_angle(void) { return 0; }
+int vector3d_from_euler_angles2d(void) { return 0; }
+int vector_intersects_pill3d(void) { return 0; }
+int vectors3d_from_euler_angles3d(void) { return 0; }
+int vector_to_line_distance_squared3d(void) { return 0; }
+int viewmodel_is_visible(void) { return 0; }
+int viewmodel_shield_is_visible(void) { return 0; }
+int weapon_class_animation_list(void) { return 0; }
+int weapon_type_animation_list(void) { return 0; }
+int widgets_delete(void) { return 0; }
+int widgets_dispose(void) { return 0; }
+int widgets_dispose_from_old_map(void) { return 0; }
+int widgets_initialize(void) { return 0; }
+int widgets_initialize_for_new_map(void) { return 0; }
+int widgets_new(void) { return 0; }
+int yaw_vectors(void) { return 0; }
+
+float real_seed_random(unsigned long *seed) { (void)seed; return 0.5f; }
+float real_seed_random_range(unsigned long *seed, float lower, float upper)
+{
+	(void)seed;
+	return (lower + upper) * 0.5f;
+}
+float game_engine_get_starting_location_rating(long player_index, void const *location)
+{
+	(void)player_index;
+	(void)location;
+	return 1.f;
+}
+void *game_engine_player_get_change_color(void *color, long player_index)
+{
+	(void)player_index;
+	if (color)
+		memset(color, 0, 12);
+	return color;
+}
+int network_objects_new_object_index(void) { return -1; }
+static unsigned char wii_cinematic_globals_bytes[64];
+void *cinematic_globals = wii_cinematic_globals_bytes;
+int control_delete(void) { return 0; }
+int control_new(void) { return 0; }
+int control_place(void) { return 0; }
+int controls_dispose(void) { return 0; }
+int controls_dispose_from_old_map(void) { return 0; }
+int controls_initialize(void) { return 0; }
+int controls_initialize_for_new_map(void) { return 0; }
+int control_update(void) { return 0; }
+int custom_edition_vehicle_placement_allowed(void) { return 0; }
+int device_delete(void) { return 0; }
+int device_export_function_values(void) { return 0; }
+int device_new(void) { return 0; }
+int device_preprocess_node_orientations(void) { return 0; }
+int device_render_debug(void) { return 0; }
+int devices_dispose(void) { return 0; }
+int devices_dispose_from_old_map(void) { return 0; }
+int devices_initialize(void) { return 0; }
+int devices_initialize_for_new_map(void) { return 0; }
+int device_update(void) { return 0; }
+int game_engine_vehicle_placement_allowed(void) { return 0; }
+int game_engine_vehicle_placement_begin(void) { return 0; }
+int garbage_new(void) { return 0; }
+int garbage_update(void) { return 0; }
+int item_delete(void) { return 0; }
+int item_new(void) { return 0; }
+int items_dispose(void) { return 0; }
+int items_dispose_from_old_map(void) { return 0; }
+int items_initialize(void) { return 0; }
+int items_initialize_for_new_map(void) { return 0; }
+int item_update(void) { return 0; }
+int light_fixture_delete(void) { return 0; }
+int light_fixture_new(void) { return 0; }
+int light_fixture_place(void) { return 0; }
+int light_fixtures_dispose(void) { return 0; }
+int light_fixtures_dispose_from_old_map(void) { return 0; }
+int light_fixtures_initialize(void) { return 0; }
+int light_fixtures_initialize_for_new_map(void) { return 0; }
+int light_fixture_update(void) { return 0; }
+int machine_delete(void) { return 0; }
+int machine_new(void) { return 0; }
+int machine_place(void) { return 0; }
+int machines_dispose(void) { return 0; }
+int machines_dispose_from_old_map(void) { return 0; }
+int machines_initialize(void) { return 0; }
+int machines_initialize_for_new_map(void) { return 0; }
+int machine_update(void) { return 0; }
+int matrix4x3_rotation_from_angles(void) { return 0; }
+int placeholder_delete(void) { return 0; }
+int placeholder_dispose(void) { return 0; }
+int placeholder_dispose_from_old_map(void) { return 0; }
+int placeholder_initialize(void) { return 0; }
+int placeholder_initialize_for_new_map(void) { return 0; }
+int placeholder_new(void) { return 0; }
+int placeholder_place(void) { return 0; }
+int scenery_delete(void) { return 0; }
+int scenery_dispose(void) { return 0; }
+int scenery_dispose_from_old_map(void) { return 0; }
+int scenery_initialize(void) { return 0; }
+int scenery_initialize_for_new_map(void) { return 0; }
+int scenery_new(void) { return 0; }
+int scenery_place(void) { return 0; }
+int scenery_update(void) { return 0; }
+int sound_scenery_delete(void) { return 0; }
+int sound_scenery_new(void) { return 0; }
+int unit_notify_impulse_sound(void) { return 0; }

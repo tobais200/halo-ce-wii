@@ -1,8 +1,7 @@
 /*
- * Device stand-ins for the calls OpenCE game.c makes.
- * game_initialize, game_load, game_initialize_for_new_map, and game_tick
- * stay in game.c. Bink, networking, the cache precacher, the rasterizer,
- * and the object/AI/weapon simulators are not linked.
+ * Device stand-ins for the calls OpenCE game.c still makes into Xbox,
+ * Bink, networking, the cache precacher, and the rasterizer.
+ * players.c, units, weapons, ai.c, and objects.c are linked.
  */
 struct game_options {
 	unsigned long flags;
@@ -22,8 +21,9 @@ struct game_options {
 #include <stdlib.h>
 #include <string.h>
 
+void wii_game_spawn_local_player(void);
+
 struct game_variant game_variant_global;
-struct data_array *player_data;
 short player_spawn_count = 1;
 boolean debug_game_save = FALSE;
 
@@ -76,47 +76,6 @@ int scenario_load(char const *name)
 	return 1;
 }
 
-int units_update(void)
-{
-	wii_game_unit_ticks++;
-	return 0;
-}
-
-int ai_update(void)
-{
-	wii_game_ai_ticks++;
-	return 0;
-}
-
-int ai_place(void)
-{
-	wii_game_ai_placed++;
-	return 0;
-}
-
-int objects_place(void)
-{
-	wii_game_objects_placed++;
-	return 0;
-}
-
-int players_update_before_game(void)
-{
-	wii_game_player_ticks++;
-	return 0;
-}
-
-int players_update_after_game(void)
-{
-	return 0;
-}
-
-int first_person_weapons_update(void)
-{
-	wii_game_weapon_ticks++;
-	return 0;
-}
-
 struct game_variant *game_engine_get_variant_by_name(struct game_variant *variant, char const *name)
 {
 	(void)name;
@@ -133,8 +92,10 @@ void wii_game_boot(void)
 		return;
 	game_initialize();
 	game_options_new(&options);
-	if (game_load(&options))
+	if (game_load(&options)) {
 		game_initialize_for_new_map();
+		wii_game_spawn_local_player();
+	}
 	booted = 1;
 }
 
@@ -169,15 +130,7 @@ void game_variant_options_default(struct game_variant const *variant, struct gam
 		memset(options, 0, sizeof(*options));
 }
 
-int ai_dispose(void) { return 0; }
-int ai_dispose_from_old_map(void) { return 0; }
-int ai_enemies_can_see_player(void) { return 0; }
-int ai_initialize(void) { return 0; }
-int ai_initialize_for_new_map(void) { return 0; }
 int antennas_update(void) { return 0; }
-int any_player_is_dead(void) { return 0; }
-int any_player_is_in_the_air(void) { return 0; }
-int any_unit_is_dangerous(void) { return 0; }
 int bink_playback_dispose(void) { return 0; }
 int bink_playback_initialize(void) { return 0; }
 int breakable_surfaces_dispose(void) { return 0; }
@@ -192,11 +145,6 @@ int cache_files_precache_map_loaded(void) { return 0; }
 int cache_files_precache_map_queue_end(void) { return 0; }
 int cache_files_precache_map_status(void) { return 0; }
 int cache_files_precache_set_priority(void) { return 0; }
-int cheats_dispose(void) { return 0; }
-int cheats_dispose_from_old_map(void) { return 0; }
-int cheats_initialize(void) { return 0; }
-int cheats_initialize_for_new_map(void) { return 0; }
-int cheats_network_client_enforce(void) { return 0; }
 int cinematic_dispose(void) { return 0; }
 int cinematic_dispose_from_old_map(void) { return 0; }
 int cinematic_initialize(void) { return 0; }
@@ -213,7 +161,6 @@ int contrails_initialize_for_new_map(void) { return 0; }
 int contrails_update(void) { return 0; }
 int dangerous_effects_near_player(void) { return 0; }
 int dangerous_items_near_player(void) { return 0; }
-int dangerous_projectiles_near_player(void) { return 0; }
 int decals_dispose(void) { return 0; }
 int decals_dispose_from_old_map(void) { return 0; }
 int decals_initialize(void) { return 0; }
@@ -235,11 +182,6 @@ int effects_initialize_for_new_map(void) { return 0; }
 int effects_update(void) { return 0; }
 int event_manager_dispose(void) { return 0; }
 int event_manager_initialize(void) { return 0; }
-int game_allegiance_dispose(void) { return 0; }
-int game_allegiance_dispose_from_old_map(void) { return 0; }
-int game_allegiance_initialize(void) { return 0; }
-int game_allegiance_initialize_for_new_map(void) { return 0; }
-int game_allegiance_update(void) { return 0; }
 int game_in_editor(void) { return 0; }
 int game_modes_options_sanitize(void) { return 0; }
 int game_sound_dispose(void) { return 0; }
@@ -271,11 +213,6 @@ int network_distributed_new_game(void) { return 0; }
 int network_game_distributed_client(void) { return 0; }
 int network_objects_placed(void) { return 0; }
 int numeric_countdown_timer_update(void) { return 0; }
-int objects_dispose(void) { return 0; }
-int objects_dispose_from_old_map(void) { return 0; }
-int objects_initialize(void) { return 0; }
-int objects_initialize_for_new_map(void) { return 0; }
-int objects_update(void) { return 0; }
 int observer_dispose_from_old_map(void) { return 0; }
 int observer_initialize(void) { return 0; }
 int observer_initialize_for_new_map(void) { return 0; }
@@ -295,10 +232,6 @@ int player_effect_dispose_from_old_map(void) { return 0; }
 int player_effect_initialize(void) { return 0; }
 int player_effect_initialize_for_new_map(void) { return 0; }
 int player_effect_update(void) { return 0; }
-int players_dispose(void) { return 0; }
-int players_dispose_from_old_map(void) { return 0; }
-int players_initialize(void) { return 0; }
-int players_initialize_for_new_map(void) { return 0; }
 int player_ui_dispose(void) { return 0; }
 int player_ui_initialize(void) { return 0; }
 int player_ui_remember_player1_profile(void) { return 0; }
@@ -355,10 +288,8 @@ int ui_widgets_dispose(void) { return 0; }
 int ui_widgets_initialize(void) { return 0; }
 int ui_widgets_safe_to_load(void) { return 0; }
 int unit_get(void) { return 0; }
-int unit_kill_no_statistics(void) { return 0; }
 int update_server_delete(void) { return 0; }
 int update_server_new(void) { return 0; }
-int vehicle_moving_near_any_player(void) { return 0; }
 int weather_particle_systems_dispose(void) { return 0; }
 int weather_particle_systems_dispose_from_old_map(void) { return 0; }
 int weather_particle_systems_initialize(void) { return 0; }

@@ -2,12 +2,12 @@
 <app version="1">
 	<name>Halo CE Wii</name>
 	<coder>halo-ce-wii</coder>
-	<version>0.6.0-game</version>
-	<release_date>20261102000000</release_date>
+	<version>0.7.0-players</version>
+	<release_date>20261103000000</release_date>
 	<short_description>Engine stub. Not playable.</short_description>
 	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
 
-This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Unit, weapon, and AI steps are counted and not simulated. No game data is included.
+This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. players.c, units, weapons, and ai.c are linked. A biped is spawned at the first player start from a stand-in tag, not from the map's cyborg tag. No game data is included.
 
 Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
 
