@@ -8,6 +8,7 @@
 #include "lz4.h"
 #include "wii_mem.h"
 #include "wii_tex.h"
+#include "wii_game.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
 #include "wii_widget.h"
@@ -422,6 +423,11 @@ int main(void)
 		if (wii_hs_global_real(0, &value) != 0 || value < 2.9f || value > 3.1f)
 			return fail(wii_hs_note()[0] ? wii_hs_note() : "hs (+ 1 2)");
 		wii_hs_shutdown();
+		wii_game_tick();
+		wii_game_tick();
+		if (wii_game_unit_ticks < 2 || wii_game_ai_ticks < 2 || wii_game_weapon_ticks < 2
+			|| wii_game_player_ticks < 2 || wii_game_objects_placed < 1 || wii_game_ai_placed < 1)
+			return fail("game tick");
 	}
 
 	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela, scripts, hs runtime ok\n");

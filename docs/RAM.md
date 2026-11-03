@@ -32,10 +32,10 @@ Measured with `powerpc-eabi-size` / `powerpc-eabi-readelf` on the `boot.elf` pro
 
 | Section | Bytes |
 | --- | --- |
-| `boot.dol` file | 584384 |
-| `powerpc-eabi-size` text | 456340 |
-| `powerpc-eabi-size` data | 127750 |
-| `powerpc-eabi-size` bss | 1070880 |
+| `boot.dol` file | 592640 |
+| `powerpc-eabi-size` text | 461308 |
+| `powerpc-eabi-size` data | 130990 |
+| `powerpc-eabi-size` bss | 1071040 |
 
 `.bss` includes libogc (`memb_mem_pool_pbufs` 0x32280, `s_mainStack` 0x20000, `ram_block` 0x10010) and the script VM's fixed buffers: the retail node array (`0x38 + 19001 * 0x14` = 380076 bytes), 64 KiB of script strings, and the script and global tables (512 records each). Thread storage (`0x100 * 0x218`) and the global datum array (`0x400 * 8`) are `malloc`'d when a map's scripts mount, on the MEM1 heap. The 256 KiB stream window is still allocated at runtime from MEM2.
 
@@ -63,6 +63,6 @@ La pantalla imprime el techo y luego el tamaño real de las arenas. Esas arenas 
 
 No se llama a `custom_edition_cache_load` ni a `physical_memory_allocate`. El primero pide 23 MiB de tags y puede reservar un BSP entero. El segundo usa direcciones fijas de Xbox dentro de MEM1.
 
-El `boot.dol` de esta compilación pesa 584384 bytes. El `.bss` es de unos 1046 KiB: libogc/BTE más el arreglo fijo de 19001 nodos de script (380076 bytes) y 64 KiB de cadenas. Los hilos de script se piden con `malloc` al montar un mapa.
+El `boot.dol` de esta compilación pesa 592640 bytes. El `.bss` es de unos 1046 KiB: libogc/BTE más el arreglo fijo de 19001 nodos de script (380076 bytes) y 64 KiB de cadenas. Los hilos de script se piden con `malloc` al montar un mapa. `game.c` añade poco BSS: sus sustitutos no reservan los pools de objetos ni de IA.
 
 La lectura es por trozos. El menú puede dibujar el primer structure BSP, con tope de 3072 vértices y 4096 triángulos (unos 72 KiB en MEM2). El resto del BSP sigue en la tarjeta. Solo la cabecera de 2 KiB se guarda comprimida con LZ4 en `sd:/halo-ce/cache/`. `fseek` aquí es de 32 bits: un offset por encima de 2 GiB se rechaza.

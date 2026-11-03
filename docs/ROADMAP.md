@@ -15,9 +15,9 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Started, still not a game
 
-1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE`. `make` links `cache_file_formats.c`, `memory/data.c`, and `hs/hs_runtime.c`. `make opence` builds that subset and exits 0. `game.c` is not in the link.
+1. Submodule [OpenCommunityEdition/OpenCE](https://github.com/OpenCommunityEdition/OpenCE) at `third_party/OpenCE`. `make` links `cache_file_formats.c`, `memory/data.c`, `hs/hs_runtime.c`, and `game/game.c`. `make opence` builds that subset and exits 0. `players.c`, `units.c`, and `ai.c` are not in the link.
 2. `port/wii/` skeleton remains (`"playable_campaign": false`). The bring-up that does run lives in `source/wii_mem.c`, `source/wii_stream.c`, and `source/xdvdfs.c`.
-3. DeLa draws string-list glyphs and follows event-handler flags (open, back, list next/previous, scenario-script name). Other event-function bodies are not linked. A campaign BSP runs OpenCE `hs_runtime.c`: `begin`, `if`, `set`, arithmetic, compares, and `sleep` execute. Calls past those return 0 and are counted. The camera orbits the scenario's first player start. Biped, weapon, and AI counts are read from the scenario. `game.c`, unit simulation, weapons, and AI are not compiled.
+3. DeLa draws string-list glyphs and follows event-handler flags (open, back, list next/previous, scenario-script name). Other event-function bodies are not linked. A campaign BSP runs OpenCE `game_tick`. That calls `hs_runtime.c` (`begin`, `if`, `set`, arithmetic, compares, `sleep`) and then the unit, AI, player, and first-person weapon steps. Those steps count calls and do not simulate. The camera orbits the first player start, lifted by `standing_camera_height` from the first biped tag when that float is present. Bink, networking, and the OpenGL rasterizer are not compiled.
 
 ### Later, each one blocked until the previous exists
 
@@ -48,9 +48,9 @@ JojoXDK's Halo Wii port is a private work in progress. It is not a branch of thi
 
 ### Empezado, y sigue sin ser un juego
 
-1. Submódulo de OpenCE. `make` enlaza `cache_file_formats.c`, `memory/data.c` y `hs/hs_runtime.c`. `make opence` construye ese subconjunto y sale con 0. `game.c` no entra en el enlace.
+1. Submódulo de OpenCE. `make` enlaza `cache_file_formats.c`, `memory/data.c`, `hs/hs_runtime.c` y `game/game.c`. `make opence` construye ese subconjunto y sale con 0. `players.c`, `units.c` y `ai.c` no entran en el enlace.
 2. El esqueleto `port/wii/` sigue con la campaña en false. El arranque que sí corre está en `source/wii_stream.c`.
-3. DeLa dibuja glifos y sigue las banderas de los manejadores de eventos (abrir, volver, siguiente/anterior, nombre de script). El resto de cuerpos de evento no se enlaza. Un BSP de campaña ejecuta `hs_runtime.c` de OpenCE: `begin`, `if`, `set`, aritmética, comparaciones y `sleep`. Las llamadas que siguen devuelven 0 y se cuentan. La cámara orbita el primer punto de inicio del jugador. Se leen los conteos de bípedos, armas y encuentros. `game.c`, las unidades, las armas y la IA no se compilan.
+3. DeLa dibuja glifos y sigue las banderas de los manejadores de eventos (abrir, volver, siguiente/anterior, nombre de script). El resto de cuerpos de evento no se enlaza. Un BSP de campaña ejecuta `game_tick` de OpenCE. Eso llama a `hs_runtime.c` (`begin`, `if`, `set`, aritmética, comparaciones, `sleep`) y luego a los pasos de unidad, IA, jugador y arma en primera persona. Esos cuatro pasos son sustitutos de dispositivo: cuentan llamadas y no simulan. La cámara orbita el primer punto de inicio, elevado con `standing_camera_height` de la primera etiqueta bípedo cuando ese float está. Bink, la red y el rasterizador OpenGL no se compilan.
 
 ### Después
 

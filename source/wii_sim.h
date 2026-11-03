@@ -11,7 +11,12 @@
 
 /* scenario_definitions.h, confirmed by offsetof against structure BSPs at 0x5A4. */
 #define WII_SCENARIO_BIPEDS 0x228u
+#define WII_SCENARIO_BIPED_PALETTE 0x234u
 #define WII_SCENARIO_WEAPONS 0x270u
+/* biped_definition.biped.standing_camera_height, from the real struct. */
+#define WII_BIPED_STANDING_CAMERA_HEIGHT 0x400u
+#define WII_PALETTE_ENTRY_BYTES 0x30u
+#define WII_BIPED_GROUP 0x64706962u
 #define WII_SCENARIO_PLAYERS 0x354u
 #define WII_SCENARIO_AI_ENCOUNTERS 0x42Cu
 #define WII_SCENARIO_HS_SYNTAX 0x474u
@@ -34,10 +39,12 @@ struct wii_sim {
 	int weapon_count;
 	int encounter_count;
 	int have_player;
+	int have_camera_height;
 	float player_x;
 	float player_y;
 	float player_z;
 	float player_facing;
+	float camera_height;
 	uint32_t syntax_bytes;
 	char startup_name[32];
 	char message[160];

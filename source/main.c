@@ -333,7 +333,7 @@ int main(int argc, char **argv)
 				if (sim.have_player) {
 					view.center[0] = sim.player_x;
 					view.center[1] = sim.player_y;
-					view.center[2] = sim.player_z;
+					view.center[2] = sim.player_z + (sim.have_camera_height ? sim.camera_height : 0.0f);
 				} else {
 					view.center[0] = preview.center[0];
 					view.center[1] = preview.center[1];

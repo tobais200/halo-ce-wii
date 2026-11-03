@@ -49,6 +49,10 @@ typedef char wii_hs_scripts_offset[
 	__builtin_offsetof(struct scenario, hs_scripts) == 0x49C ? 1 : -1];
 typedef char wii_hs_bsp_offset[
 	__builtin_offsetof(struct scenario, structure_bsp_references) == 0x5A4 ? 1 : -1];
+typedef char wii_hs_biped_palette_offset[
+	__builtin_offsetof(struct scenario, biped_palette) == 0x234 ? 1 : -1];
+typedef char wii_hs_palette_entry_size[
+	sizeof(struct scenario_object_palette_entry) == 0x30 ? 1 : -1];
 
 enum {
 	WII_HS_FUNCTIONS = 418 + 7,

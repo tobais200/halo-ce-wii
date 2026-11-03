@@ -34,7 +34,8 @@ opence:
 	@echo "  BSP geometry and bitmap/lightmap decode (xbox_textures.c rules)"
 	@echo "  DeLa widget tags, string-list glyphs, event-handler flags"
 	@echo "  hs_runtime.c special forms on the scenario script-node array"
-	@echo "game.c is not compiled. It still needs the Xbox SDK and OpenGL."
+	@echo "  game.c tick order; unit/weapon/AI calls are device stubs"
+	@echo "Bink, networking, the rasterizer, and players.c are not compiled."
 
 clean:
 	@rm -rf build

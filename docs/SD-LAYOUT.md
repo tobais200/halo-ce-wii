@@ -30,7 +30,7 @@ usb:/game.iso
 
 Opening `ui` draws DeLa bitmaps and, when the widget names a string list and a font, the list's UTF-16 text with that font's glyph pixels. A button that matches a widget event handler follows that handler's flags: open or replace a widget, go back, move a list, or launch a campaign id named by the handler script. Other event functions are reported as unlinked.
 
-On a BSP, OpenCE `hs_runtime.c` runs the scenario's script-node array at 30 Hz. `begin`, `if`, `set`, arithmetic, compares, `sleep`, and `wake` are the real evaluators. Later calls return 0. The orbit center is the first player starting location when that block is readable. Biped, weapon, and encounter blocks are counted, not simulated. `game.c` is not linked.
+On a BSP, OpenCE `game_tick` runs at 30 Hz. It updates scripts through `hs_runtime.c` (`begin`, `if`, `set`, arithmetic, compares, `sleep`, `wake`) and then calls the unit, AI, player, and first-person weapon steps. Those steps are stubs. The orbit center is the first player starting location, plus `standing_camera_height` from the first `bipd` tag (offset 0x400 in `biped_definition`). Bink, networking, and the rasterizer are not linked.
 
 Optional header cache, written by the DOL, not required:
 
@@ -60,4 +60,4 @@ También se buscan `sd:/apps/halo-ce/maps`, `sd:/maps` y las mismas rutas en `us
 
 Si `ui` está en la tarjeta, el DOL lo abre y dibuja el widget DeLa, incluidos los glifos de su lista de texto con la fuente del cache. Un botón con manejador de evento abre el widget, vuelve, mueve la lista o lanza un id de campaña escrito en el script del manejador. Las demás funciones de evento quedan sin enlazar.
 
-En el BSP, `hs_runtime.c` de OpenCE ejecuta el arreglo de nodos del escenario a 30 Hz. `begin`, `if`, `set`, la aritmética, las comparaciones, `sleep` y `wake` son los evaluadores reales. El resto de llamadas devuelve 0. La órbita se centra en el primer punto de inicio del jugador. Los bloques de bípedos, armas y encuentros se cuentan y no se simulan. `game.c` no está enlazado.
+En el BSP, `game_tick` de OpenCE corre a 30 Hz. Actualiza los scripts con `hs_runtime.c` (`begin`, `if`, `set`, aritmética, comparaciones, `sleep`, `wake`) y llama a los pasos de unidad, IA, jugador y arma en primera persona. Esos pasos son sustitutos. La órbita usa el primer punto de inicio más `standing_camera_height` de la primera etiqueta `bipd` (desplazamiento 0x400). Bink, la red y el rasterizador no están enlazados.

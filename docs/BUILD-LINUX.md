@@ -69,7 +69,7 @@ Copy that directory to the SD card as `sd:/apps/halo-ce/`. The Homebrew Channel 
 
 `make clean` removes `build/`, the ELF/DOL, `dist/`, and `port/wii/build/`.
 
-`make` needs `python3`. It rewrites OpenCE fourcc constants into `build/cache_file_formats.c` (the submodule is not edited) and links that file plus `hs_runtime.c` and `memory/data.c`. `make host-check` needs `gcc -m32` and runs the synthetic header, XDVDFS, LZ4, and a script-node evaluation. `make` also compiles `port/wii/build/wii_platform.o` and does not link it. `make opence` builds this subset and exits 0. It does not compile `game.c`. Fetch the submodule first if you want `make opence-status` to report it present:
+`make` needs `python3`. It rewrites OpenCE fourcc constants into `build/cache_file_formats.c` (the submodule is not edited) and links that file plus `hs_runtime.c`, `memory/data.c`, and `game/game.c`. `make host-check` needs `gcc -m32` and runs the synthetic header, XDVDFS, LZ4, a script-node evaluation, and two `game_tick` calls. `make` also compiles `port/wii/build/wii_platform.o` and does not link it. `make opence` builds this subset and exits 0. It does not compile `players.c`, `units.c`, or `ai.c`. Fetch the submodule first if you want `make opence-status` to report it present:
 
 ```bash
 git submodule update --init third_party/OpenCE
@@ -146,7 +146,7 @@ Copia ese directorio a la SD como `sd:/apps/halo-ce/`. El Homebrew Channel abre 
 
 `make clean` borra `build/`, el ELF/DOL, `dist/` y `port/wii/build/`.
 
-`make` necesita `python3`. Reescribe las constantes fourcc de OpenCE en `build/cache_file_formats.c` (el submódulo no se edita) y enlaza ese archivo junto con `hs_runtime.c` y `memory/data.c`. `make host-check` necesita `gcc -m32` y prueba la cabecera sintética, XDVDFS, LZ4 y una evaluación de nodos de script. `make` también compila `port/wii/build/wii_platform.o` y no lo enlaza. `make opence` construye ese subconjunto y sale con 0. No compila `game.c`. Para que `make opence-status` lo vea:
+`make` necesita `python3`. Reescribe las constantes fourcc de OpenCE en `build/cache_file_formats.c` (el submódulo no se edita) y enlaza ese archivo junto con `hs_runtime.c`, `memory/data.c` y `game/game.c`. `make host-check` necesita `gcc -m32` y prueba la cabecera sintética, XDVDFS, LZ4, una evaluación de nodos de script y dos llamadas a `game_tick`. `make` también compila `port/wii/build/wii_platform.o` y no lo enlaza. `make opence` construye ese subconjunto y sale con 0. No compila `players.c`, `units.c` ni `ai.c`. Para que `make opence-status` lo vea:
 
 ```bash
 git submodule update --init third_party/OpenCE

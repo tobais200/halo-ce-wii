@@ -1,5 +1,6 @@
 #include "wii_sim.h"
 
+#include "wii_game.h"
 #include "wii_hs.h"
 
 #include <stdio.h>
@@ -58,6 +59,53 @@ static int read_player(bsp_read_fn read, void *context, uint32_t file_size, uint
 	return 0;
 }
 
+static int read_camera_height(bsp_read_fn read, void *context, uint32_t file_size, uint32_t tag_offset, uint32_t tag_size, uint32_t scenario_file, struct wii_sim *sim)
+{
+	uint8_t block[8];
+	uint8_t entry[16];
+	uint8_t header[4];
+	uint8_t instance[0x20];
+	uint8_t height[4];
+	uint32_t count;
+	uint32_t address;
+	uint32_t instances;
+	uint32_t datum;
+	uint32_t base;
+	uint32_t bits;
+
+	if (pull(read, context, file_size, scenario_file + WII_SCENARIO_BIPED_PALETTE, block, sizeof(block)) != 0)
+		return -1;
+	count = read_u32(block);
+	address = read_u32(block + 4);
+	if (!count || address < 0x803A6000u || (address - 0x803A6000u) >= tag_size)
+		return -1;
+	if (pull(read, context, file_size, tag_offset + (address - 0x803A6000u), entry, sizeof(entry)) != 0)
+		return -1;
+	datum = read_u32(entry + 0x0c);
+	if (datum == 0xffffffffu)
+		return -1;
+	if (pull(read, context, file_size, tag_offset, header, 4) != 0)
+		return -1;
+	instances = read_u32(header);
+	if (instances < 0x803A6000u || (instances - 0x803A6000u) >= tag_size)
+		return -1;
+	if (pull(read, context, file_size, tag_offset + (instances - 0x803A6000u) + (datum & 0xffffu) * 0x20u, instance, sizeof(instance)) != 0)
+		return -1;
+	if (read_u32(instance) != WII_BIPED_GROUP)
+		return -1;
+	base = read_u32(instance + 0x14);
+	if (base < 0x803A6000u || (base - 0x803A6000u) + WII_BIPED_STANDING_CAMERA_HEIGHT + 4u > tag_size)
+		return -1;
+	if (pull(read, context, file_size, tag_offset + (base - 0x803A6000u) + WII_BIPED_STANDING_CAMERA_HEIGHT, height, 4) != 0)
+		return -1;
+	bits = read_u32(height);
+	memcpy(&sim->camera_height, &bits, 4);
+	if (sim->camera_height < 0.2f || sim->camera_height > 3.0f)
+		return -1;
+	sim->have_camera_height = 1;
+	return 0;
+}
+
 int wii_sim_script_record(uint8_t const *record, char *name, int name_size, int *script_type)
 {
 	int index;
@@ -110,6 +158,7 @@ int wii_sim_load(
 	sim->weapon_count = block_count(read, context, file_size, scenario_file + WII_SCENARIO_WEAPONS);
 	sim->encounter_count = block_count(read, context, file_size, scenario_file + WII_SCENARIO_AI_ENCOUNTERS);
 	read_player(read, context, file_size, tag_offset, tag_size, scenario_file, sim);
+	read_camera_height(read, context, file_size, tag_offset, tag_size, scenario_file, sim);
 	if (pull(read, context, file_size, scenario_file + WII_SCENARIO_HS_SYNTAX, syntax_head, 4) == 0)
 		sim->syntax_bytes = read_u32(syntax_head);
 	if (pull(read, context, file_size, scenario_file + WII_SCENARIO_HS_STRINGS, syntax_head, 16) == 0) {
@@ -216,21 +265,19 @@ void wii_sim_frame(struct wii_sim *sim)
 	sim->frames++;
 	if ((sim->frames & 1u) == 0)
 		sim->ticks++;
-	if (sim->vm) {
-		wii_hs_set_time(sim->ticks);
-		wii_hs_update();
-	}
+	wii_hs_set_time(sim->ticks);
+	wii_game_tick();
 	note = wii_hs_note();
 	snprintf(sim->message, sizeof(sim->message),
-		"tick %u %.16s %s unlinked %d  biped %d weap %d ai %d%s%s",
+		"tick %u %.12s %s unlinked %d  unit %d ai %d gun %d%s%s",
 		(unsigned)sim->ticks,
 		sim->startup_name[0] ? sim->startup_name : "no startup",
-		sim->vm ? "hs" : "vm off",
+		sim->vm ? "game" : "vm off",
 		sim->vm ? wii_hs_unlinked() : 0,
-		sim->biped_count,
-		sim->weapon_count,
-		sim->encounter_count,
-		sim->have_player ? "  player" : "",
+		wii_game_unit_ticks,
+		wii_game_ai_ticks,
+		wii_game_weapon_ticks,
+		sim->have_camera_height ? "  eye" : "",
 		note && note[0] ? "  " : "");
 	if (note && note[0]) {
 		size_t used = strlen(sim->message);
