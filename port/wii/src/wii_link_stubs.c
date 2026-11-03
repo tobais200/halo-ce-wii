@@ -638,7 +638,26 @@ int valid_real_normal2d(void) { return 0; }
 int vector3d_from_angle(void) { return 0; }
 int vector3d_from_euler_angles2d(void) { return 0; }
 int vector_intersects_pill3d(void) { return 0; }
-int vectors3d_from_euler_angles3d(void) { return 0; }
+float cosf(float);
+float sinf(float);
+void vectors3d_from_euler_angles3d(float *forward, float *up, float const *angles)
+{
+	float yaw;
+	float pitch;
+	float cosine_pitch;
+
+	if (!forward || !up || !angles)
+		return;
+	yaw = angles[0];
+	pitch = angles[1];
+	cosine_pitch = cosf(pitch);
+	forward[0] = cosf(yaw) * cosine_pitch;
+	forward[1] = sinf(yaw) * cosine_pitch;
+	forward[2] = sinf(pitch);
+	up[0] = 0.f;
+	up[1] = 0.f;
+	up[2] = 1.f;
+}
 int vector_to_line_distance_squared3d(void) { return 0; }
 int viewmodel_is_visible(void) { return 0; }
 int viewmodel_shield_is_visible(void) { return 0; }
@@ -698,7 +717,7 @@ int game_engine_vehicle_placement_begin(void) { return 0; }
 int garbage_new(void) { return 0; }
 int garbage_update(void) { return 0; }
 int item_delete(void) { return 0; }
-int item_new(void) { return 0; }
+int item_new(void) { return 1; }
 int items_dispose(void) { return 0; }
 int items_dispose_from_old_map(void) { return 0; }
 int items_initialize(void) { return 0; }

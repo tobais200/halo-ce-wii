@@ -35,7 +35,7 @@ opence:
 	@echo "  DeLa widget tags, string-list glyphs, event-handler flags"
 	@echo "  hs_runtime.c special forms on the scenario script-node array"
 	@echo "  game.c tick calls players, units, bipeds, weapons, ai, objects"
-	@echo "  player_spawn places a biped at the scenario start; the tag body is a stand-in"
+	@echo "  tag cache working set is streamed; the 23 MiB Xbox cache is not mapped"
 	@echo "Bink, networking, the rasterizer, collisions.c, and game_engine.c are not compiled."
 
 clean:

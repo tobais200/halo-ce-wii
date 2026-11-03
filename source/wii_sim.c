@@ -2,6 +2,7 @@
 
 #include "wii_game.h"
 #include "wii_hs.h"
+#include "wii_tag_cache.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -157,6 +158,7 @@ int wii_sim_load(
 	sim->biped_count = block_count(read, context, file_size, scenario_file + WII_SCENARIO_BIPEDS);
 	sim->weapon_count = block_count(read, context, file_size, scenario_file + WII_SCENARIO_WEAPONS);
 	sim->encounter_count = block_count(read, context, file_size, scenario_file + WII_SCENARIO_AI_ENCOUNTERS);
+	wii_tag_cache_mount(read, context, file_size, tag_offset, tag_size);
 	read_player(read, context, file_size, tag_offset, tag_size, scenario_file, sim);
 	read_camera_height(read, context, file_size, tag_offset, tag_size, scenario_file, sim);
 	if (pull(read, context, file_size, scenario_file + WII_SCENARIO_HS_SYNTAX, syntax_head, 4) == 0)

@@ -11,6 +11,7 @@
 unsigned char game_map_loaded(void);
 
 #include "wii_game.h"
+#include "wii_tag_cache.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
 #include "wii_widget.h"
@@ -427,7 +428,8 @@ int main(void)
 		wii_hs_shutdown();
 	}
 	{
-		wii_game_set_player_start(1.f, 2.f, 3.f, 0.4f);
+		if (wii_tag_cache_self_test() != 0)
+			return fail("tag cache");
 		wii_game_tick();
 		if (!game_map_loaded())
 			return fail(wii_hs_note()[0] ? wii_hs_note() : "game load");

@@ -62,8 +62,9 @@ int wii_mem2_init(void);
 void *wii_mem2_alloc(uint32_t size);
 void wii_mem_sample(struct wii_ram_sample *sample);
 
-/* 0 when a future tag-data copy of this size would still fit the cap
-   and the measured MEM2 free space. This bring-up never performs that copy. */
+/* 0 when a tag-data copy of this size would still fit the cap and the
+   measured MEM2 free space. The streamed working set is 1 MiB, not the
+   23 MiB Xbox cache. */
 int wii_mem_tag_would_fit(uint32_t tag_bytes);
 
 #endif

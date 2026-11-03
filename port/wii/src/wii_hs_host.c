@@ -361,8 +361,14 @@ void hs_node_gc(void)
 	}
 }
 
+struct scenario *wii_tag_cache_scenario(void);
+
 struct scenario *global_scenario_get(void)
 {
+	struct scenario *loaded = wii_tag_cache_scenario();
+
+	if (loaded)
+		return loaded;
 	return &wii_scenario;
 }
 

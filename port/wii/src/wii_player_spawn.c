@@ -11,6 +11,7 @@
 #include "models/model_definitions.h"
 #include "objects/object_types.h"
 #include "units/biped_definitions.h"
+#include "wii_tag_cache.h"
 
 #include <string.h>
 
@@ -113,6 +114,8 @@ static void wii_tags_init(void)
 
 void *tag_get(long group_tag, long tag_index)
 {
+	if (wii_tag_cache_ready())
+		return wii_tag_cache_get(group_tag, tag_index);
 	(void)group_tag;
 	wii_tags_init();
 	if (tag_index == 0)
@@ -126,6 +129,8 @@ void *tag_get(long group_tag, long tag_index)
 
 long tag_get_group_tag(long tag_index)
 {
+	if (wii_tag_cache_ready())
+		return wii_tag_cache_group(tag_index);
 	if (tag_index == 0)
 		return (long)'bipd';
 	if (tag_index == 1)
@@ -137,6 +142,8 @@ long tag_get_group_tag(long tag_index)
 
 struct game_globals *scenario_get_game_globals(void)
 {
+	if (wii_tag_cache_ready() && wii_tag_cache_globals())
+		return wii_tag_cache_globals();
 	wii_tags_init();
 	return &wii_game_globals_tag;
 }
