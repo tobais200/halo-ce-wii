@@ -459,6 +459,17 @@ void *tag_block_get_element_with_size(struct tag_block const *block, long index,
 	return (char *)block->address + index * element_size;
 }
 
+void *tag_data_get_pointer(struct tag_data const *data, long offset, long size)
+{
+	static unsigned char empty[64];
+
+	if (!data || size < 0 || offset < 0 || offset > data->size)
+		return size <= (long)sizeof(empty) ? empty : NULL;
+	if (size > data->size - offset || (size && !data->address))
+		return size <= (long)sizeof(empty) ? empty : NULL;
+	return (unsigned char *)data->address + offset;
+}
+
 int _stricmp(char const *a, char const *b)
 {
 	unsigned char ca;

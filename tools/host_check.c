@@ -435,6 +435,12 @@ int main(void)
 			return fail(wii_hs_note()[0] ? wii_hs_note() : "game load");
 		if (wii_game_player_unit() == -1)
 			return fail("player biped was not spawned");
+		if (wii_tag_cache_location_count() < 1 || wii_tag_cache_magazine_rounds() < 1)
+			return fail("encounter or magazine");
+		if (wii_tag_cache_idle_rotation_w() < 0.9f)
+			return fail("biped idle animation");
+		if (wii_game_live_objects() < 3)
+			return fail("actor was not spawned");
 	}
 
 	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela, scripts, hs runtime, player biped ok\n");

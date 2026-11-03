@@ -1,4 +1,66 @@
 #include <string.h>
+
+float sqrtf(float);
+
+/* Same 16-byte layout as real_quaternion: i, j, k, w. */
+struct wii_quaternion {
+	float i, j, k, w;
+};
+
+void quaternions_multiply(struct wii_quaternion const *q0, struct wii_quaternion const *q1, struct wii_quaternion *result)
+{
+	struct wii_quaternion temporary;
+
+	if (q0 == result) {
+		temporary = *q0;
+		q0 = &temporary;
+	}
+	if (q1 == result) {
+		temporary = *q1;
+		q1 = &temporary;
+	}
+	result->i = q0->j * q1->k + q0->i * q1->w + q0->w * q1->i - q0->k * q1->j;
+	result->j = q0->w * q1->j + q0->j * q1->w + q0->k * q1->i - q0->i * q1->k;
+	result->k = q0->k * q1->w + q0->i * q1->j + q0->w * q1->k - q0->j * q1->i;
+	result->w = q0->w * q1->w - q0->i * q1->i - q0->j * q1->j - q0->k * q1->k;
+}
+
+void quaternions_interpolate(struct wii_quaternion const *q0, struct wii_quaternion const *q1, float t, struct wii_quaternion *result)
+{
+	float v = 1.f - t;
+
+	if (q0->i * q1->i + q0->j * q1->j + q0->k * q1->k + q0->w * q1->w < 0.f)
+		t = -t;
+	result->i = q0->i * v + q1->i * t;
+	result->j = q0->j * v + q1->j * t;
+	result->k = q0->k * v + q1->k * t;
+	result->w = q0->w * v + q1->w * t;
+}
+
+void quaternion_normalize(struct wii_quaternion *q)
+{
+	float magnitude_squared = q->i * q->i + q->j * q->j + q->k * q->k + q->w * q->w;
+
+	if (magnitude_squared > 0.f) {
+		float scale = 1.f / sqrtf(magnitude_squared);
+
+		q->i *= scale;
+		q->j *= scale;
+		q->k *= scale;
+		q->w *= scale;
+	} else {
+		q->i = 0.f;
+		q->j = 0.f;
+		q->k = 0.f;
+		q->w = 1.f;
+	}
+}
+
+void quaternions_interpolate_and_normalize(struct wii_quaternion const *q0, struct wii_quaternion const *q1, float t, struct wii_quaternion *result)
+{
+	quaternions_interpolate(q0, q1, t, result);
+	quaternion_normalize(result);
+}
 short global_structure_bsp_index;
 float global_gravity;
 short global_current_collision_user_depth;
@@ -147,7 +209,9 @@ int actor_combat_update(void) { return 0; }
 int actor_compute_prop_target_weight(void) { return 0; }
 int actor_compute_prop_unopposable(void) { return 0; }
 int actor_conversation_control(void) { return 0; }
-void *actor_debug_array;
+/* One debug record is 0x657c. The first actors use the low slots. */
+static unsigned char wii_actor_debug[4 * 0x657c];
+void *actor_debug_array = wii_actor_debug;
 int actor_destination_update(void) { return 0; }
 int actor_discard_firing_position(void) { return 0; }
 int actor_emotion_update(void) { return 0; }
@@ -224,7 +288,6 @@ int ai_debug_select_actor(void) { return 0; }
 int ai_debug_select_encounter(void) { return 0; }
 int ai_debug_update(void) { return 0; }
 void *ai_globals;
-int aiming_screen_apply(void) { return 0; }
 void *ai_profile;
 int ai_profile_dispose(void) { return 0; }
 int ai_profile_dispose_from_old_map(void) { return 0; }
@@ -233,16 +296,6 @@ int ai_profile_initialize_for_new_map(void) { return 0; }
 int ai_profile_update(void) { return 0; }
 int angle_between_vectors3d(void) { return 0; }
 int angular_accelerate_to_position(void) { return 0; }
-int animation_choose_random_permutation_internal(void) { return 0; }
-int animation_get_frame_info(void) { return 0; }
-int animation_get_node_orientations(void) { return 0; }
-int animation_get_root_matrix(void) { return 0; }
-int animation_get_root_velocity(void) { return 0; }
-int animation_get_x_offsets(void) { return 0; }
-int animation_graph_get_animation_by_name(void) { return 0; }
-int animation_graph_node_matrices_from_orientations(void) { return 0; }
-int animation_list_get_string(void) { return 0; }
-int animation_update_internal(void) { return 0; }
 int biped_limp_noodle_get_max_relaxation_iterations(void) { return 0; }
 int biped_limp_noodle_relax_nodes_onto_environment(void) { return 0; }
 int bit_vector_and(void) { return 0; }
@@ -253,7 +306,6 @@ int bots_update_actions(void) { return 0; }
 int breakable_surface_damage(void) { return 0; }
 int breakable_surface_damage_area_of_effect(void) { return 0; }
 int breakable_surface_flags_get(void) { return 0; }
-int build_damage_animation_index(void) { return 0; }
 void *cheat;
 int cinematic_in_progress(void) { return 0; }
 int cluster_partition_delete(void) { return 0; }
@@ -397,8 +449,6 @@ int infection_unit_is_zombie(void) { return 0; }
 int input_get_gamepad_state(void) { return 0; }
 int input_has_gamepad(void) { return 0; }
 int input_key_is_down(void) { return 0; }
-int interpolate_node_orientations(void) { return 0; }
-int inverse_kinematics_adjust_matrices(void) { return 0; }
 int item_accelerate(void) { return 0; }
 int item_detonate(void) { return 0; }
 int item_in_unit_inventory(void) { return 0; }
@@ -487,10 +537,6 @@ int object_list_get_next(void) { return 0; }
 int observer_get_camera(void) { return 0; }
 int observer_obsolete_position(void) { return 0; }
 int orientations_interpolate(void) { return 0; }
-int overlay_animation_apply(void) { return 0; }
-int overlay_animation_apply_continuous(void) { return 0; }
-int overlay_animation_apply_continuous_scaled(void) { return 0; }
-int overlay_animation_apply_scaled(void) { return 0; }
 int overshield_effect_active(void) { return 0; }
 int overshield_effect_hit_effect_allowed(void) { return 0; }
 int overshield_effect_values(void) { return 0; }
@@ -538,7 +584,6 @@ void *prop_data;
 int prop_position_refresh(void) { return 0; }
 int prop_status_refresh(void) { return 0; }
 int quantize_real_to_byte_lower_bound(void) { return 0; }
-int quaternions_interpolate_and_normalize(void) { return 0; }
 int quaternion_to_angle_and_vector(void) { return 0; }
 int rasterizer_debug_model_vertices(void) { return 0; }
 int rasterizer_debug_options(void) { return 0; }
@@ -574,7 +619,6 @@ void *render_model_markers;
 void *render_model_nodes;
 int render_model_no_geometry(void) { return 0; }
 int render_model_vertex_counts(void) { return 0; }
-int replacement_animation_apply(void) { return 0; }
 int rgb_colors_interpolate(void) { return 0; }
 int rintf(void) { return 0; }
 int rotate_vector_about_axis(void) { return 0; }
@@ -629,17 +673,24 @@ int unit_get_local_player_index(void) { return 0; }
 int unit_get_speech_priority_name(void) { return 0; }
 int unit_make_damage_sound(void) { return 0; }
 int unit_scream(void) { return 0; }
-int unit_seat_animation_list(void) { return 0; }
 int unit_speak(void) { return 0; }
 int unit_test_speech(void) { return 0; }
 int unspatialized_impulse_sound_new(void) { return 0; }
 int ustrncpy(void) { return 0; }
 int valid_real_normal2d(void) { return 0; }
-int vector3d_from_angle(void) { return 0; }
-int vector3d_from_euler_angles2d(void) { return 0; }
-int vector_intersects_pill3d(void) { return 0; }
 float cosf(float);
 float sinf(float);
+float *vector3d_from_angle(float *vector, float angle)
+{
+	if (!vector)
+		return 0;
+	vector[0] = cosf(angle);
+	vector[1] = sinf(angle);
+	vector[2] = 0.f;
+	return vector;
+}
+int vector3d_from_euler_angles2d(void) { return 0; }
+int vector_intersects_pill3d(void) { return 0; }
 void vectors3d_from_euler_angles3d(float *forward, float *up, float const *angles)
 {
 	float yaw;
@@ -661,8 +712,6 @@ void vectors3d_from_euler_angles3d(float *forward, float *up, float const *angle
 int vector_to_line_distance_squared3d(void) { return 0; }
 int viewmodel_is_visible(void) { return 0; }
 int viewmodel_shield_is_visible(void) { return 0; }
-int weapon_class_animation_list(void) { return 0; }
-int weapon_type_animation_list(void) { return 0; }
 int widgets_delete(void) { return 0; }
 int widgets_dispose(void) { return 0; }
 int widgets_dispose_from_old_map(void) { return 0; }

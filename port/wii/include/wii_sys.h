@@ -46,5 +46,6 @@ struct memory_status;
 struct scenario_structure_bsp_reference;
 struct render_fog;
 struct location;
+struct model;
 
 #endif

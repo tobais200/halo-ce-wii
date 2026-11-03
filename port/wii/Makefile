@@ -36,6 +36,8 @@ opence:
 	@echo "  hs_runtime.c special forms on the scenario script-node array"
 	@echo "  game.c tick calls players, units, bipeds, weapons, ai, objects"
 	@echo "  tag cache working set is streamed; the 23 MiB Xbox cache is not mapped"
+	@echo "  ai_place spawns actors from squad starting locations"
+	@echo "  weapon magazines are resident; animation_get_node_orientations samples up to 64 KiB of frame data"
 	@echo "Bink, networking, the rasterizer, collisions.c, and game_engine.c are not compiled."
 
 clean:

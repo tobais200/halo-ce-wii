@@ -26,6 +26,9 @@ uint32_t wii_tag_cache_resident(void);
 float wii_tag_cache_camera_height(void);
 int wii_tag_cache_weapon_count(void);
 int wii_tag_cache_encounter_count(void);
+int wii_tag_cache_location_count(void);
+int wii_tag_cache_magazine_rounds(void);
+float wii_tag_cache_idle_rotation_w(void);
 void wii_tag_cache_player(float *x, float *y, float *z);
 
 struct scenario *wii_tag_cache_scenario(void);

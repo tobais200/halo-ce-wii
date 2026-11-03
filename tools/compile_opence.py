@@ -27,6 +27,8 @@ SOURCES = {
     "object_types.o": "objects/object_types.c",
     "damage.o": "objects/damage.c",
     "models.o": "models/models.c",
+    "model_animations.o": "models/model_animations.c",
+    "model_animation_definitions.o": "models/model_animation_definitions.c",
     "first_person_weapons.o": "interface/first_person_weapons.c",
     "memory_pool.o": "memory/memory_pool.c",
 }

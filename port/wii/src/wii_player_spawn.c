@@ -170,6 +170,22 @@ void wii_game_spawn_local_player(void)
 		wii_player = player_new(0, NONE, 0, NULL);
 }
 
+extern struct data_array *object_header_data;
+
+int wii_game_live_objects(void)
+{
+	long index;
+	int count;
+
+	if (!object_header_data)
+		return 0;
+	count = 0;
+	index = NONE;
+	while ((index = data_next_index(object_header_data, index)) != NONE)
+		count++;
+	return count;
+}
+
 long wii_game_player_unit(void)
 {
 	struct player_datum *player;

@@ -12,6 +12,7 @@
 #include "units/biped_definitions.h"
 #include "items/weapon_definitions.h"
 #include "ai/ai_scenario_definitions.h"
+#include "ai/actor_definitions.h"
 #include "wii_tag_cache.h"
 
 #include <stdlib.h>
@@ -36,7 +37,13 @@ enum {
 	WII_TAG_CAP_NODES = 64,
 	WII_TAG_CAP_SEATS = 8,
 	WII_TAG_CAP_CLASSES = 2,
-	WII_TAG_CAP_TYPES = 2
+	WII_TAG_CAP_TYPES = 2,
+	WII_TAG_CAP_LOCATIONS = 4,
+	WII_TAG_CAP_ANIMS = 4,
+	WII_TAG_CAP_MAGAZINES = 2,
+	/* One animation's default pose or frame blob. Four of these still fit
+	   in the 1 MiB arena with the scenario, biped, and weapon tags. */
+	WII_TAG_FRAME_BYTES = 65536
 };
 
 struct wii_slot {
@@ -64,6 +71,8 @@ static struct game_globals *native_globals;
 static struct biped_definition *native_biped;
 static int weapon_published;
 static int encounter_published;
+static int location_published;
+static int magazine_rounds;
 
 static uint32_t read_le32(uint8_t const *p)
 {
@@ -198,6 +207,7 @@ static int load_model(int slot)
 	nodes = count ? bump((uint32_t)count * sizeof(*nodes)) : NULL;
 	if (!model || (count && !nodes))
 		return -1;
+	model->node_list_checksum = read_le32(raw + offsetof(struct model, node_list_checksum));
 	model->nodes.count = count;
 	model->nodes.address = nodes;
 	for (index = 0; index < count; index++) {
@@ -227,12 +237,229 @@ static int load_model(int slot)
 	return 0;
 }
 
+static void store_u32(uint8_t *p, uint32_t value)
+{
+	memcpy(p, &value, 4);
+}
+
+static void store_u16(uint8_t *p, uint16_t value)
+{
+	memcpy(p, &value, 2);
+}
+
+static void store_f32(uint8_t *p, float value)
+{
+	memcpy(p, &value, 4);
+}
+
+static int span_ok(int size, int offset, int bytes)
+{
+	if (offset < 0 || bytes < 0)
+		return 0;
+	if ((uint32_t)offset > (uint32_t)size)
+		return 0;
+	if ((uint32_t)bytes > (uint32_t)size - (uint32_t)offset)
+		return 0;
+	return 1;
+}
+
+static void native_u32s(uint8_t *p, int count)
+{
+	int index;
+
+	for (index = 0; index < count; index++)
+		store_u32(p + index * 4, read_le32(p + index * 4));
+}
+
+static void native_u16s(uint8_t *p, int count)
+{
+	int index;
+
+	for (index = 0; index < count; index++)
+		store_u16(p + index * 2, (uint16_t)read_les16(p + index * 2));
+}
+
+static void native_f32s(uint8_t *p, int count)
+{
+	int index;
+
+	for (index = 0; index < count; index++)
+		store_f32(p + index * 4, read_lef(p + index * 4));
+}
+
+static int flag_on(void const *flags, int node)
+{
+	uint32_t word;
+
+	if (!flags || node < 0 || node >= 64)
+		return 0;
+	memcpy(&word, (uint8_t const *)flags + (node >> 5) * 4, 4);
+	return (int)((word >> (node & 31)) & 1u);
+}
+
+static int flags_set(void const *flags, int node_count)
+{
+	int count = 0;
+	int node;
+
+	if (node_count > 64)
+		node_count = 64;
+	for (node = 0; node < node_count; node++)
+		count += flag_on(flags, node);
+	return count;
+}
+
+/* File bytes are little-endian. The sampler reads native shorts and floats.
+   On a little-endian host this stores the same bytes. */
+static int native_uncompressed(
+	uint8_t *bytes,
+	int size,
+	void const *rotation,
+	void const *translation,
+	void const *scale,
+	int node_count,
+	int frame_count,
+	int defaults)
+{
+	int frame;
+	int cursor = 0;
+
+	if (node_count < 0 || node_count > WII_TAG_CAP_NODES)
+		return -1;
+	if (defaults)
+		frame_count = 1;
+	if (frame_count < 1 || frame_count > 32767)
+		return -1;
+	for (frame = 0; frame < frame_count; frame++) {
+		int node;
+
+		for (node = 0; node < node_count; node++) {
+			int use_rotation = defaults ? !flag_on(rotation, node) : flag_on(rotation, node);
+			int use_translation = defaults ? !flag_on(translation, node) : flag_on(translation, node);
+			int use_scale = defaults ? !flag_on(scale, node) : flag_on(scale, node);
+
+			if (use_rotation) {
+				if (!span_ok(size, cursor, 8))
+					return -1;
+				native_u16s(bytes + cursor, 4);
+				cursor += 8;
+			}
+			if (use_translation) {
+				if (!span_ok(size, cursor, 12))
+					return -1;
+				native_f32s(bytes + cursor, 3);
+				cursor += 12;
+			}
+			if (use_scale) {
+				if (!span_ok(size, cursor, 4))
+					return -1;
+				native_f32s(bytes + cursor, 1);
+				cursor += 4;
+			}
+		}
+	}
+	return 0;
+}
+
+static int native_key_range(uint8_t *blob, int size, int index_off, int index_stride, int value_off, int value_stride, int first, int count, int value_is_float)
+{
+	if (count <= 0)
+		return 0;
+	if (first < 0)
+		return -1;
+	if (!span_ok(size, index_off + first * index_stride, count * index_stride))
+		return -1;
+	if (!span_ok(size, value_off + first * value_stride, count * value_stride))
+		return -1;
+	native_u16s(blob + index_off + first * index_stride, count * (index_stride / 2));
+	if (value_is_float)
+		native_f32s(blob + value_off + first * value_stride, count * (value_stride / 4));
+	else
+		native_u16s(blob + value_off + first * value_stride, count * (value_stride / 2));
+	return 0;
+}
+
+static int native_compressed(
+	uint8_t *blob,
+	int size,
+	void const *rotation,
+	void const *translation,
+	void const *scale,
+	int node_count)
+{
+	int32_t off[11];
+	int index;
+	int rotation_nodes;
+	int translation_nodes;
+	int scale_nodes;
+
+	if (node_count < 0 || node_count > WII_TAG_CAP_NODES)
+		return -1;
+	if (!span_ok(size, 0, 0x2C))
+		return -1;
+	for (index = 0; index < 11; index++)
+		off[index] = read_les32(blob + index * 4);
+	native_u32s(blob, 11);
+	rotation_nodes = flags_set(rotation, node_count);
+	translation_nodes = flags_set(translation, node_count);
+	scale_nodes = flags_set(scale, node_count);
+	if (!span_ok(size, 0x2C, rotation_nodes * 4))
+		return -1;
+	native_u32s(blob + 0x2C, rotation_nodes);
+	if (translation_nodes && !span_ok(size, off[3], translation_nodes * 4))
+		return -1;
+	if (translation_nodes)
+		native_u32s(blob + off[3], translation_nodes);
+	if (scale_nodes && !span_ok(size, off[7], scale_nodes * 4))
+		return -1;
+	if (scale_nodes)
+		native_u32s(blob + off[7], scale_nodes);
+	if (!span_ok(size, off[1], node_count * 6) || !span_ok(size, off[5], node_count * 12) || !span_ok(size, off[9], node_count * 4))
+		return -1;
+	native_u16s(blob + off[1], node_count * 3);
+	native_f32s(blob + off[5], node_count * 3);
+	native_f32s(blob + off[9], node_count);
+	for (index = 0; index < rotation_nodes; index++) {
+		uint32_t header;
+		int first;
+		int count;
+
+		memcpy(&header, blob + 0x2C + index * 4, 4);
+		first = (int)(header >> 12);
+		count = (int)(header & 0xFFFu);
+		if (native_key_range(blob, size, off[0], 2, off[2], 6, first, count, 0) != 0)
+			return -1;
+	}
+	for (index = 0; index < translation_nodes; index++) {
+		uint32_t header;
+		int first;
+		int count;
+
+		memcpy(&header, blob + off[3] + index * 4, 4);
+		first = (int)(header >> 12);
+		count = (int)(header & 0xFFFu);
+		if (native_key_range(blob, size, off[4], 2, off[6], 12, first, count, 1) != 0)
+			return -1;
+	}
+	for (index = 0; index < scale_nodes; index++) {
+		uint32_t header;
+		int first;
+		int count;
+
+		memcpy(&header, blob + off[7] + index * 4, 4);
+		first = (int)(header >> 12);
+		count = (int)(header & 0xFFFu);
+		if (native_key_range(blob, size, off[8], 2, off[10], 4, first, count, 1) != 0)
+			return -1;
+	}
+	return 0;
+}
+
 static int load_animation(int slot)
 {
 	uint8_t raw[sizeof(struct animation_graph)];
 	struct animation_graph *graph;
 	struct animation_graph_unit_seat *seats;
-	struct animation *animation;
 	int seat_count;
 	int seat_index;
 	uint32_t seat_va;
@@ -251,14 +478,112 @@ static int load_animation(int slot)
 		seat_count = WII_TAG_CAP_SEATS;
 	graph = bump(sizeof(*graph));
 	seats = seat_count ? bump((uint32_t)seat_count * sizeof(*seats)) : NULL;
-	animation = bump(sizeof(*animation));
-	if (!graph || !animation || (seat_count && !seats))
+	if (!graph || (seat_count && !seats))
 		return -1;
 	graph->unit_seats.count = seat_count;
 	graph->unit_seats.address = seats;
-	graph->animations.count = 1;
-	graph->animations.address = animation;
-	animation->node_count = 1;
+	{
+		int anim_count = read_les32(raw + offsetof(struct animation_graph, animations));
+		uint32_t anim_va = read_le32(raw + offsetof(struct animation_graph, animations) + 4);
+		struct animation *animations;
+		int anim_index;
+
+		if (anim_count < 1)
+			anim_count = 1;
+		if (anim_count > WII_TAG_CAP_ANIMS)
+			anim_count = WII_TAG_CAP_ANIMS;
+		animations = bump((uint32_t)anim_count * sizeof(*animations));
+		if (!animations)
+			return -1;
+		graph->animations.count = anim_count;
+		graph->animations.address = animations;
+		if (read_le32(raw + offsetof(struct animation_graph, animations)) == 0)
+			animations[0].node_count = 1;
+		for (anim_index = 0; anim_index < anim_count && anim_va; anim_index++) {
+			uint8_t anim_raw[sizeof(struct animation)];
+			int data_size;
+
+			if (pull_va(anim_va + (uint32_t)anim_index * sizeof(anim_raw), anim_raw, sizeof(anim_raw)) != 0)
+				break;
+			memcpy(animations[anim_index].name, anim_raw, 32);
+			animations[anim_index].type = read_les16(anim_raw + offsetof(struct animation, type));
+			animations[anim_index].frame_count = read_les16(anim_raw + offsetof(struct animation, frame_count));
+			animations[anim_index].frame_size = read_les16(anim_raw + offsetof(struct animation, frame_size));
+			animations[anim_index].frame_info_type = read_les16(anim_raw + offsetof(struct animation, frame_info_type));
+			animations[anim_index].node_list_checksum = read_le32(anim_raw + offsetof(struct animation, node_list_checksum));
+			animations[anim_index].node_count = read_les16(anim_raw + offsetof(struct animation, node_count));
+			animations[anim_index].flags = (word)read_les16(anim_raw + offsetof(struct animation, flags));
+			animations[anim_index].nodes_with_translation_flags[0] = read_le32(anim_raw + offsetof(struct animation, nodes_with_translation_flags));
+			animations[anim_index].nodes_with_translation_flags[1] = read_le32(anim_raw + offsetof(struct animation, nodes_with_translation_flags) + 4);
+			animations[anim_index].nodes_with_rotation_flags[0] = read_le32(anim_raw + offsetof(struct animation, nodes_with_rotation_flags));
+			animations[anim_index].nodes_with_rotation_flags[1] = read_le32(anim_raw + offsetof(struct animation, nodes_with_rotation_flags) + 4);
+			animations[anim_index].nodes_with_scale_flags[0] = read_le32(anim_raw + offsetof(struct animation, nodes_with_scale_flags));
+			animations[anim_index].nodes_with_scale_flags[1] = read_le32(anim_raw + offsetof(struct animation, nodes_with_scale_flags) + 4);
+			animations[anim_index].compressed_data_offset = read_les32(anim_raw + offsetof(struct animation, compressed_data_offset));
+			data_size = read_les32(anim_raw + offsetof(struct animation, default_data));
+			if (data_size > 0 && data_size <= WII_TAG_FRAME_BYTES) {
+				uint8_t *bytes = bump((uint32_t)data_size);
+				uint32_t data_va = read_le32(anim_raw + offsetof(struct animation, default_data) + 12);
+
+				if (bytes && pull_va(data_va, bytes, (uint32_t)data_size) == 0) {
+					if ((animations[anim_index].flags & 1) == 0 &&
+						native_uncompressed(bytes, data_size,
+							animations[anim_index].nodes_with_rotation_flags,
+							animations[anim_index].nodes_with_translation_flags,
+							animations[anim_index].nodes_with_scale_flags,
+							animations[anim_index].node_count, 1, 1) != 0)
+						animations[anim_index].frame_count = 0;
+					animations[anim_index].default_data.size = animations[anim_index].frame_count ? data_size : 0;
+					animations[anim_index].default_data.address = animations[anim_index].frame_count ? bytes : NULL;
+				} else {
+					animations[anim_index].frame_count = 0;
+				}
+			} else if (data_size > WII_TAG_FRAME_BYTES) {
+				animations[anim_index].frame_count = 0;
+			}
+			data_size = read_les32(anim_raw + offsetof(struct animation, data));
+			if (data_size > 0 && data_size <= WII_TAG_FRAME_BYTES && animations[anim_index].frame_count > 0) {
+				uint8_t *bytes = bump((uint32_t)data_size);
+				uint32_t data_va = read_le32(anim_raw + offsetof(struct animation, data) + 12);
+				int fixed = 0;
+
+				if (bytes && pull_va(data_va, bytes, (uint32_t)data_size) == 0) {
+					if (animations[anim_index].flags & 1) {
+						int shift = animations[anim_index].compressed_data_offset;
+
+						fixed = shift >= 0 && span_ok(data_size, shift, 0x2C) &&
+							native_compressed(bytes + shift, data_size - shift,
+								animations[anim_index].nodes_with_rotation_flags,
+								animations[anim_index].nodes_with_translation_flags,
+								animations[anim_index].nodes_with_scale_flags,
+								animations[anim_index].node_count) == 0;
+					} else {
+						fixed = native_uncompressed(bytes, data_size,
+							animations[anim_index].nodes_with_rotation_flags,
+							animations[anim_index].nodes_with_translation_flags,
+							animations[anim_index].nodes_with_scale_flags,
+							animations[anim_index].node_count,
+							animations[anim_index].frame_count, 0) == 0;
+					}
+				}
+				if (fixed) {
+					animations[anim_index].data.size = data_size;
+					animations[anim_index].data.address = bytes;
+				} else {
+					animations[anim_index].frame_count = 0;
+				}
+			} else if (animations[anim_index].frame_count > 0 &&
+				((animations[anim_index].flags & 1) ||
+					native_uncompressed(NULL, 0,
+						animations[anim_index].nodes_with_rotation_flags,
+						animations[anim_index].nodes_with_translation_flags,
+						animations[anim_index].nodes_with_scale_flags,
+						animations[anim_index].node_count,
+						animations[anim_index].frame_count, 0) != 0)) {
+				animations[anim_index].frame_count = 0;
+			}
+		}
+	}
 	for (seat_index = 0; seat_index < seat_count; seat_index++) {
 		uint8_t seat_raw[sizeof(struct animation_graph_unit_seat)];
 		struct animation_graph_weapon_class *classes;
@@ -301,6 +626,29 @@ static int load_animation(int slot)
 				return -1;
 			classes[class_index].weapon_types.count = type_count;
 			classes[class_index].weapon_types.address = types;
+			{
+				int listed = read_les32(class_raw + offsetof(struct animation_graph_weapon_class, animations));
+				uint32_t listed_va = read_le32(class_raw + offsetof(struct animation_graph_weapon_class, animations) + 4);
+				struct animation_graph_animation_index *indices;
+				int listed_index;
+
+				if (listed < 0)
+					listed = 0;
+				if (listed > 8)
+					listed = 8;
+				indices = listed ? bump((uint32_t)listed * sizeof(*indices)) : NULL;
+				if (listed && !indices)
+					return -1;
+				for (listed_index = 0; listed_index < listed; listed_index++) {
+					uint8_t index_raw[2];
+
+					if (pull_va(listed_va + (uint32_t)listed_index * sizeof(struct animation_graph_animation_index), index_raw, 2) != 0)
+						break;
+					indices[listed_index].animation_index = read_les16(index_raw);
+				}
+				classes[class_index].animations.count = listed;
+				classes[class_index].animations.address = indices;
+			}
 			for (type_index = 0; type_index < type_count; type_index++) {
 				uint8_t type_raw[32];
 
@@ -403,6 +751,58 @@ static int load_weapon(int slot)
 	weapon->object.render_bounding_radius = weapon->object.bounding_radius;
 	weapon->object.acceleration_scale = 1.f;
 	weapon->object.forced_shader_permutation_index = NONE;
+	{
+		uint8_t block[8];
+		int magazine_count = 0;
+		uint32_t magazine_va = 0;
+
+		if (pull_va(slots[slot].base_va + offsetof(struct weapon_definition, weapon.magazines), block, 8) == 0) {
+			magazine_count = read_les32(block);
+			magazine_va = read_le32(block + 4);
+		}
+		if (magazine_count < 0)
+			magazine_count = 0;
+		if (magazine_count > WII_TAG_CAP_MAGAZINES)
+			magazine_count = WII_TAG_CAP_MAGAZINES;
+		if (magazine_count > 0) {
+			struct weapon_magazine_definition *magazines = bump((uint32_t)magazine_count * sizeof(*magazines));
+			int magazine_index;
+
+			if (!magazines)
+				return -1;
+			for (magazine_index = 0; magazine_index < magazine_count; magazine_index++) {
+				uint8_t magazine_raw[16];
+
+				if (pull_va(magazine_va + (uint32_t)magazine_index * sizeof(*magazines), magazine_raw, sizeof(magazine_raw)) != 0)
+					return -1;
+				magazines[magazine_index].flags = read_le32(magazine_raw);
+				magazines[magazine_index].rounds_recharged_per_second = read_les16(magazine_raw + 4);
+				magazines[magazine_index].rounds_total_initial = read_les16(magazine_raw + 6);
+				magazines[magazine_index].rounds_total_maximum = read_les16(magazine_raw + 8);
+				magazines[magazine_index].rounds_loaded_maximum = read_les16(magazine_raw + 10);
+				if (magazine_index == 0)
+					magazine_rounds = magazines[magazine_index].rounds_loaded_maximum;
+			}
+			weapon->weapon.magazines.count = magazine_count;
+			weapon->weapon.magazines.address = magazines;
+		}
+		if (pull_va(slots[slot].base_va + offsetof(struct weapon_definition, weapon.triggers), block, 8) == 0) {
+			int trigger_count = read_les32(block);
+			struct weapon_trigger_definition *triggers;
+
+			if (trigger_count < 0)
+				trigger_count = 0;
+			if (trigger_count > 2)
+				trigger_count = 2;
+			triggers = trigger_count ? bump((uint32_t)trigger_count * sizeof(*triggers)) : NULL;
+			if (trigger_count && !triggers)
+				return -1;
+			for (magazine_count = 0; magazine_count < trigger_count; magazine_count++)
+				ref_clear(&triggers[magazine_count].projectile);
+			weapon->weapon.triggers.count = trigger_count;
+			weapon->weapon.triggers.address = triggers;
+		}
+	}
 	ref_clear(&weapon->object.model);
 	ref_clear(&weapon->object.animation_graph);
 	ref_clear(&weapon->object.collision_model);
@@ -486,6 +886,52 @@ static int load_globals(int slot)
 	slots[slot].base = globals;
 	native_globals = globals;
 	return load_biped(find_datum((uint32_t)info->player_unit.index));
+}
+
+static int load_actor(int slot)
+{
+	uint8_t raw[offsetof(struct actor_definition, type) + sizeof(short)];
+	struct actor_definition *actor;
+
+	if (slot < 0 || slots[slot].group != FCC('a', 'c', 't', 'r'))
+		return -1;
+	if (slots[slot].base)
+		return 0;
+	if (pull_va(slots[slot].base_va, raw, sizeof(raw)) != 0)
+		return -1;
+	actor = bump(sizeof(*actor));
+	if (!actor)
+		return -1;
+	actor->flags = read_le32(raw);
+	actor->type = read_les16(raw + offsetof(struct actor_definition, type));
+	slots[slot].base = actor;
+	return 0;
+}
+
+static int load_variant(int slot)
+{
+	uint8_t raw[48];
+	struct actor_variant_definition *variant;
+
+	if (slot < 0 || slots[slot].group != FCC('a', 'c', 't', 'v'))
+		return -1;
+	if (slots[slot].base)
+		return 0;
+	if (pull_va(slots[slot].base_va, raw, sizeof(raw)) != 0)
+		return -1;
+	variant = bump(sizeof(*variant));
+	if (!variant)
+		return -1;
+	read_ref(raw + offsetof(struct actor_variant_definition, actor_reference), &variant->actor_reference);
+	read_ref(raw + offsetof(struct actor_variant_definition, unit_reference), &variant->unit_reference);
+	ref_clear(&variant->major_upgrade_reference);
+	ref_clear(&variant->ranged_combat.reference);
+	ref_clear(&variant->items.equipment_reference);
+	variant->grenade_combat.grenade_type = NONE;
+	if (load_actor(find_datum((uint32_t)variant->actor_reference.index)) != 0)
+		ref_clear(&variant->actor_reference);
+	slots[slot].base = variant;
+	return 0;
 }
 
 static int load_scenario(int slot)
@@ -629,6 +1075,37 @@ static int load_scenario(int slot)
 					squads[squad_index].squad_delay_timer = read_lef(squad_raw + offsetof(struct squad_definition, squad_delay_timer));
 					squads[squad_index].min_count = read_les16(squad_raw + offsetof(struct squad_definition, min_count));
 					squads[squad_index].max_count = read_les16(squad_raw + offsetof(struct squad_definition, max_count));
+					squads[squad_index].platoon_index = NONE;
+					{
+						int location_count = read_les32(squad_raw + offsetof(struct squad_definition, starting_locations));
+						uint32_t location_va = read_le32(squad_raw + offsetof(struct squad_definition, starting_locations) + 4);
+						struct actor_starting_location *locations;
+						int location_index;
+
+						if (location_count < 0)
+							location_count = 0;
+						if (location_count > WII_TAG_CAP_LOCATIONS)
+							location_count = WII_TAG_CAP_LOCATIONS;
+						locations = location_count ? bump((uint32_t)location_count * sizeof(*locations)) : NULL;
+						if (location_count && !locations)
+							return -1;
+						for (location_index = 0; location_index < location_count; location_index++) {
+							uint8_t location_raw[sizeof(struct actor_starting_location)];
+
+							if (pull_va(location_va + (uint32_t)location_index * sizeof(location_raw), location_raw, sizeof(location_raw)) != 0)
+								return -1;
+							locations[location_index].position.x = read_lef(location_raw);
+							locations[location_index].position.y = read_lef(location_raw + 4);
+							locations[location_index].position.z = read_lef(location_raw + 8);
+							locations[location_index].facing = read_lef(location_raw + 12);
+							locations[location_index].flags = location_raw[offsetof(struct actor_starting_location, flags)];
+							locations[location_index].actor_variant_index = read_les16(location_raw + offsetof(struct actor_starting_location, actor_variant_index));
+							locations[location_index].command_list_index = NONE;
+							location_published++;
+						}
+						squads[squad_index].starting_locations.count = location_count;
+						squads[squad_index].starting_locations.address = locations;
+					}
 				}
 				encounters[index].squads.count = squad_count;
 				encounters[index].squads.address = squads;
@@ -637,6 +1114,29 @@ static int load_scenario(int slot)
 			scenario->ai_encounters.address = encounters;
 			encounter_published = count;
 		}
+	}
+	if (pull_va(slots[slot].base_va + offsetof(struct scenario, ai_actor_palette), block, 8) == 0) {
+		int palette_count = read_les32(block);
+		uint32_t palette_va = read_le32(block + 4);
+		struct tag_reference *palette;
+
+		if (palette_count < 0)
+			palette_count = 0;
+		if (palette_count > 4)
+			palette_count = 4;
+		palette = palette_count ? bump((uint32_t)palette_count * sizeof(*palette)) : NULL;
+		if (palette_count && !palette)
+			return -1;
+		for (index = 0; index < palette_count; index++) {
+			uint8_t raw[16];
+
+			if (pull_va(palette_va + (uint32_t)index * sizeof(raw), raw, sizeof(raw)) != 0)
+				return -1;
+			read_ref(raw, &palette[index]);
+			load_variant(find_datum((uint32_t)palette[index].index));
+		}
+		scenario->ai_actor_palette.count = palette_count;
+		scenario->ai_actor_palette.address = palette;
 	}
 	slots[slot].base = scenario;
 	native_scenario = scenario;
@@ -733,6 +1233,8 @@ void wii_tag_cache_unmount(void)
 	native_biped = NULL;
 	weapon_published = 0;
 	encounter_published = 0;
+	location_published = 0;
+	magazine_rounds = 0;
 	memset(slots, 0, sizeof(slots));
 }
 
@@ -761,6 +1263,51 @@ int wii_tag_cache_weapon_count(void)
 int wii_tag_cache_encounter_count(void)
 {
 	return encounter_published;
+}
+
+int wii_tag_cache_location_count(void)
+{
+	return location_published;
+}
+
+int wii_tag_cache_magazine_rounds(void)
+{
+	return magazine_rounds;
+}
+
+float wii_tag_cache_idle_rotation_w(void)
+{
+	struct animation_graph *graph;
+	struct model *model;
+	struct animation *animation;
+	struct real_orientation orientation;
+	int anim_index = 0;
+
+	if (!native_biped)
+		return 0.f;
+	graph = wii_tag_cache_get((long)FCC('a', 'n', 't', 'r'), native_biped->object.animation_graph.index);
+	model = wii_tag_cache_get((long)FCC('m', 'o', 'd', 'e'), native_biped->object.model.index);
+	if (!graph || !model || graph->animations.count < 1 || !graph->animations.address)
+		return 0.f;
+	if (graph->unit_seats.count > 0 && graph->unit_seats.address) {
+		struct animation_graph_unit_seat *seat = graph->unit_seats.address;
+
+		if (seat->weapon_classes.count > 0 && seat->weapon_classes.address) {
+			struct animation_graph_weapon_class *weapon_class = seat->weapon_classes.address;
+
+			if (weapon_class->animations.count > 0 && weapon_class->animations.address) {
+				struct animation_graph_animation_index *indices = weapon_class->animations.address;
+
+				anim_index = indices[0].animation_index;
+			}
+		}
+	}
+	if (anim_index < 0 || anim_index >= graph->animations.count)
+		anim_index = 0;
+	animation = (struct animation *)graph->animations.address + anim_index;
+	memset(&orientation, 0, sizeof(orientation));
+	animation_get_node_orientations(model, animation, 0, &orientation);
+	return orientation.rotation.w;
 }
 
 void wii_tag_cache_player(float *x, float *y, float *z)
@@ -839,7 +1386,7 @@ static int memory_read(void *context, uint64_t offset, void *destination, uint32
 
 int wii_tag_cache_self_test(void)
 {
-	uint8_t file[0x4000];
+	static uint8_t file[0x10000];
 	uint32_t cursor;
 	uint32_t instances;
 	uint32_t scenario_at;
@@ -848,6 +1395,8 @@ int wii_tag_cache_self_test(void)
 	uint32_t palette_at;
 	uint32_t encounter_at;
 	uint32_t squad_at;
+	uint32_t location_at;
+	uint32_t actor_palette_at;
 	uint32_t globals_at;
 	uint32_t info_at;
 	uint32_t fall_at;
@@ -857,17 +1406,21 @@ int wii_tag_cache_self_test(void)
 	uint32_t graph_at;
 	uint32_t seat_at;
 	uint32_t class_at;
+	uint32_t class_anim_at;
 	uint32_t type_at;
 	uint32_t anim_at;
+	uint32_t default_at;
 	uint32_t weapon_def_at;
-	uint32_t datum[6];
+	uint32_t variant_at;
+	uint32_t actor_at;
+	uint32_t datum[8];
 	float x;
 	float y;
 	float z;
 	int index;
 
 	memset(file, 0, sizeof(file));
-	cursor = 0x40 + 6u * 0x20u;
+	cursor = 0x40 + 8u * 0x20u;
 	instances = 0x40;
 	scenario_at = cursor;
 	cursor += 0x800;
@@ -881,6 +1434,10 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct encounter_definition);
 	squad_at = cursor;
 	cursor += sizeof(struct squad_definition);
+	location_at = cursor;
+	cursor += sizeof(struct actor_starting_location);
+	actor_palette_at = cursor;
+	cursor += sizeof(struct tag_reference);
 	globals_at = cursor;
 	cursor += sizeof(struct game_globals) + 16u;
 	info_at = cursor;
@@ -899,19 +1456,27 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct animation_graph_unit_seat);
 	class_at = cursor;
 	cursor += sizeof(struct animation_graph_weapon_class);
+	class_anim_at = cursor;
+	cursor += sizeof(struct animation_graph_animation_index);
 	type_at = cursor;
 	cursor += sizeof(struct animation_graph_weapon_type);
 	anim_at = cursor;
 	cursor += sizeof(struct animation);
+	default_at = cursor;
+	cursor += 24u;
 	weapon_def_at = cursor;
-	cursor += 64u;
+	cursor += sizeof(struct weapon_definition);
+	variant_at = cursor;
+	cursor += sizeof(struct actor_variant_definition);
+	actor_at = cursor;
+	cursor += sizeof(struct actor_definition);
 	if (cursor > sizeof(file))
 		return -1;
-	for (index = 0; index < 6; index++)
+	for (index = 0; index < 8; index++)
 		datum[index] = 0x12340000u | (uint32_t)index;
 	put_u32(file, TAG_BASE + instances);
 	put_u32(file + 4, datum[0]);
-	put_u32(file + 0x0c, 6);
+	put_u32(file + 0x0c, 8);
 	file[0x20] = 't';
 	file[0x21] = 'a';
 	file[0x22] = 'g';
@@ -922,16 +1487,18 @@ int wii_tag_cache_self_test(void)
 			char a, b, c, d;
 			char p0a, p0b, p0c, p0d;
 			char p1a, p1b, p1c, p1d;
-		} rows[6] = {
+		} rows[8] = {
 			{ scenario_at, 's', 'c', 'n', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ globals_at, 'm', 'a', 't', 'g', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ biped_at, 'b', 'i', 'p', 'd', 'u', 'n', 'i', 't', 'o', 'b', 'j', 'e' },
 			{ model_at, 'm', 'o', 'd', 'e', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ graph_at, 'a', 'n', 't', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
-			{ weapon_def_at, 'w', 'e', 'a', 'p', 'i', 't', 'e', 'm', 'o', 'b', 'j', 'e' }
+			{ weapon_def_at, 'w', 'e', 'a', 'p', 'i', 't', 'e', 'm', 'o', 'b', 'j', 'e' },
+			{ variant_at, 'a', 'c', 't', 'v', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ actor_at, 'a', 'c', 't', 'r', 0, 0, 0, 0, 0, 0, 0, 0 }
 		};
 
-		for (index = 0; index < 6; index++) {
+		for (index = 0; index < 8; index++) {
 			uint8_t *instance = file + instances + (uint32_t)index * 0x20u;
 
 			instance[0] = (uint8_t)rows[index].a;
@@ -979,6 +1546,37 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + encounter_at + offsetof(struct encounter_definition, squads) + 4, TAG_BASE + squad_at);
 	memcpy(file + squad_at, "squad", 5);
 	put_u32(file + squad_at + offsetof(struct squad_definition, flags), 0);
+	put_u16(file + squad_at + offsetof(struct squad_definition, actor_palette_index), 0);
+	put_u16(file + squad_at + offsetof(struct squad_definition, min_count), 1);
+	put_u16(file + squad_at + offsetof(struct squad_definition, max_count), 1);
+	put_u32(file + squad_at + offsetof(struct squad_definition, starting_locations), 1);
+	put_u32(file + squad_at + offsetof(struct squad_definition, starting_locations) + 4, TAG_BASE + location_at);
+	put_f32(file + location_at, 1.5f);
+	put_f32(file + location_at + 4, 2.5f);
+	put_f32(file + location_at + 8, 3.5f);
+	put_f32(file + location_at + 12, 0.5f);
+	put_u16(file + location_at + offsetof(struct actor_starting_location, actor_variant_index), 0xffffu);
+	put_u16(file + actor_at + offsetof(struct actor_definition, type), 0);
+	put_u32(file + scenario_at + offsetof(struct scenario, ai_actor_palette), 1);
+	put_u32(file + scenario_at + offsetof(struct scenario, ai_actor_palette) + 4, TAG_BASE + actor_palette_at);
+	file[actor_palette_at] = 'a';
+	file[actor_palette_at + 1] = 'c';
+	file[actor_palette_at + 2] = 't';
+	file[actor_palette_at + 3] = 'v';
+	put_u32(file + actor_palette_at + 12, datum[6]);
+	file[variant_at + offsetof(struct actor_variant_definition, actor_reference)] = 'a';
+	file[variant_at + offsetof(struct actor_variant_definition, actor_reference) + 1] = 'c';
+	file[variant_at + offsetof(struct actor_variant_definition, actor_reference) + 2] = 't';
+	file[variant_at + offsetof(struct actor_variant_definition, actor_reference) + 3] = 'r';
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, actor_reference) + 12, datum[7]);
+	file[variant_at + offsetof(struct actor_variant_definition, unit_reference)] = 'b';
+	file[variant_at + offsetof(struct actor_variant_definition, unit_reference) + 1] = 'i';
+	file[variant_at + offsetof(struct actor_variant_definition, unit_reference) + 2] = 'p';
+	file[variant_at + offsetof(struct actor_variant_definition, unit_reference) + 3] = 'd';
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, unit_reference) + 12, datum[2]);
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, major_upgrade_reference) + 12, 0xffffffffu);
+	put_u32(file + variant_at + offsetof(struct actor_variant_definition, ranged_combat.reference) + 12, 0xffffffffu);
+	put_u16(file + variant_at + offsetof(struct actor_variant_definition, grenade_combat.grenade_type), 0xffffu);
 	put_u16(file + globals_at + offsetof(struct game_globals, player_information), 1);
 	put_u32(file + globals_at + offsetof(struct game_globals, player_information) + 4, TAG_BASE + info_at);
 	file[info_at] = 'b';
@@ -1023,9 +1621,25 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + seat_at + offsetof(struct animation_graph_unit_seat, weapon_classes) + 4, TAG_BASE + class_at);
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, weapon_types), 1);
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, weapon_types) + 4, TAG_BASE + type_at);
+	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, animations), 1);
+	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, animations) + 4, TAG_BASE + class_anim_at);
+	put_u16(file + class_anim_at, 0);
+	put_u32(file + graph_at + offsetof(struct animation_graph, animations), 1);
+	put_u32(file + graph_at + offsetof(struct animation_graph, animations) + 4, TAG_BASE + anim_at);
+	put_u16(file + anim_at + offsetof(struct animation, frame_count), 1);
+	put_u16(file + anim_at + offsetof(struct animation, node_count), 1);
+	put_u32(file + anim_at + offsetof(struct animation, default_data), 24);
+	put_u32(file + anim_at + offsetof(struct animation, default_data) + 12, TAG_BASE + default_at);
+	put_u16(file + default_at + 6, 32767);
 	put_u16(file + weapon_def_at, (uint16_t)_object_type_weapon);
 	put_f32(file + weapon_def_at + offsetof(struct weapon_definition, object.bounding_radius), 0.2f);
-	(void)anim_at;
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.magazines), 1);
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.magazines) + 4, TAG_BASE + weapon_def_at + sizeof(struct weapon_definition) - 32u);
+	put_u16(file + weapon_def_at + sizeof(struct weapon_definition) - 32u + 6, 36);
+	put_u16(file + weapon_def_at + sizeof(struct weapon_definition) - 32u + 8, 36);
+	put_u16(file + weapon_def_at + sizeof(struct weapon_definition) - 32u + 10, 36);
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.triggers), 1);
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.triggers) + 4, TAG_BASE + weapon_def_at + sizeof(struct weapon_definition) - 16u);
 	if (wii_tag_cache_mount(memory_read, file, sizeof(file), 0, sizeof(file)) != 0)
 		return -1;
 	wii_tag_cache_player(&x, &y, &z);
@@ -1034,6 +1648,10 @@ int wii_tag_cache_self_test(void)
 	if (wii_tag_cache_camera_height() < 0.61f || wii_tag_cache_camera_height() > 0.63f)
 		return -1;
 	if (wii_tag_cache_weapon_count() != 1 || wii_tag_cache_encounter_count() != 1)
+		return -1;
+	if (wii_tag_cache_location_count() != 1 || wii_tag_cache_magazine_rounds() != 36)
+		return -1;
+	if (wii_tag_cache_idle_rotation_w() < 0.9f)
 		return -1;
 	if (!wii_tag_cache_get((long)FCC('b', 'i', 'p', 'd'), (long)datum[2]))
 		return -1;
