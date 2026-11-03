@@ -1,7 +1,8 @@
 /*
  * Data-driven slice of OpenCE's DeLa widgets (ui_widget.c offsets).
- * Draws background and child bitmaps from the cache. Event functions,
- * string lists, and the widget memory pool are not run.
+ * Draws background, child bitmaps, and string-list glyphs. Event handlers
+ * follow the retail flag bits. The widget memory pool and the other event
+ * function bodies are not run.
  */
 #ifndef WII_WIDGET_H
 #define WII_WIDGET_H

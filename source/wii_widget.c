@@ -14,6 +14,13 @@
 #define CHILD_BLOCK 0x3E0u
 #define HANDLER_BLOCK 0x54u
 #define BOUNDS_OFFSET 0x24u
+/* ui_widget.c event_handler flag bits. */
+#define EH_CLOSE_CURRENT 0
+#define EH_OPEN 3
+#define EH_RUN_FUNCTION 8
+#define EH_REPLACE 9
+#define EH_GO_BACK 10
+#define EH_RUN_SCRIPT 11
 
 static char const *campaign_names[] = {
 	"a10", "a30", "a50", "b30", "b40", "c10", "c20", "c40", "d20", "d40", 0
@@ -521,6 +528,107 @@ int wii_widget_compose(
 	return 0;
 }
 
+static int move_focus(struct wii_widget *widget, int direction)
+{
+	if (!widget->child_count)
+		return 0;
+	if (direction < 0)
+		widget->focus = widget->focus > 0 ? widget->focus - 1 : widget->child_count - 1;
+	else
+		widget->focus = (widget->focus + 1) % widget->child_count;
+	return 0;
+}
+
+static int open_widget_index(struct wii_widget *widget, bsp_read_fn read, void *context,
+	uint32_t file_size, uint32_t tag_offset, uint32_t tag_size, uint32_t datum)
+{
+	uint32_t next;
+
+	if (widget_file_for_index(read, context, file_size, tag_offset, tag_size, datum, &next) != 0) {
+		snprintf(widget->message, sizeof(widget->message), "DeLa open missing");
+		return 0;
+	}
+	if (widget->depth + 1 >= WII_WIDGET_STACK) {
+		snprintf(widget->message, sizeof(widget->message), "DeLa stack full");
+		return 0;
+	}
+	widget->depth++;
+	widget->stack[widget->depth] = next;
+	widget->focus = 0;
+	snprintf(widget->message, sizeof(widget->message), "DeLa open");
+	return 0;
+}
+
+static int run_handler(struct wii_widget *widget, uint8_t const *handler,
+	bsp_read_fn read, void *context, uint32_t file_size, uint32_t tag_offset, uint32_t tag_size)
+{
+	uint32_t flags = read_u32(handler);
+	int function = (int16_t)read_u16(handler + 6);
+	char script[32];
+
+	memcpy(script, handler + 0x28, 31);
+	script[31] = 0;
+	if ((flags & (1u << EH_RUN_SCRIPT)) && script[0]) {
+		if (campaign_id(script, widget->scenario))
+			return 1;
+		snprintf(widget->message, sizeof(widget->message), "script %.24s", script);
+		return 0;
+	}
+	if (flags & (1u << EH_RUN_FUNCTION)) {
+		/* ui_widget_event_handler_functions.c: 1 next item, 2 previous item.
+		   The other 100 bodies are the menu VM and are not linked. */
+		if (function == 1)
+			return move_focus(widget, 1);
+		if (function == 2)
+			return move_focus(widget, -1);
+		snprintf(widget->message, sizeof(widget->message), "DeLa fn %d unlinked", function);
+		return 0;
+	}
+	if (flags & ((1u << EH_OPEN) | (1u << EH_REPLACE)))
+		return open_widget_index(widget, read, context, file_size, tag_offset, tag_size, read_u32(handler + 0x14));
+	if (flags & ((1u << EH_GO_BACK) | (1u << EH_CLOSE_CURRENT))) {
+		if (widget->depth > 0) {
+			widget->depth--;
+			widget->focus = 0;
+			return 0;
+		}
+		return 2;
+	}
+	snprintf(widget->message, sizeof(widget->message), "DeLa event");
+	return 0;
+}
+
+static int dispatch_widget_events(struct wii_widget *widget, int button,
+	bsp_read_fn read, void *context, uint32_t file_size, uint32_t tag_offset, uint32_t tag_size,
+	uint32_t widget_file)
+{
+	uint8_t block[12];
+	uint32_t count;
+	uint32_t address;
+	uint32_t file_offset;
+	uint32_t index;
+
+	if (!widget_file || pull(read, context, file_size, widget_file + HANDLER_BLOCK, block, sizeof(block)) != 0)
+		return -1;
+	count = read_u32(block);
+	address = read_u32(block + 4);
+	if (!count || address < TAG_CACHE_BASE || (address - TAG_CACHE_BASE) >= tag_size)
+		return -1;
+	if (count > 32u)
+		count = 32u;
+	file_offset = tag_offset + (address - TAG_CACHE_BASE);
+	for (index = 0; index < count; index++) {
+		uint8_t handler[HANDLER_BYTES];
+
+		if (pull(read, context, file_size, file_offset + index * HANDLER_BYTES, handler, sizeof(handler)) != 0)
+			break;
+		if ((int)(int16_t)read_u16(handler + 4) != button)
+			continue;
+		return run_handler(widget, handler, read, context, file_size, tag_offset, tag_size);
+	}
+	return -1;
+}
+
 int wii_widget_input(struct wii_widget *widget, int button,
 	bsp_read_fn read, void *context, uint32_t file_size,
 	uint32_t tag_offset, uint32_t tag_size)
@@ -528,9 +636,21 @@ int wii_widget_input(struct wii_widget *widget, int button,
 	uint8_t definition[WIDGET_BYTES];
 	uint32_t next;
 
+	int handled;
+
 	if (!widget)
 		return 2;
 	widget->scenario[0] = 0;
+	if (widget->child_count && widget->focus >= 0 && widget->focus < widget->child_count) {
+		handled = dispatch_widget_events(widget, button, read, context, file_size, tag_offset, tag_size,
+			widget->child_widget[widget->focus]);
+		if (handled >= 0)
+			return handled;
+	}
+	handled = dispatch_widget_events(widget, button, read, context, file_size, tag_offset, tag_size,
+		widget->depth >= 0 ? widget->stack[widget->depth] : 0);
+	if (handled >= 0)
+		return handled;
 	if (button == 8 || button == 9) {
 		if (widget->child_count) {
 			if (button == 8)

@@ -56,7 +56,17 @@ endif
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o
+export WII_ROOT := $(CURDIR)
+export WII_HS_CFLAGS := -std=c99 -fno-strict-aliasing -DHALO_RELEASE \
+	-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
+	-I$(CURDIR)/port/wii/hs_shim \
+	-I$(CURDIR)/third_party/OpenCE/source \
+	-I$(CURDIR)/third_party/OpenCE/source/tag_files \
+	-I$(CURDIR)/third_party/OpenCE/source/math \
+	-I$(CURDIR)/third_party/OpenCE/source/cseries \
+	-I$(CURDIR)/third_party/OpenCE/source/memory \
+	-I$(CURDIR)/source
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
@@ -82,8 +92,38 @@ $(BUILD): $(OPENCE_GEN)
 
 #---------------------------------------------------------------------------------
 host-check: $(OPENCE_GEN)
-	gcc -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
+	@mkdir -p $(CURDIR)/build
+	gcc -m32 -std=c99 -O2 -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
+		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
+		-I$(CURDIR)/port/wii/hs_shim \
+		-I$(CURDIR)/third_party/OpenCE/source \
+		-I$(CURDIR)/third_party/OpenCE/source/tag_files \
+		-I$(CURDIR)/third_party/OpenCE/source/math \
+		-I$(CURDIR)/third_party/OpenCE/source/cseries \
+		-I$(CURDIR)/third_party/OpenCE/source/memory \
+		-c $(CURDIR)/third_party/OpenCE/source/hs/hs_runtime.c -o $(CURDIR)/build/hs_runtime_host.o
+	gcc -m32 -std=c99 -O2 -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
+		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
+		-I$(CURDIR)/port/wii/hs_shim \
+		-I$(CURDIR)/third_party/OpenCE/source \
+		-I$(CURDIR)/third_party/OpenCE/source/tag_files \
+		-I$(CURDIR)/third_party/OpenCE/source/math \
+		-I$(CURDIR)/third_party/OpenCE/source/cseries \
+		-I$(CURDIR)/third_party/OpenCE/source/memory \
+		-c $(CURDIR)/third_party/OpenCE/source/memory/data.c -o $(CURDIR)/build/data_host.o
+	gcc -m32 -std=c99 -O2 -Wall -Wextra -fno-strict-aliasing -DHALO_RELEASE \
+		-include $(CURDIR)/port/wii/hs_shim/wii_hs_prefix.h \
+		-I$(CURDIR)/port/wii/hs_shim \
+		-I$(CURDIR)/third_party/OpenCE/source \
+		-I$(CURDIR)/third_party/OpenCE/source/tag_files \
+		-I$(CURDIR)/third_party/OpenCE/source/math \
+		-I$(CURDIR)/third_party/OpenCE/source/cseries \
+		-I$(CURDIR)/third_party/OpenCE/source/memory \
+		-I$(CURDIR)/source \
+		-c $(CURDIR)/port/wii/src/wii_hs_host.c -o $(CURDIR)/build/wii_hs_host_host.o
+	gcc -m32 -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
 		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/bsp_preview.c $(CURDIR)/source/wii_tex.c $(CURDIR)/source/wii_widget.c $(CURDIR)/source/wii_sim.c \
+		$(CURDIR)/build/hs_runtime_host.o $(CURDIR)/build/data_host.o $(CURDIR)/build/wii_hs_host_host.o \
 		-o $(CURDIR)/build/host_check
 	$(CURDIR)/build/host_check
 
@@ -119,6 +159,17 @@ $(OUTPUT).dol: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
 $(OFILES_SOURCES) : $(HFILES)
+
+WII_HS_COMPILE = $(CC) -MMD -MP $(CFLAGS) $(WII_HS_CFLAGS)
+
+hs_runtime.o: $(WII_ROOT)/third_party/OpenCE/source/hs/hs_runtime.c
+	$(WII_HS_COMPILE) -MF $(DEPSDIR)/hs_runtime.d -c $< -o $@
+
+data.o: $(WII_ROOT)/third_party/OpenCE/source/memory/data.c
+	$(WII_HS_COMPILE) -MF $(DEPSDIR)/data.d -c $< -o $@
+
+wii_hs_host.o: $(WII_ROOT)/port/wii/src/wii_hs_host.c
+	$(WII_HS_COMPILE) -MF $(DEPSDIR)/wii_hs_host.d -c $< -o $@
 
 #---------------------------------------------------------------------------------
 %.jpg.o %_jpg.h : %.jpg

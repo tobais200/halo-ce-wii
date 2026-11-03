@@ -8,6 +8,7 @@
 #include "lz4.h"
 #include "wii_mem.h"
 #include "wii_tex.h"
+#include "wii_hs.h"
 #include "wii_sim.h"
 #include "wii_widget.h"
 #include "xdvdfs.h"
@@ -341,7 +342,88 @@ int main(void)
 		if (wii_sim_script_record(record, name, sizeof(name), &type) != 0 || type != 0 || strcmp(name, "startup") != 0)
 			return fail("script record");
 	}
+	{
+		/* (set n (+ 1 2)) through hs_runtime.c. Node links match hs_compile:
+		   a call's data names the predicate, and the predicate's next is the
+		   first argument. */
+		enum { nodes = 8, ident = 1 };
+		uint8_t syntax[0x38 + nodes * 0x14];
+		uint8_t script[0x5C];
+		uint8_t global[0x5C];
+		float value = 0.f;
+		int node;
+		uint32_t one = 0x3f800000u;
+		uint32_t two = 0x40000000u;
 
-	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela, scripts ok\n");
+		memset(syntax, 0, sizeof(syntax));
+		memcpy(syntax, "script node", 11);
+		write_u16(syntax + 0x20, nodes);
+		write_u16(syntax + 0x22, 0x14);
+		syntax[0x24] = 1;
+		syntax[0x25] = 1;
+		syntax[0x28] = 0x40;
+		syntax[0x29] = 0x74;
+		syntax[0x2a] = 0x40;
+		syntax[0x2b] = 0x64;
+		write_u16(syntax + 0x2C, nodes);
+		write_u16(syntax + 0x2E, nodes);
+		write_u16(syntax + 0x30, nodes);
+		write_u16(syntax + 0x32, 2);
+		for (node = 0; node < nodes; node++)
+			write_u16(syntax + 0x38 + node * 0x14, ident);
+		/* 0 set, 1 predicate, 2 variable n, 3 plus, 4 plus predicate, 5 one, 6 two, 7 zero */
+		write_u16(syntax + 0x38 + 0 * 0x14 + 2, 4);
+		write_u16(syntax + 0x38 + 0 * 0x14 + 4, 6);
+		write_u16(syntax + 0x38 + 0 * 0x14 + 6, 8);
+		write_u32(syntax + 0x38 + 0 * 0x14 + 8, 0xffffffffu);
+		write_u32(syntax + 0x38 + 0 * 0x14 + 16, (ident << 16) | 1);
+		write_u16(syntax + 0x38 + 1 * 0x14 + 2, 4);
+		write_u16(syntax + 0x38 + 1 * 0x14 + 4, 2);
+		write_u16(syntax + 0x38 + 1 * 0x14 + 6, 1 | 8);
+		write_u32(syntax + 0x38 + 1 * 0x14 + 8, (ident << 16) | 2);
+		write_u16(syntax + 0x38 + 2 * 0x14 + 2, 6);
+		write_u16(syntax + 0x38 + 2 * 0x14 + 4, 6);
+		write_u16(syntax + 0x38 + 2 * 0x14 + 6, 1 | 4 | 8);
+		write_u32(syntax + 0x38 + 2 * 0x14 + 8, (ident << 16) | 3);
+		write_u32(syntax + 0x38 + 2 * 0x14 + 16, 0);
+		write_u16(syntax + 0x38 + 3 * 0x14 + 2, 7);
+		write_u16(syntax + 0x38 + 3 * 0x14 + 4, 6);
+		write_u16(syntax + 0x38 + 3 * 0x14 + 6, 8);
+		write_u32(syntax + 0x38 + 3 * 0x14 + 8, 0xffffffffu);
+		write_u32(syntax + 0x38 + 3 * 0x14 + 16, (ident << 16) | 4);
+		write_u16(syntax + 0x38 + 4 * 0x14 + 2, 7);
+		write_u16(syntax + 0x38 + 4 * 0x14 + 4, 2);
+		write_u16(syntax + 0x38 + 4 * 0x14 + 6, 1 | 8);
+		write_u32(syntax + 0x38 + 4 * 0x14 + 8, (ident << 16) | 5);
+		write_u16(syntax + 0x38 + 5 * 0x14 + 2, 6);
+		write_u16(syntax + 0x38 + 5 * 0x14 + 4, 6);
+		write_u16(syntax + 0x38 + 5 * 0x14 + 6, 1 | 8);
+		write_u32(syntax + 0x38 + 5 * 0x14 + 8, (ident << 16) | 6);
+		write_u32(syntax + 0x38 + 5 * 0x14 + 16, one);
+		write_u16(syntax + 0x38 + 6 * 0x14 + 2, 6);
+		write_u16(syntax + 0x38 + 6 * 0x14 + 4, 6);
+		write_u16(syntax + 0x38 + 6 * 0x14 + 6, 1 | 8);
+		write_u32(syntax + 0x38 + 6 * 0x14 + 8, 0xffffffffu);
+		write_u32(syntax + 0x38 + 6 * 0x14 + 16, two);
+		write_u16(syntax + 0x38 + 7 * 0x14 + 2, 6);
+		write_u16(syntax + 0x38 + 7 * 0x14 + 4, 6);
+		write_u16(syntax + 0x38 + 7 * 0x14 + 6, 1 | 8);
+		write_u32(syntax + 0x38 + 7 * 0x14 + 8, 0xffffffffu);
+		memset(script, 0, sizeof(script));
+		memcpy(script, "startup", 7);
+		write_u16(script + 34, 6);
+		write_u32(script + 36, (ident << 16) | 0);
+		memset(global, 0, sizeof(global));
+		memcpy(global, "n", 2);
+		write_u16(global + 32, 6);
+		write_u32(global + 40, (ident << 16) | 7);
+		if (wii_hs_mount(syntax, sizeof(syntax), script, 1, global, 1, NULL, 0) != 0)
+			return fail(wii_hs_note()[0] ? wii_hs_note() : "hs mount");
+		if (wii_hs_global_real(0, &value) != 0 || value < 2.9f || value > 3.1f)
+			return fail(wii_hs_note()[0] ? wii_hs_note() : "hs (+ 1 2)");
+		wii_hs_shutdown();
+	}
+
+	printf("host_check: identify, xdvdfs, lz4, bsp, texels, dela, scripts, hs runtime ok\n");
 	return 0;
 }

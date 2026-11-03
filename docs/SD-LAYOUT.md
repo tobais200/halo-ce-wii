@@ -28,7 +28,9 @@ usb:/game.iso
 
 `fseek` and libfat's `f_lseek` on this devkitPPC are 32-bit (`off_t` is signed, FatFs `FSIZE_t` is one PowerPC register). `fseeko64` is declared and not provided by newlib here, so an offset past 2 GiB still fails. Loose `.map` files are the layout that works. A file the FAT layer can describe only up to 4 GiB cannot be seeked further from this DOL.
 
-Opening `ui` draws DeLa bitmaps and, when the widget names a string list and a font, the list's UTF-16 text with that font's glyph pixels. A 30 Hz counter (`TICKS_PER_SECOND` from `cseries.h`) runs while a BSP is up and names the scenario's first startup script. `hs_runtime.c` is not linked, so the bytecode does not execute. Weapons and AI are not linked.
+Opening `ui` draws DeLa bitmaps and, when the widget names a string list and a font, the list's UTF-16 text with that font's glyph pixels. A button that matches a widget event handler follows that handler's flags: open or replace a widget, go back, move a list, or launch a campaign id named by the handler script. Other event functions are reported as unlinked.
+
+On a BSP, OpenCE `hs_runtime.c` runs the scenario's script-node array at 30 Hz. `begin`, `if`, `set`, arithmetic, compares, `sleep`, and `wake` are the real evaluators. Later calls return 0. The orbit center is the first player starting location when that block is readable. Biped, weapon, and encounter blocks are counted, not simulated. `game.c` is not linked.
 
 Optional header cache, written by the DOL, not required:
 
@@ -56,4 +58,6 @@ sd:/halo-ce/game.iso
 
 También se buscan `sd:/apps/halo-ce/maps`, `sd:/maps` y las mismas rutas en `usb:`. Un `.iso` tiene que ser una imagen XDVDFS. El offset máximo de lectura es 2 GiB con este toolchain; los `.map` sueltos son la forma fiable.
 
-Si `ui` está en la tarjeta, el DOL lo abre y dibuja el widget DeLa, incluidos los glifos de su lista de texto con la fuente del cache. La cruceta mueve el foco, A entra en el hijo o en un escenario `a10`–`d40`, y B vuelve a la lista. En el BSP corre un contador a 30 Hz con el nombre del script de arranque. La VM de bytecode, las armas y la IA no se ejecutan.
+Si `ui` está en la tarjeta, el DOL lo abre y dibuja el widget DeLa, incluidos los glifos de su lista de texto con la fuente del cache. Un botón con manejador de evento abre el widget, vuelve, mueve la lista o lanza un id de campaña escrito en el script del manejador. Las demás funciones de evento quedan sin enlazar.
+
+En el BSP, `hs_runtime.c` de OpenCE ejecuta el arreglo de nodos del escenario a 30 Hz. `begin`, `if`, `set`, la aritmética, las comparaciones, `sleep` y `wake` son los evaluadores reales. El resto de llamadas devuelve 0. La órbita se centra en el primer punto de inicio del jugador. Los bloques de bípedos, armas y encuentros se cuentan y no se simulan. `game.c` no está enlazado.

@@ -282,9 +282,14 @@ int main(int argc, char **argv)
 							showing = 1;
 							yaw = 0.8f;
 							pitch = 0.4f;
-							if (mesh_ok)
+							if (mesh_ok) {
 								wii_sim_load(map_read, &reader, map->size, map->tag_data_offset,
 									map->tag_data_size, preview.scenario_file, &sim);
+								if (sim.have_player) {
+									yaw = sim.player_facing;
+									pitch = 0.2f;
+								}
+							}
 							if (!mesh_ok)
 								snprintf(preview.message, sizeof(preview.message), "%s", image.message);
 						} else {
@@ -325,9 +330,15 @@ int main(int argc, char **argv)
 				view.indices = store.indices;
 				view.vertex_count = preview.vertices;
 				view.triangle_count = preview.triangles;
-				view.center[0] = preview.center[0];
-				view.center[1] = preview.center[1];
-				view.center[2] = preview.center[2];
+				if (sim.have_player) {
+					view.center[0] = sim.player_x;
+					view.center[1] = sim.player_y;
+					view.center[2] = sim.player_z;
+				} else {
+					view.center[0] = preview.center[0];
+					view.center[1] = preview.center[1];
+					view.center[2] = preview.center[2];
+				}
 				view.radius = preview.radius;
 				view.yaw = yaw;
 				view.pitch = pitch;
