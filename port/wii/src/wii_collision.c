@@ -7,6 +7,7 @@
 #include "objects/damage.h"
 #include "objects/damage_effect_definitions.h"
 #include "objects/objects.h"
+#include "units/units.h"
 #include "physics/collision_bsp.h"
 #include "physics/collision_bsp_definitions.h"
 #include "physics/collision_model_definitions.h"
@@ -581,4 +582,29 @@ int wii_damage_hurts(long object_index, long damage_definition)
 	down.k = -1.f;
 	object_cause_damage(&damage, object_index, 0, NONE, 0, &down);
 	return object->object.body_vitality + object->object.shield_vitality < before;
+}
+
+float wii_unit_throttle(long unit_index)
+{
+	struct unit_datum *unit = unit_get(unit_index);
+
+	if (!unit)
+		return 0.f;
+	return unit->unit.throttle.i;
+}
+
+int wii_unit_eye(long unit_index, float *x, float *y, float *z)
+{
+	struct object_datum *object = object_get(unit_index);
+	float height = wii_tag_cache_camera_height();
+
+	if (!object)
+		return 0;
+	if (x)
+		*x = object->object.position.x;
+	if (y)
+		*y = object->object.position.y;
+	if (z)
+		*z = object->object.position.z + (height > 0.f ? height : 0.62f);
+	return 1;
 }

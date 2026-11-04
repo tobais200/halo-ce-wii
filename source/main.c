@@ -3,6 +3,7 @@
  * A draws the first structure BSP through GX. The campaign simulation,
  * main-menu widgets, and shaders are not linked.
  */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,10 @@
 #include "wii_stream.h"
 #include "wii_sim.h"
 #include "wii_tex.h"
+#include "wii_game.h"
+#include "wii_collision.h"
+#include "wii_effects.h"
+#include <ogc/pad.h>
 #include "wii_widget.h"
 
 static void *console_xfb = NULL;
@@ -106,6 +111,7 @@ int main(int argc, char **argv)
 
 	VIDEO_Init();
 	WPAD_Init();
+	PAD_Init();
 	rmode = VIDEO_GetPreferredMode(NULL);
 	console_xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
 	if (!console_xfb)
@@ -324,24 +330,61 @@ int main(int argc, char **argv)
 					pitch += 0.03f;
 				if (held & WPAD_BUTTON_DOWN)
 					pitch -= 0.03f;
+				{
+					float move_x = 0.0f;
+					float move_y = 0.0f;
+					int chan;
+					int fire = (held & WPAD_BUTTON_A) != 0;
+
+					for (chan = 0; chan < 4; chan++) {
+						struct expansion_t exp;
+
+						WPAD_Expansion(chan, &exp);
+						if (exp.type == WPAD_EXP_NUNCHUK && exp.nunchuk.js.mag > 0.2f) {
+							move_x = exp.nunchuk.js.mag * sinf(exp.nunchuk.js.ang * 0.0174533f);
+							move_y = exp.nunchuk.js.mag * cosf(exp.nunchuk.js.ang * 0.0174533f);
+						} else if (exp.type == WPAD_EXP_CLASSIC && exp.classic.ljs.mag > 0.2f) {
+							move_x = exp.classic.ljs.mag * sinf(exp.classic.ljs.ang * 0.0174533f);
+							move_y = exp.classic.ljs.mag * cosf(exp.classic.ljs.ang * 0.0174533f);
+						}
+					}
+					PAD_ScanPads();
+					if (PAD_StickY(0) > 16 || PAD_StickY(0) < -16)
+						move_y = PAD_StickY(0) / 128.0f;
+					if (PAD_StickX(0) > 16 || PAD_StickX(0) < -16)
+						move_x = PAD_StickX(0) / 128.0f;
+					if (PAD_ButtonsHeld(0) & PAD_BUTTON_A)
+						fire = 1;
+					wii_control_set(move_y, move_x, yaw, pitch, fire);
+				}
 				view.positions = store.positions;
 				view.colors = store.colors;
 				view.uvs = store.uvs;
 				view.indices = store.indices;
 				view.vertex_count = preview.vertices;
 				view.triangle_count = preview.triangles;
-				if (sim.have_player) {
+				view.eye = 0;
+				if (sim.have_player && wii_unit_eye(wii_game_player_unit(), &view.center[0], &view.center[1], &view.center[2])) {
+					view.eye = 1;
+					view.yaw = wii_control_yaw();
+					view.pitch = wii_control_pitch();
+				} else if (sim.have_player) {
 					view.center[0] = sim.player_x;
 					view.center[1] = sim.player_y;
 					view.center[2] = sim.player_z + (sim.have_camera_height ? sim.camera_height : 0.0f);
+					view.eye = 1;
+					view.yaw = wii_control_yaw();
+					view.pitch = wii_control_pitch();
 				} else {
 					view.center[0] = preview.center[0];
 					view.center[1] = preview.center[1];
 					view.center[2] = preview.center[2];
 				}
 				view.radius = preview.radius;
-				view.yaw = yaw;
-				view.pitch = pitch;
+				if (!view.eye) {
+					view.yaw = yaw;
+					view.pitch = pitch;
+				}
 				if (view.texture_mode == 2 && !preview.triangles)
 					gx_draw_bitmap(rmode, console_xfb);
 				else
@@ -349,8 +392,9 @@ int main(int argc, char **argv)
 				printf("\x1b[2;0H%s  %u tris\n", stats.maps[selected].name, (unsigned)preview.triangles);
 				wii_sim_frame(&sim);
 				printf("%s\n%s\n", preview.message, sim.message);
-				printf("B back  D-pad orbit  %s\n",
-					view.texture_mode ? "cache bitmap" : "no bitmap decoded");
+				printf("B back  stick move  D-pad look  %s%s\n",
+					view.texture_mode ? "cache bitmap" : "no bitmap decoded",
+					wii_effect_bitmap_ok() ? "  fx" : "");
 			}
 		}
 		VIDEO_WaitVSync();

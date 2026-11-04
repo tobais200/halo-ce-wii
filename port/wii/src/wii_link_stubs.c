@@ -330,9 +330,6 @@ int component_vectors_from_direction3d(void) { return 0; }
 int component_vectors_from_normal3d(void) { return 0; }
 int config_boolean(void) { return 0; }
 int config_changes(void) { return 0; }
-int contrail_delete(void) { return 0; }
-int contrail_new(void) { return 0; }
-int contrail_owner_collision(void) { return 0; }
 int coop_enemies_extra_count(void) { return 0; }
 int coop_enemies_fallback_position(void) { return 0; }
 int coop_enemies_rider_seated(void) { return 0; }
@@ -360,10 +357,6 @@ int director_inhibit_input(void) { return 0; }
 int draw_string_set_color(void) { return 0; }
 int draw_string_set_format(void) { return 0; }
 int effect_delete(void) { return 0; }
-int effect_new_attached_from_markers(void) { return 0; }
-int effect_new_from_object(void) { return 0; }
-int effect_new_looping(void) { return 0; }
-int effect_new_unattached_from_markers(void) { return 0; }
 int effects_start_on_first_person_weapon(void) { return 0; }
 int effects_stop_on_first_person_weapon(void) { return 0; }
 int effect_stop(void) { return 0; }

@@ -18,8 +18,12 @@
 #include "objects/damage_effect_definitions.h"
 #include "physics/collision_model_definitions.h"
 #include "physics/collision_bsp_definitions.h"
+#include "effects/effect_definitions.h"
+#include "effects/contrail_definitions.h"
+#include "effects/effects.h"
 #include "wii_tag_cache.h"
 #include "wii_collision.h"
+#include "wii_effects.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -974,7 +978,26 @@ static int load_weapon(int slot)
 				ref_clear(&weapon->weapon.interface_definition.first_person_animations);
 		}
 	}
-	ref_clear(&weapon->weapon.ready_effect);
+	{
+		uint8_t effect_raw[16];
+		int effect_slot;
+
+		ref_clear(&weapon->weapon.ready_effect);
+		if (pull_va(slots[slot].base_va + offsetof(struct weapon_definition, weapon.ready_effect), effect_raw, 16) == 0) {
+			read_ref(effect_raw, &weapon->weapon.ready_effect);
+			effect_slot = find_datum((uint32_t)weapon->weapon.ready_effect.index);
+			if (effect_slot >= 0 && slots[effect_slot].group == FCC('e', 'f', 'f', 'e')) {
+				void *effect = wii_effect_load(slots[effect_slot].base_va);
+
+				if (effect)
+					slots[effect_slot].base = effect;
+				else
+					ref_clear(&weapon->weapon.ready_effect);
+			} else {
+				ref_clear(&weapon->weapon.ready_effect);
+			}
+		}
+	}
 	ref_clear(&weapon->object.collision_model);
 	ref_clear(&weapon->object.physics);
 	ref_clear(&weapon->object.modifier_shader);
@@ -1533,6 +1556,20 @@ int wii_tag_cache_pull(uint32_t va, void *destination, uint32_t size)
 	return pull_va(va, destination, size);
 }
 
+uint32_t wii_tag_cache_slot_va(long tag_index)
+{
+	int absolute;
+
+	if (tag_index == NONE || slot_count <= 0)
+		return 0;
+	absolute = (int)(tag_index & 0xffff);
+	if (absolute < 0 || absolute >= slot_count)
+		return 0;
+	if ((long)slots[absolute].datum != tag_index)
+		return 0;
+	return slots[absolute].base_va;
+}
+
 float wii_tag_cache_idle_rotation_w(void)
 {
 	struct animation_graph *graph;
@@ -1687,14 +1724,21 @@ int wii_tag_cache_self_test(void)
 	uint32_t upgrade_at;
 	uint32_t trigger_at;
 	uint32_t grenade_at;
-	uint32_t datum[14];
+	uint32_t effect_at;
+	uint32_t event_at;
+	uint32_t part_at;
+	uint32_t cont_at;
+	uint32_t bitm_at;
+	uint32_t bitm_data_at;
+	uint32_t pixels_at;
+	uint32_t datum[17];
 	float x;
 	float y;
 	float z;
 	int index;
 
 	memset(file, 0, sizeof(file));
-	cursor = 0x40 + 14u * 0x20u;
+	cursor = 0x40 + 17u * 0x20u;
 	instances = 0x40;
 	scenario_at = cursor;
 	cursor += 0x800;
@@ -1776,13 +1820,27 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct damage_resistance_material);
 	damage_at = cursor;
 	cursor += sizeof(struct damage_effect_definition);
+	effect_at = cursor;
+	cursor += sizeof(struct effect_definition);
+	event_at = cursor;
+	cursor += sizeof(struct effect_event_definition);
+	part_at = cursor;
+	cursor += sizeof(struct effect_part_definition);
+	cont_at = cursor;
+	cursor += sizeof(struct contrail_definition);
+	bitm_at = cursor;
+	cursor += 0x6cu;
+	bitm_data_at = cursor;
+	cursor += 0x30u;
+	pixels_at = cursor;
+	cursor += 16u;
 	if (cursor > sizeof(file))
 		return -1;
-	for (index = 0; index < 14; index++)
+	for (index = 0; index < 17; index++)
 		datum[index] = 0x12340000u | (uint32_t)index;
 	put_u32(file, TAG_BASE + instances);
 	put_u32(file + 4, datum[0]);
-	put_u32(file + 0x0c, 14);
+	put_u32(file + 0x0c, 17);
 	file[0x20] = 't';
 	file[0x21] = 'a';
 	file[0x22] = 'g';
@@ -1793,7 +1851,7 @@ int wii_tag_cache_self_test(void)
 			char a, b, c, d;
 			char p0a, p0b, p0c, p0d;
 			char p1a, p1b, p1c, p1d;
-		} rows[14] = {
+		} rows[17] = {
 			{ scenario_at, 's', 'c', 'n', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ globals_at, 'm', 'a', 't', 'g', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ biped_at, 'b', 'i', 'p', 'd', 'u', 'n', 'i', 't', 'o', 'b', 'j', 'e' },
@@ -1807,10 +1865,13 @@ int wii_tag_cache_self_test(void)
 			{ eqip_at, 'e', 'q', 'i', 'p', 'i', 't', 'e', 'm', 'o', 'b', 'j', 'e' },
 			{ sbsp_at, 's', 'b', 's', 'p', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ coll_at, 'c', 'o', 'l', 'l', 0, 0, 0, 0, 0, 0, 0, 0 },
-			{ damage_at, 'j', 'p', 't', '!', 0, 0, 0, 0, 0, 0, 0, 0 }
+			{ damage_at, 'j', 'p', 't', '!', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ effect_at, 'e', 'f', 'f', 'e', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ cont_at, 'c', 'o', 'n', 't', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ bitm_at, 'b', 'i', 't', 'm', 0, 0, 0, 0, 0, 0, 0, 0 }
 		};
 
-		for (index = 0; index < 14; index++) {
+		for (index = 0; index < 17; index++) {
 			uint8_t *instance = file + instances + (uint32_t)index * 0x20u;
 
 			instance[0] = (uint8_t)rows[index].a;
@@ -2035,6 +2096,33 @@ int wii_tag_cache_self_test(void)
 	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 2] = 't';
 	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 3] = 'r';
 	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_animations) + 12, datum[4]);
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.ready_effect)] = 'e';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.ready_effect) + 1] = 'f';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.ready_effect) + 2] = 'f';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.ready_effect) + 3] = 'e';
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.ready_effect) + 12, datum[14]);
+	put_u32(file + effect_at + offsetof(struct effect_definition, events), 1);
+	put_u32(file + effect_at + offsetof(struct effect_definition, events) + 4, TAG_BASE + event_at);
+	put_u32(file + event_at + offsetof(struct effect_event_definition, parts), 1);
+	put_u32(file + event_at + offsetof(struct effect_event_definition, parts) + 4, TAG_BASE + part_at);
+	file[part_at + offsetof(struct effect_part_definition, reference)] = 'c';
+	file[part_at + offsetof(struct effect_part_definition, reference) + 1] = 'o';
+	file[part_at + offsetof(struct effect_part_definition, reference) + 2] = 'n';
+	file[part_at + offsetof(struct effect_part_definition, reference) + 3] = 't';
+	put_u32(file + part_at + offsetof(struct effect_part_definition, reference) + 12, datum[15]);
+	file[cont_at + offsetof(struct contrail_definition, bitmap)] = 'b';
+	file[cont_at + offsetof(struct contrail_definition, bitmap) + 1] = 'i';
+	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
+	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
+	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
+	put_u32(file + bitm_at + 0x60, 1);
+	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
+	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
+	put_u16(file + bitm_data_at + 0x04, 4);
+	put_u16(file + bitm_data_at + 0x06, 4);
+	put_u16(file + bitm_data_at + 0x0e, 1u << 4);
+	put_u32(file + bitm_data_at + 0x1c, 16);
+	memset(file + pixels_at, 0xff, 16);
 	put_u16(file + eqip_at + offsetof(struct equipment_definition, equipment.powerup_type), 1);
 	if (wii_tag_cache_mount(memory_read, file, sizeof(file), 0, sizeof(file)) != 0)
 		return -1;
@@ -2056,6 +2144,8 @@ int wii_tag_cache_self_test(void)
 	if (wii_tag_cache_damage_index() == -1)
 		return -1;
 	if (!wii_collision_model_hits(wii_tag_cache_get((long)FCC('c', 'o', 'l', 'l'), (long)datum[12])))
+		return -1;
+	if (!wii_effect_bitmap_ok() || effect_new_from_object((long)datum[14], NONE, NONE, NONE, 1.f, 1.f, NULL, NULL) == NONE)
 		return -1;
 	if (!wii_tag_cache_get((long)FCC('b', 'i', 'p', 'd'), (long)datum[2]))
 		return -1;

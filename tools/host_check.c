@@ -13,6 +13,8 @@ unsigned char game_map_loaded(void);
 #include "wii_game.h"
 #include "wii_tag_cache.h"
 #include "wii_collision.h"
+#include "wii_effects.h"
+#include "wii_game.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
 #include "wii_widget.h"
@@ -431,6 +433,7 @@ int main(void)
 	{
 		if (wii_tag_cache_self_test() != 0)
 			return fail("tag cache");
+		wii_control_set(1.f, 0.f, 0.4f, 0.2f, 1);
 		wii_game_tick();
 		if (!game_map_loaded())
 			return fail(wii_hs_note()[0] ? wii_hs_note() : "game load");
@@ -444,6 +447,10 @@ int main(void)
 			return fail("projectile or grenade");
 		if (!wii_damage_hurts(wii_game_player_unit(), wii_tag_cache_damage_index()))
 			return fail("projectile damage");
+		if (wii_unit_throttle(wii_game_player_unit()) < 0.5f)
+			return fail("player control");
+		if (wii_effect_live() < 1 || !wii_effect_bitmap_ok())
+			return fail("effect bitmap");
 		if (wii_tag_cache_idle_rotation_w() < 0.9f)
 			return fail("biped idle animation");
 		if (wii_game_live_objects() < 3)

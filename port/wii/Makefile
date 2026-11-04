@@ -42,6 +42,7 @@ opence:
 	@echo "  biped collision models (up to 32 nodes) and projectile damage effects are resident"
 	@echo "  projectile, equipment, grenade, and major-upgrade tags are resident"
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
+	@echo "  effect_new decodes a contrail bitmap; the eye camera follows the player"
 	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:

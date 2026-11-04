@@ -22,6 +22,8 @@ struct gx_mesh_view {
 	float pitch;
 	/* 0 vertex color, 1 lightmap modulated by vertex color, 2 bitmap only */
 	int texture_mode;
+	/* Camera sits on center and looks along yaw/pitch. Halo Z is up. */
+	int eye;
 };
 
 /* Copies rgba8 (R,G,B,A) into a MEM1 GX_TF_RGBA8 texture. 0 on success. */

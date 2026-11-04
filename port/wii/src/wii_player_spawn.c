@@ -148,6 +148,33 @@ struct game_globals *scenario_get_game_globals(void)
 	return &wii_game_globals_tag;
 }
 
+static float control_forward;
+static float control_strafe;
+static float control_yaw;
+static float control_pitch;
+static int control_fire;
+static int control_set;
+
+void wii_control_set(float forward, float strafe, float yaw, float pitch, int fire)
+{
+	control_forward = forward;
+	control_strafe = strafe;
+	control_yaw = yaw;
+	control_pitch = pitch;
+	control_fire = fire;
+	control_set = 1;
+}
+
+float wii_control_yaw(void)
+{
+	return control_yaw;
+}
+
+float wii_control_pitch(void)
+{
+	return control_pitch;
+}
+
 boolean update_client_dequeue(struct player_action *actions)
 {
 	int index;
@@ -159,6 +186,14 @@ boolean update_client_dequeue(struct player_action *actions)
 		actions[index].desired_weapon_index = NONE;
 		actions[index].desired_grenade_index = NONE;
 		actions[index].desired_zoom_level = NONE;
+		if (control_set) {
+			actions[index].throttle.i = control_forward;
+			actions[index].throttle.j = control_strafe;
+			actions[index].desired_facing.yaw = control_yaw;
+			actions[index].desired_facing.pitch = control_pitch;
+			if (control_fire)
+				actions[index].control_flags |= 1u << 11;
+		}
 	}
 	return TRUE;
 }

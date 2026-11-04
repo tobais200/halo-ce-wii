@@ -102,13 +102,28 @@ static void frame_mesh(struct gx_mesh_view const *view, Mtx view_matrix, Mtx44 p
 	if (distance < 2.0f)
 		distance = 2.0f;
 
-	/* Halo's coordinates: Z is up. The orbit matches that, not a new axis. */
-	camera.x = view->center[0] + distance * cosf(pitch) * cosf(view->yaw);
-	camera.y = view->center[1] + distance * cosf(pitch) * sinf(view->yaw);
-	camera.z = view->center[2] + distance * sinf(pitch);
-	look.x = view->center[0];
-	look.y = view->center[1];
-	look.z = view->center[2];
+	/* Halo's coordinates: Z is up. An eye camera sits on the biped. */
+	if (view->eye) {
+		float cy = cosf(view->yaw);
+		float sy = sinf(view->yaw);
+		float cp = cosf(pitch);
+		float sp = sinf(pitch);
+
+		camera.x = view->center[0];
+		camera.y = view->center[1];
+		camera.z = view->center[2];
+		look.x = camera.x + cp * cy;
+		look.y = camera.y + cp * sy;
+		look.z = camera.z + sp;
+		distance = 8.0f;
+	} else {
+		camera.x = view->center[0] + distance * cosf(pitch) * cosf(view->yaw);
+		camera.y = view->center[1] + distance * cosf(pitch) * sinf(view->yaw);
+		camera.z = view->center[2] + distance * sinf(pitch);
+		look.x = view->center[0];
+		look.y = view->center[1];
+		look.z = view->center[2];
+	}
 	up.x = 0.0f;
 	up.y = 0.0f;
 	up.z = 1.0f;
