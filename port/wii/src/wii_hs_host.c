@@ -225,8 +225,6 @@ static long wii_camera_point = NONE;
 static long wii_chapter = NONE;
 static float wii_chapter_delay;
 static long wii_protected_list = NONE;
-static float wii_effect_intensity;
-static float wii_effect_attack;
 static char wii_chapter_text[64];
 static char wii_help_text[64];
 static char wii_objective_text[64];
@@ -443,10 +441,6 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 	case 140:
 		*(float *)&result = wii_device_index == arguments[0] ? wii_device_position : 0.f;
 		break;
-	case 374:
-		wii_effect_intensity = *(float *)&arguments[0];
-		wii_effect_attack = *(float *)&arguments[1];
-		break;
 	case 241:
 		if (actor_data)
 			ai_scripting_set_team(arguments[0], (short)arguments[1]);
@@ -462,12 +456,6 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		break;
 	case 376: case 377: case 378: case 379: case 380: case 381: case 382:
 		wii_hud_show(3, arguments[0], (float)(function_index - 376));
-		break;
-	case 384:
-		wii_hud_show(1, arguments[0], 0.f);
-		break;
-	case 385:
-		wii_hud_show(2, arguments[0], 0.f);
 		break;
 	case 156: case 161: case 162: case 163: case 164: case 166: case 168:
 	case 173: case 175: case 176: case 177: case 178: case 179: case 196:
@@ -566,7 +554,7 @@ static void wii_hs_table_init(void)
 			219,251,252,253,255,257,258,259,265,266,267,268,269,270,271,273,274,280,
 			281,282,286,287,294,295,296,297,302,303,304,305,306,307,308,309,310,311,
 			312,313,314,315,316,318,319,337,340,341,342,343,344,345,346,347,348,349,
-			350,351,352,353,359,368,370,383,391,394,395,396,398,405,407,408,409,410,
+			350,351,352,353,368,370,395,396,398,405,407,408,409,410,
 			412,413,416,419,420,422
 		};
 		static short const ai_one[] = {
@@ -614,6 +602,10 @@ static void wii_hs_table_init(void)
 		fill_campaign(137, _hs_type_real, 1, _hs_type_device, "device_get_power");
 		fill_campaign3(114, _hs_type_void, _hs_type_unit, _hs_type_real, _hs_type_real, "unit_set_current_vitality");
 		fill_campaign2(374, _hs_type_void, _hs_type_real, _hs_type_real, "player_effect_start");
+		fill_campaign(359, _hs_type_void, 0, _hs_type_void, "hud_help_flash_restart");
+		fill_campaign(383, _hs_type_void, 0, _hs_type_void, "hud_clear_messages");
+		fill_campaign(391, _hs_type_short_integer, 0, _hs_type_void, "hud_get_timer_ticks");
+		fill_campaign(394, _hs_type_void, 0, _hs_type_void, "time_code_reset");
 #include "wii_hs_linked_fill.inc"
 	}
 	wii_table_ready = 1;

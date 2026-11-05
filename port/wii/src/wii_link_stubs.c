@@ -458,7 +458,6 @@ int hud_picked_up_ammunition(void) { return 0; }
 int hud_picked_up_grenade(void) { return 0; }
 int hud_picked_up_powerup(void) { return 0; }
 int hud_picked_up_weapon(void) { return 0; }
-int hud_print_message(void) { return 0; }
 int hud_tick_shield(void) { return 0; }
 int infection_allow_weapon_drop(void) { return 0; }
 int infection_can_delete_skull(void) { return 0; }
@@ -663,11 +662,7 @@ int player_control_new_unit(void) { return 0; }
 int player_control_set_desired_weapon(void) { return 0; }
 int player_control_set_facing(void) { return 0; }
 int player_control_unzoom(void) { return 0; }
-int player_effect_screen_flash(void) { return 0; }
-int player_effect_start(void) { return 0; }
 void *player_magnetism_flag;
-int player_telefrag_effect_start(void) { return 0; }
-int player_telefrag_effect_stop(void) { return 0; }
 int player_ui_get_single_player_local_player_controller(void) { return 0; }
 int point_from_line3d(void) { return 0; }
 int points_interpolate(void) { return 0; }
@@ -931,8 +926,6 @@ int global_network_game_client_get(void) { return 0; }
 int global_network_game_server_get(void) { return 0; }
 int halo_scoreboard_pointer_update(void) { return 0; }
 int halo_server_mode(void) { return 0; }
-int hud_get_font_index(void) { return 0; }
-int hud_get_text_color(void) { return 0; }
 int hud_player_name_color(void) { return 0; }
 int infection_enabled(void) { return 0; }
 int infection_read_network_state(void) { return 0; }
@@ -1222,16 +1215,15 @@ int structure_detail_objects_initialize(void) { return 0; }
 int structure_detail_objects_initialize_for_new_map(void) { return 0; }
 int structure_render_set_fog_offset(void) { return 0; }
 
-/* Cluster 0 owns surfaces 0-2. Cluster 1 owns surface 3. The portal between
-   them sits on the z=0 plane over the edge path_state_find walks. */
+/* Three clusters. Portal 0 joins 0 and 1 at x=1.5. Portal 1 joins 1 and 2 at x=2.5. */
 short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
 
-static int portal_query(float x, float y, float z, float radius, short *first, short *second)
+static int portal_from(short start, float x, float y, float radius, short *first, short *second)
 {
 	struct wii_tag_block *clusters = (struct wii_tag_block *)(wii_structure_bsp + 308);
 	struct wii_tag_block *portals = (struct wii_tag_block *)(wii_structure_bsp + 340);
-	static unsigned char cluster_bytes[2][0x68];
-	static short portal_of_cluster[2];
+	static unsigned char cluster_bytes[3][0x68];
+	static short portal_list[3][2];
 	static struct {
 		short cluster_indices[2];
 		long plane_index;
@@ -1240,39 +1232,53 @@ static int portal_query(float x, float y, float z, float radius, short *first, s
 		unsigned long flags;
 		long unused[6];
 		struct wii_tag_block vertices;
-	} portal;
-	static float vertices[4][3];
+	} portal[2];
+	static float vertices[2][4][3];
 	float point[3];
-	short found[4];
+	short found[8];
 	short count;
 
 	global_structure_bsp_get();
 	memset(cluster_bytes, 0, sizeof(cluster_bytes));
-	memset(&portal, 0, sizeof(portal));
-	portal_of_cluster[0] = 0;
-	portal_of_cluster[1] = 0;
+	memset(portal, 0, sizeof(portal));
+	portal_list[0][0] = 0;
+	portal_list[1][0] = 0;
+	portal_list[1][1] = 1;
+	portal_list[2][0] = 1;
 	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->count = 1;
-	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->address = &portal_of_cluster[0];
-	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->count = 1;
-	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->address = &portal_of_cluster[1];
-	portal.cluster_indices[0] = 0;
-	portal.cluster_indices[1] = 1;
-	portal.centroid[0] = 2.5f;
-	portal.bounding_radius = 4.f;
-	vertices[0][0] = 2.f; vertices[0][1] = -1.f;
-	vertices[1][0] = 3.f; vertices[1][1] = -1.f;
-	vertices[2][0] = 3.f; vertices[2][1] = 1.f;
-	vertices[3][0] = 2.f; vertices[3][1] = 1.f;
-	portal.vertices.count = 4;
-	portal.vertices.address = vertices;
-	clusters->count = 2;
+	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->address = &portal_list[0][0];
+	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->count = 2;
+	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->address = portal_list[1];
+	((struct wii_tag_block *)(cluster_bytes[2] + 0x5C))->count = 1;
+	((struct wii_tag_block *)(cluster_bytes[2] + 0x5C))->address = &portal_list[2][0];
+	portal[0].cluster_indices[0] = 0;
+	portal[0].cluster_indices[1] = 1;
+	portal[0].centroid[0] = 1.5f;
+	portal[0].bounding_radius = 1.2f;
+	vertices[0][0][0] = 1.f; vertices[0][0][1] = -1.f;
+	vertices[0][1][0] = 2.f; vertices[0][1][1] = -1.f;
+	vertices[0][2][0] = 2.f; vertices[0][2][1] = 1.f;
+	vertices[0][3][0] = 1.f; vertices[0][3][1] = 1.f;
+	portal[0].vertices.count = 4;
+	portal[0].vertices.address = vertices[0];
+	portal[1].cluster_indices[0] = 1;
+	portal[1].cluster_indices[1] = 2;
+	portal[1].centroid[0] = 2.5f;
+	portal[1].bounding_radius = 1.2f;
+	vertices[1][0][0] = 2.f; vertices[1][0][1] = -1.f;
+	vertices[1][1][0] = 3.f; vertices[1][1][1] = -1.f;
+	vertices[1][2][0] = 3.f; vertices[1][2][1] = 1.f;
+	vertices[1][3][0] = 2.f; vertices[1][3][1] = 1.f;
+	portal[1].vertices.count = 4;
+	portal[1].vertices.address = vertices[1];
+	clusters->count = 3;
 	clusters->address = cluster_bytes;
-	portals->count = 1;
-	portals->address = &portal;
+	portals->count = 2;
+	portals->address = portal;
 	point[0] = x;
 	point[1] = y;
-	point[2] = z;
-	count = structure_clusters_in_sphere(0, point, radius, 4, found);
+	point[2] = 0.f;
+	count = structure_clusters_in_sphere(start, point, radius, 8, found);
 	clusters->count = 0;
 	portals->count = 0;
 	if (first)
@@ -1284,7 +1290,7 @@ static int portal_query(float x, float y, float z, float radius, short *first, s
 
 int wii_structure_portal_span(short *first, short *second)
 {
-	return portal_query(2.5f, 0.f, 0.f, 0.2f, first, second);
+	return portal_from(0, 1.5f, 0.f, 0.15f, first, second);
 }
 
 int wii_structure_portal_accepts(float x, float y)
@@ -1292,6 +1298,92 @@ int wii_structure_portal_accepts(float x, float y)
 	short first = -1;
 	short second = -1;
 
-	portal_query(x, y, 0.f, 0.05f, &first, &second);
-	return first == 0 && second == 1;
+	portal_from(1, x, y, 0.05f, &first, &second);
+	return first == 1 && second == 2;
+}
+
+int wii_structure_portal_hops(void)
+{
+	short first = -1;
+	short second = -1;
+	int hops = 0;
+
+	if (portal_from(0, 1.5f, 0.f, 0.15f, &first, &second) >= 2 && first == 0 && second == 1)
+		hops++;
+	first = -1;
+	second = -1;
+	if (portal_from(1, 2.5f, 0.f, 0.15f, &first, &second) >= 2 && first == 1 && second == 2)
+		hops++;
+	return hops;
+}
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <wchar.h>
+
+double sin(double);
+double cos(double);
+double atan2(double, double);
+double pow(double, double);
+
+double halo_sin(double x) { return sin(x); }
+double halo_cos(double x) { return cos(x); }
+double halo_atan2(double y, double x) { return atan2(y, x); }
+double halo_pow(double x, double y) { return pow(x, y); }
+
+int halo_linux_sprintf(char *buffer, char const *format, ...)
+{
+	va_list args;
+	int wrote;
+
+	va_start(args, format);
+	wrote = vsprintf(buffer, format, args);
+	va_end(args);
+	return wrote;
+}
+
+int console_is_active(void) { return 0; }
+void controller_remap_prompt(short port, void *preferences) { (void)port; (void)preferences; }
+void draw_string_set_indents(int a, int b) { (void)a; (void)b; }
+unsigned get_flash_color(void) { return 0xffffffffu; }
+void hud_calculate_point(void) {}
+wchar_t const *hud_get_item_string(long string_index) { (void)string_index; return L""; }
+void hud_hires_button_draw(void) {}
+void hud_hires_sprite_bitmap(void) {}
+struct hud_scripted_globals_definition { int show_hud; int show_hud_help_text; };
+struct hud_scripted_globals_definition wii_hud_scripted;
+struct hud_scripted_globals_definition *hud_scripted_globals = &wii_hud_scripted;
+void input_abstraction_get_local_player_preferences(short player, void *preferences)
+{
+	(void)player;
+	if (preferences)
+		memset(preferences, 0, 0x18);
+}
+void network_coop_note_hud(short kind, short value) { (void)kind; (void)value; }
+void network_coop_note_player_effect(short kind, float a, float b, float c)
+{
+	(void)kind; (void)a; (void)b; (void)c;
+}
+void const *player_control_get_facing_angles(short player)
+{
+	static float angles[2];
+	(void)player;
+	return angles;
+}
+void player_control_permanent_impulse(void) {}
+unsigned real_argb_color_to_pixel32(void) { return 0xffffffffu; }
+short remap_sticks_for_local_player(short port) { return port; }
+void rumble_player_continuous(short player, float a, float b) { (void)player; (void)a; (void)b; }
+void rumble_player_set_scale(short player, float scale) { (void)player; (void)scale; }
+void rumble_player_set_scripted_values(short player, float a, float b, float c, float d)
+{
+	(void)player; (void)a; (void)b; (void)c; (void)d;
+}
+int ustring_format_takes(void) { return 0; }
+wchar_t *ustrncpy_terminated(wchar_t *dest, wchar_t const *src, int count)
+{
+	if (dest && count > 0)
+		dest[0] = 0;
+	(void)src;
+	return dest;
 }

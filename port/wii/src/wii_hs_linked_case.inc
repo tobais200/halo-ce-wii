@@ -612,3 +612,66 @@
 	case 328:
 		scripted_looping_sound_stop(arguments[0]);
 		break;
+	case 292:
+		player_effect_screen_fade_in(*(float *)&arguments[0], *(float *)&arguments[1], *(float *)&arguments[2], (short)arguments[3]);
+		break;
+	case 293:
+		player_effect_screen_fade_out(*(float *)&arguments[0], *(float *)&arguments[1], *(float *)&arguments[2], (short)arguments[3]);
+		break;
+	case 358:
+		scripted_hud_set_flashing_state((boolean)arguments[0]);
+		break;
+	case 359:
+		scripted_hud_restart_flashing();
+		break;
+	case 371:
+		scripted_player_effect_set_translation(*(float *)&arguments[0], *(float *)&arguments[1], *(float *)&arguments[2]);
+		break;
+	case 372:
+		scripted_player_effect_set_rotation(*(float *)&arguments[0], *(float *)&arguments[1], *(float *)&arguments[2]);
+		break;
+	case 373:
+		scripted_player_effect_set_rumble(*(float *)&arguments[0], *(float *)&arguments[1]);
+		break;
+	case 374:
+		scripted_player_effect_start(*(float *)&arguments[0], *(float *)&arguments[1]);
+		break;
+	case 375:
+		scripted_player_effect_stop(*(float *)&arguments[0]);
+		break;
+	case 383:
+		scripted_hud_messages_clear();
+		break;
+	case 384:
+		scripted_hud_set_state_message((short)arguments[0]);
+		break;
+	case 385:
+		scripted_hud_set_objective((short)arguments[0]);
+		break;
+	case 386:
+		scripted_hud_set_timer_time((short)arguments[0], (word)arguments[1]);
+		break;
+	case 387:
+		scripted_hud_set_timer_warning_cutoff((short)arguments[0], (word)arguments[1]);
+		break;
+	case 388:
+		scripted_hud_set_timer_position((short)arguments[0], (short)arguments[1], (short)arguments[2]);
+		break;
+	case 389:
+		scripted_hud_show_timer((boolean)arguments[0]);
+		break;
+	case 390:
+		scripted_hud_pause_timer((boolean)arguments[0]);
+		break;
+	case 391:
+		result = scripted_hud_get_timer_ticks();
+		break;
+	case 392:
+		scripted_hud_time_code_show((boolean)arguments[0]);
+		break;
+	case 393:
+		scripted_hud_time_code_start((boolean)arguments[0]);
+		break;
+	case 394:
+		scripted_hud_time_code_reset();
+		break;

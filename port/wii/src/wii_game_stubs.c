@@ -76,12 +76,15 @@ int scenario_load(char const *name)
 	return 1;
 }
 
+void hud_messaging_initialize(void);
+
 void wii_game_boot(void)
 {
 	struct game_options options;
 
 	if (booted)
 		return;
+	hud_messaging_initialize();
 	game_initialize();
 	game_options_new(&options);
 	if (game_load(&options)) {
@@ -196,11 +199,6 @@ int particle_systems_initialize(void) { return 0; }
 int particle_systems_initialize_for_new_map(void) { return 0; }
 int particle_systems_update(void) { return 0; }
 int player_control_initialize_for_new_map(void) { return 0; }
-int player_effect_dispose(void) { return 0; }
-int player_effect_dispose_from_old_map(void) { return 0; }
-int player_effect_initialize(void) { return 0; }
-int player_effect_initialize_for_new_map(void) { return 0; }
-int player_effect_update(void) { return 0; }
 int player_ui_dispose(void) { return 0; }
 int player_ui_initialize(void) { return 0; }
 int player_ui_remember_player1_profile(void) { return 0; }

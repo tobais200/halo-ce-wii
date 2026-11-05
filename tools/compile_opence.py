@@ -52,6 +52,8 @@ SOURCES = {
     "hs_library_external.o": "hs/hs_library_external.c",
     "physics.o": "physics/physics.c",
     "structures.o": "structures/structures.c",
+    "hud_messaging.o": "interface/hud_messaging.c",
+    "player_effects.o": "effects/player_effects.c",
 }
 
 PORT = {

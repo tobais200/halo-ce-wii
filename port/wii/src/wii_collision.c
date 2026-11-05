@@ -435,8 +435,16 @@ static void put_f32(uint8_t *p, float value)
 	put_u32(p, bits);
 }
 
-void wii_collision_write_floor(uint8_t *file, uint32_t sbsp_at, uint32_t collide_at, uint32_t plane_at, uint32_t node_at, uint32_t leaf_at, uint32_t ref_at, uint32_t surface_at)
+void wii_collision_write_floor(uint8_t *file, uint32_t sbsp_at, uint32_t collide_at, uint32_t plane_at, uint32_t node_at, uint32_t leaf_at, uint32_t ref_at, uint32_t surface_at, uint32_t edge_at, uint32_t vertex_at)
 {
+	static float const quad[4][2] = {
+		{ -32.f, -32.f },
+		{ 32.f, -32.f },
+		{ 32.f, 32.f },
+		{ -32.f, 32.f },
+	};
+	int edge;
+
 	put_u32(file + sbsp_at + 176u, 1);
 	put_u32(file + sbsp_at + 180u, 0x803A6000u + collide_at);
 	put_u32(file + collide_at + offsetof(struct collision_bsp, bsp3d.nodes), 1);
@@ -449,11 +457,31 @@ void wii_collision_write_floor(uint8_t *file, uint32_t sbsp_at, uint32_t collide
 	put_u32(file + collide_at + offsetof(struct collision_bsp, bsp2d_references) + 4, 0x803A6000u + ref_at);
 	put_u32(file + collide_at + offsetof(struct collision_bsp, surfaces), 1);
 	put_u32(file + collide_at + offsetof(struct collision_bsp, surfaces) + 4, 0x803A6000u + surface_at);
+	put_u32(file + collide_at + offsetof(struct collision_bsp, edges), 4);
+	put_u32(file + collide_at + offsetof(struct collision_bsp, edges) + 4, 0x803A6000u + edge_at);
+	put_u32(file + collide_at + offsetof(struct collision_bsp, vertices), 4);
+	put_u32(file + collide_at + offsetof(struct collision_bsp, vertices) + 4, 0x803A6000u + vertex_at);
 	put_f32(file + plane_at + 8, 1.f);
 	put_u32(file + node_at + 4, 0xffffffffu);
 	put_u32(file + node_at + 8, 0x80000000u);
 	put_u16(file + leaf_at + 2, 1);
 	put_u32(file + ref_at + 4, 0x80000000u);
+	put_u32(file + surface_at + 4, 0);
+	for (edge = 0; edge < 4; edge++) {
+		uint32_t at = edge_at + (uint32_t)edge * 0x18u;
+		int next = edge + 1 < 4 ? edge + 1 : 0;
+		int prev = edge > 0 ? edge - 1 : 3;
+
+		put_u32(file + at + 0, (uint32_t)edge);
+		put_u32(file + at + 4, (uint32_t)next);
+		put_u32(file + at + 8, (uint32_t)next);
+		put_u32(file + at + 12, (uint32_t)prev);
+		put_u32(file + at + 16, 0);
+		put_u32(file + at + 20, 0xffffffffu);
+		put_f32(file + vertex_at + (uint32_t)edge * 0x10u, quad[edge][0]);
+		put_f32(file + vertex_at + (uint32_t)edge * 0x10u + 4, quad[edge][1]);
+		put_u32(file + vertex_at + (uint32_t)edge * 0x10u + 12, (uint32_t)edge);
+	}
 }
 
 int wii_collision_load(uint32_t sbsp_va)

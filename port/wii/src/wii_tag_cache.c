@@ -1770,13 +1770,13 @@ int wii_tag_cache_mount(
 		return -1;
 	{
 		/* Resident pixel pages inside the 23 MiB arena. The group names
-		   forty-eight bitmaps; this slab is the bytes they can grow into. */
-		unsigned char *pages = bump(16u << 20);
+		   sixty-four bitmaps; this slab is the bytes they can grow into. */
+		unsigned char *pages = bump(20u << 20);
 
 		if (!pages)
 			return -1;
 		pages[0] = 0xff;
-		pages[(16u << 20) - 1] = 0xff;
+		pages[(20u << 20) - 1] = 0xff;
 	}
 	return 0;
 }
@@ -2103,6 +2103,8 @@ int wii_tag_cache_self_test(void)
 	uint32_t leaf_at;
 	uint32_t ref2d_at;
 	uint32_t surface_at;
+	uint32_t edge_at;
+	uint32_t vertex_at;
 	uint32_t proj_at;
 	uint32_t eqip_at;
 	uint32_t upgrade_at;
@@ -2244,6 +2246,10 @@ int wii_tag_cache_self_test(void)
 	cursor += 8u;
 	surface_at = cursor;
 	cursor += 12u;
+	edge_at = cursor;
+	cursor += 0x18u * 4u;
+	vertex_at = cursor;
+	cursor += 0x10u * 4u;
 	coll_at = cursor;
 	cursor += sizeof(struct collision_model);
 	coll_node_at = cursor;
@@ -2263,9 +2269,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0x900u;
+	cursor += 0xC00u;
 	pixels_at = cursor;
-	cursor += 768u;
+	cursor += 1024u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2477,7 +2483,7 @@ int wii_tag_cache_self_test(void)
 	file[grenade_at + offsetof(struct game_globals_grenade, projectile) + 2] = 'o';
 	file[grenade_at + offsetof(struct game_globals_grenade, projectile) + 3] = 'j';
 	put_u32(file + grenade_at + offsetof(struct game_globals_grenade, projectile) + 12, datum[9]);
-	wii_collision_write_floor(file, sbsp_at, collide_at, plane_at, node3d_at, leaf_at, ref2d_at, surface_at);
+	wii_collision_write_floor(file, sbsp_at, collide_at, plane_at, node3d_at, leaf_at, ref2d_at, surface_at, edge_at, vertex_at);
 	put_u16(file + globals_at + offsetof(struct game_globals, player_information), 1);
 	put_u32(file + globals_at + offsetof(struct game_globals, player_information) + 4, TAG_BASE + info_at);
 	file[info_at] = 'b';
@@ -2682,7 +2688,7 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 48);
+	put_u32(file + bitm_at + 0x60, 64);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
@@ -2692,7 +2698,7 @@ int wii_tag_cache_self_test(void)
 	{
 		int bitmap;
 
-		for (bitmap = 1; bitmap < 48; bitmap++) {
+		for (bitmap = 1; bitmap < 64; bitmap++) {
 			memcpy(file + bitm_data_at + (uint32_t)bitmap * 0x30u, file + bitm_data_at, 0x30);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x18, (uint32_t)bitmap * 16u);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x1c, 16);

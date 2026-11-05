@@ -73,6 +73,8 @@ static int portal_crossed;
 static int portal_inside;
 static int portal_outside;
 static int vehicle_moved;
+static int vehicle_settled;
+static int portal_hops;
 static long prop_actor = NONE;
 static int pursuit_ran;
 static long sound_tag;
@@ -433,18 +435,38 @@ static void spawn_vehicle(void)
 			memset(vehicle->vehicle.suspension, 0, sizeof(vehicle->vehicle.suspension));
 		}
 		{
-			extern float global_gravity;
-			float saved_gravity = global_gravity;
 			float before_z = object->object.position.z;
+			float previous = before_z;
+			int stable = 0;
+			int tick;
+			int wheel_seen = 0;
 
-			global_gravity = 1.f;
-			vehicle_updated = vehicle_update(created) ? 1 : 0;
-			global_gravity = saved_gravity;
-			vehicle_moved = object->object.position.z != before_z;
+			vehicle_updated = 0;
+			for (tick = 0; tick < 64; tick++) {
+				float z;
+
+				if (!vehicle_update(created))
+					break;
+				vehicle_updated = 1;
+				object = object_get(created);
+				vehicle = vehicle_datum_get(created);
+				if (!object || !vehicle)
+					break;
+				if (vehicle->vehicle.wheel != 0.f)
+					wheel_seen = 1;
+				z = object->object.position.z;
+				if (tick >= 12 && z > previous - 0.002f && previous - z < 0.002f)
+					stable++;
+				else if (tick >= 12)
+					stable = 0;
+				previous = z;
+			}
+			vehicle_moved = previous > before_z + 0.005f || before_z > previous + 0.005f;
+			vehicle_settled = stable >= 8;
+			wheel_ran = wheel_seen;
 		}
 		vehicle = vehicle_datum_get(created);
 		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
-		wheel_ran = vehicle && vehicle->vehicle.wheel != 0.f;
 		suspension_ran = 0;
 		if (vehicle) {
 			unsigned char sample = vehicle->vehicle.suspension[0];
@@ -554,6 +576,11 @@ void wii_play_after_tick(void)
 
 				portal_inside = wii_structure_portal_accepts(2.5f, 0.f);
 				portal_outside = wii_structure_portal_accepts(2.5f, 2.5f);
+				{
+					extern int wii_structure_portal_hops(void);
+
+					portal_hops = wii_structure_portal_hops();
+				}
 			}
 		}
 	}
@@ -736,6 +763,16 @@ int wii_play_portal_inside(void)
 int wii_play_vehicle_moved(void)
 {
 	return vehicle_moved;
+}
+
+int wii_play_vehicle_settled(void)
+{
+	return vehicle_settled;
+}
+
+int wii_play_portal_hops(void)
+{
+	return portal_hops;
 }
 
 int wii_play_pursuit_ran(void)

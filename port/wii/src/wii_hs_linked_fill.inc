@@ -177,3 +177,17 @@
 		fill_campaign(325, _hs_type_void, 1, _hs_type_sound, "sound_impulse_stop");
 		fill_campaign(326, _hs_type_void, 1, _hs_type_looping_sound, "sound_looping_predict");
 		fill_campaign(328, _hs_type_void, 1, _hs_type_looping_sound, "sound_looping_stop");
+		fill_campaign4(292, _hs_type_void, _hs_type_real, _hs_type_real, _hs_type_real, _hs_type_short_integer, "fade_in");
+		fill_campaign4(293, _hs_type_void, _hs_type_real, _hs_type_real, _hs_type_real, _hs_type_short_integer, "fade_out");
+		fill_campaign(358, _hs_type_void, 1, _hs_type_boolean, "enable_hud_help_flash");
+		fill_campaign3(371, _hs_type_void, _hs_type_real, _hs_type_real, _hs_type_real, "player_effect_set_max_translation");
+		fill_campaign3(372, _hs_type_void, _hs_type_real, _hs_type_real, _hs_type_real, "player_effect_set_max_rotation");
+		fill_campaign2(373, _hs_type_void, _hs_type_real, _hs_type_real, "player_effect_set_max_rumble");
+		fill_campaign(375, _hs_type_void, 1, _hs_type_real, "player_effect_stop");
+		fill_campaign2(386, _hs_type_void, _hs_type_short_integer, _hs_type_short_integer, "hud_set_timer_time");
+		fill_campaign2(387, _hs_type_void, _hs_type_short_integer, _hs_type_short_integer, "hud_set_timer_warning_time");
+		fill_campaign3(388, _hs_type_void, _hs_type_short_integer, _hs_type_short_integer, _hs_type_enum_hud_corner, "hud_set_timer_position");
+		fill_campaign(389, _hs_type_void, 1, _hs_type_boolean, "show_hud_timer");
+		fill_campaign(390, _hs_type_void, 1, _hs_type_boolean, "pause_hud_timer");
+		fill_campaign(392, _hs_type_void, 1, _hs_type_boolean, "time_code_show");
+		fill_campaign(393, _hs_type_void, 1, _hs_type_boolean, "time_code_start");
