@@ -31,6 +31,7 @@ int wii_tag_cache_scenery_count(void);
 int wii_tag_cache_vehicle_count(void);
 long wii_tag_cache_vehicle_definition(void);
 int wii_tag_cache_mass_points(void);
+float wii_tag_cache_ground_depth(void);
 uint32_t wii_tag_cache_arena(void);
 int wii_tag_cache_magazine_rounds(void);
 int wii_tag_cache_grenade_count(void);

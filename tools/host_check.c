@@ -546,11 +546,11 @@ int main(void)
 			}
 			if (wii_play_firing_tested() < 3 || wii_play_firing_real() < 0 || wii_play_firing_index() != wii_play_firing_real() || !wii_play_firing_on_path())
 				return fail("firing position");
-			if (!wii_play_path_found() || wii_play_path_nodes() < 4 || wii_play_prop_surface() != 3 || !wii_play_portal_crossed())
+			if (!wii_play_path_found() || wii_play_path_nodes() < 4 || wii_play_prop_surface() != 3 || !wii_play_portal_crossed() || !wii_play_portal_inside())
 				return fail("path find");
 			if (!wii_play_pursuit_ran())
 				return fail("pursuit");
-			if (!wii_play_mass_ran() || wii_tag_cache_mass_points() < 1)
+			if (!wii_play_mass_ran() || wii_tag_cache_mass_points() < 4 || wii_tag_cache_ground_depth() <= 0.f)
 				return fail("mass points");
 			if (!wii_play_wheel_ran())
 				return fail("wheel");
@@ -562,9 +562,9 @@ int main(void)
 				return fail("vehicle update");
 			if (!wii_play_vehicle_seated())
 				return fail("vehicle seat");
-			if (wii_mesh_bitmap_count() < 32)
+			if (wii_mesh_bitmap_count() < 48)
 				return fail("bitmap count");
-			if (wii_tag_cache_arena() != 23u * 1024u * 1024u || wii_tag_cache_resident() < (8u << 20))
+			if (wii_tag_cache_arena() != 23u * 1024u * 1024u || wii_tag_cache_resident() < (16u << 20))
 				return fail("tag arena");
 			if (wii_seat_anim_frame(1, 5) != 5 || wii_seat_anim_frame(0, 5) != 0)
 				return fail("seat animation");

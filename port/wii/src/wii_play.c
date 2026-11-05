@@ -70,6 +70,8 @@ static int wheel_ran;
 static int suspension_ran;
 static int prop_surface;
 static int portal_crossed;
+static int portal_inside;
+static int portal_outside;
 static int vehicle_moved;
 static long prop_actor = NONE;
 static int pursuit_ran;
@@ -414,7 +416,7 @@ static void spawn_vehicle(void)
 	object_placement_data_new(&placement, definition, NONE);
 	placement.position.x = 6.f;
 	placement.position.y = 6.f;
-	placement.position.z = 3.5f;
+	placement.position.z = 1.2f;
 	created = object_new(&placement);
 	if (created == NONE)
 		return;
@@ -428,7 +430,7 @@ static void spawn_vehicle(void)
 			vehicle->vehicle.airborne_ticks = 3;
 			vehicle->vehicle.speed = 1.f;
 			vehicle->vehicle.wheel = 0.f;
-			vehicle->vehicle.suspension[0] = 0xff;
+			memset(vehicle->vehicle.suspension, 0, sizeof(vehicle->vehicle.suspension));
 		}
 		{
 			extern float global_gravity;
@@ -443,7 +445,15 @@ static void spawn_vehicle(void)
 		vehicle = vehicle_datum_get(created);
 		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
 		wheel_ran = vehicle && vehicle->vehicle.wheel != 0.f;
-		suspension_ran = vehicle && vehicle->vehicle.suspension[0] != 0xff;
+		suspension_ran = 0;
+		if (vehicle) {
+			unsigned char sample = vehicle->vehicle.suspension[0];
+
+			suspension_ran = sample != 0
+				&& sample == vehicle->vehicle.suspension[1]
+				&& sample == vehicle->vehicle.suspension[2]
+				&& sample == vehicle->vehicle.suspension[3];
+		}
 	}
 }
 
@@ -539,6 +549,12 @@ void wii_play_after_tick(void)
 			span = wii_structure_portal_span(&first, &second);
 			portal_crossed = path_found && near_cluster && far_cluster && span >= 2
 				&& first == 0 && second == 1;
+			{
+				extern int wii_structure_portal_accepts(float x, float y);
+
+				portal_inside = wii_structure_portal_accepts(2.5f, 0.f);
+				portal_outside = wii_structure_portal_accepts(2.5f, 2.5f);
+			}
 		}
 	}
 	enter_vehicle_seat();
@@ -710,6 +726,11 @@ int wii_play_prop_surface(void)
 int wii_play_portal_crossed(void)
 {
 	return portal_crossed;
+}
+
+int wii_play_portal_inside(void)
+{
+	return portal_inside && !portal_outside;
 }
 
 int wii_play_vehicle_moved(void)

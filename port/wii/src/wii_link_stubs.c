@@ -568,7 +568,22 @@ int matrix4x3_rotation_from_axis_and_angle(void) { return 0; }
 int matrix4x3_rotation_from_vectors(void) { return 0; }
 int matrix4x3_rotation_to_quaternion(void) { return 0; }
 int matrix4x3_to_point_and_vectors(void) { return 0; }
-int matrix4x3_transform_normal(void) { return 0; }
+struct wii_point3 *matrix4x3_transform_normal(struct wii_matrix4x3 const *matrix, struct wii_point3 const *normal, struct wii_point3 *result)
+{
+	float x = normal->x;
+	float y = normal->y;
+	float z = normal->z;
+
+	if (matrix->scale != 1.f) {
+		x *= matrix->scale;
+		y *= matrix->scale;
+		z *= matrix->scale;
+	}
+	result->x = matrix->n[2][0] * z + matrix->n[1][0] * y + matrix->n[0][0] * x;
+	result->y = matrix->n[2][1] * z + matrix->n[1][1] * y + matrix->n[0][1] * x;
+	result->z = matrix->n[2][2] * z + matrix->n[1][2] * y + matrix->n[0][2] * x;
+	return result;
+}
 int matrix4x3_transform_plane(void) { return 0; }
 int matrix4x3_translation(void) { return 0; }
 int model_detail_geometry_index(void) { return 0; }
@@ -664,7 +679,20 @@ void *profile_global_enable;
 void *prop_data;
 int prop_position_refresh(void) { return 0; }
 int prop_status_refresh(void) { return 0; }
-int quantize_real_to_byte_lower_bound(void) { return 0; }
+unsigned char quantize_real_to_byte_lower_bound(float min, float max, float value)
+{
+	float range = max - min;
+	int test;
+
+	if (range == 0.f)
+		return 0;
+	test = (int)(((value - min) / range) * 255.f);
+	if (test < 0)
+		test = 0;
+	if (test > 255)
+		test = 255;
+	return (unsigned char)test;
+}
 int quaternion_to_angle_and_vector(void) { return 0; }
 int rasterizer_debug_model_vertices(void) { return 0; }
 int rasterizer_debug_options(void) { return 0; }
@@ -1139,7 +1167,32 @@ int render_camera_view_to_screen(void) { return 0; }
 int render_interpolation_object_point(void) { return 0; }
 int get_return_eip(void) { return 0; }
 int fast_ftol_C(void) { return 0; }
-int convex_hull2d_test_circle(void) { return 1; }
+/* Same test as OpenCE geometry.c: a circle is outside an edge when it sits
+   strictly to the left of that directed edge by more than its radius. */
+int convex_hull2d_test_circle(short count, float const *points, float const *center, float radius)
+{
+	short index;
+	float radius_squared = radius * radius;
+
+	if (!points || !center || count < 3)
+		return 0;
+	for (index = 0; index < count; index++) {
+		short next = (short)(index + 1 < count ? index + 1 : 0);
+		float edge_i = points[next * 2] - points[index * 2];
+		float edge_j = points[next * 2 + 1] - points[index * 2 + 1];
+		float offset_i = center[0] - points[index * 2];
+		float offset_j = center[1] - points[index * 2 + 1];
+		float edge_length_squared = edge_i * edge_i + edge_j * edge_j;
+		float cross;
+
+		if (edge_length_squared == 0.f)
+			continue;
+		cross = offset_i * edge_j - offset_j * edge_i;
+		if (cross > 0.f && cross * cross > edge_length_squared * radius_squared)
+			return 0;
+	}
+	return 1;
+}
 int environment_vertex_compressed_get_point(void) { return 0; }
 int matrix3x3_transform_vector(void) { return 0; }
 int matrix4x3_rotation_from_quaternion(void) { return 0; }
@@ -1173,7 +1226,7 @@ int structure_render_set_fog_offset(void) { return 0; }
    them sits on the z=0 plane over the edge path_state_find walks. */
 short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
 
-int wii_structure_portal_span(short *first, short *second)
+static int portal_query(float x, float y, float z, float radius, short *first, short *second)
 {
 	struct wii_tag_block *clusters = (struct wii_tag_block *)(wii_structure_bsp + 308);
 	struct wii_tag_block *portals = (struct wii_tag_block *)(wii_structure_bsp + 340);
@@ -1192,7 +1245,6 @@ int wii_structure_portal_span(short *first, short *second)
 	float point[3];
 	short found[4];
 	short count;
-	int index;
 
 	global_structure_bsp_get();
 	memset(cluster_bytes, 0, sizeof(cluster_bytes));
@@ -1206,7 +1258,7 @@ int wii_structure_portal_span(short *first, short *second)
 	portal.cluster_indices[0] = 0;
 	portal.cluster_indices[1] = 1;
 	portal.centroid[0] = 2.5f;
-	portal.bounding_radius = 3.f;
+	portal.bounding_radius = 4.f;
 	vertices[0][0] = 2.f; vertices[0][1] = -1.f;
 	vertices[1][0] = 3.f; vertices[1][1] = -1.f;
 	vertices[2][0] = 3.f; vertices[2][1] = 1.f;
@@ -1217,19 +1269,29 @@ int wii_structure_portal_span(short *first, short *second)
 	clusters->address = cluster_bytes;
 	portals->count = 1;
 	portals->address = &portal;
-	point[0] = 2.5f;
-	point[1] = 0.f;
-	point[2] = 0.f;
-	count = structure_clusters_in_sphere(0, point, 1.f, 4, found);
+	point[0] = x;
+	point[1] = y;
+	point[2] = z;
+	count = structure_clusters_in_sphere(0, point, radius, 4, found);
 	clusters->count = 0;
 	portals->count = 0;
 	if (first)
 		*first = count > 0 ? found[0] : -1;
 	if (second)
 		*second = count > 1 ? found[1] : -1;
-	for (index = 0; index < count; index++) {
-		if (found[index] == 1)
-			return count;
-	}
 	return count;
+}
+
+int wii_structure_portal_span(short *first, short *second)
+{
+	return portal_query(2.5f, 0.f, 0.f, 0.2f, first, second);
+}
+
+int wii_structure_portal_accepts(float x, float y)
+{
+	short first = -1;
+	short second = -1;
+
+	portal_query(x, y, 0.f, 0.05f, &first, &second);
+	return first == 0 && second == 1;
 }
