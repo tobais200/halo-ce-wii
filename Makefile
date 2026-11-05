@@ -27,7 +27,7 @@ CXXFLAGS	=	$(CFLAGS)
 LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 # fat before wiiuse before bte before ogc: each library depends on the next.
-LIBS		:=	-lfat -lwiiuse -lbte -logc -lm
+LIBS		:=	-lfat -laesnd -lwiiuse -lbte -logc -lm
 
 LIBDIRS		:=
 

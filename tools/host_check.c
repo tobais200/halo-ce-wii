@@ -489,6 +489,14 @@ int main(void)
 				scale += sprites[index].z;
 			if (count < 1 || scale == before)
 				return fail("effect motion");
+			if (wii_hs_campaign_count() < 80)
+				return fail("campaign scripts");
+			if (wii_save_checkpoint() != 0 || !wii_save_valid() || wii_save_restore() != 0)
+				return fail("checkpoint");
+			if (wii_pose_segments() < 1)
+				return fail("biped pose");
+			if (wii_sound_last() == 0)
+				return fail("sound impulse");
 		}
 		if (wii_tag_cache_idle_rotation_w() < 0.9f)
 			return fail("biped idle animation");

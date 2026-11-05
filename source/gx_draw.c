@@ -1,5 +1,6 @@
 #include "gx_draw.h"
 
+#include "wii_collision.h"
 #include "wii_effects.h"
 #include "wii_mem.h"
 
@@ -158,8 +159,7 @@ static void draw_overlay(struct gx_mesh_view const *view)
 		overlay_vertex(ox + rx * 0.08f, oy + ry * 0.08f, oz - 0.06f, 24, 26, 28, 0, 0, 0);
 		GX_End();
 	}
-	if (count <= 0)
-		return;
+	if (count > 0) {
 	if (textured) {
 		GX_SetNumTexGens(1);
 		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
@@ -197,6 +197,40 @@ static void draw_overlay(struct gx_mesh_view const *view)
 		}
 	}
 	GX_End();
+	}
+	if (wii_pose_segments() > 0) {
+		int bone;
+		int bones = wii_pose_segments();
+
+		GX_SetNumTexGens(0);
+		GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+		GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+		if (bones > 24)
+			bones = 24;
+		GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (uint16_t)(bones * 6));
+		for (bone = 0; bone < bones; bone++) {
+			float x0, y0, z0, x1, y1, z1;
+			float dx, dy, dz, len;
+
+			if (!wii_pose_segment(bone, &x0, &y0, &z0, &x1, &y1, &z1))
+				continue;
+			dx = x1 - x0;
+			dy = y1 - y0;
+			dz = z1 - z0;
+			len = sqrtf(dx * dx + dy * dy + dz * dz);
+			if (len < 0.02f)
+				len = 0.02f;
+			overlay_vertex(x0, y0, z0, 220, 180, 90, 0, 0, 0);
+			overlay_vertex(x1, y1, z1, 220, 180, 90, 0, 0, 0);
+			overlay_vertex(x0 + 0.04f, y0, z0 + 0.04f, 160, 120, 50, 0, 0, 0);
+			overlay_vertex(x1, y1, z1, 220, 180, 90, 0, 0, 0);
+			overlay_vertex(x0, y0, z0, 220, 180, 90, 0, 0, 0);
+			overlay_vertex(x1 + 0.04f, y1, z1 + 0.04f, 160, 120, 50, 0, 0, 0);
+		}
+		GX_End();
+	}
 }
 
 void gx_draw_clear_texture(void)

@@ -15,6 +15,9 @@ int wii_damage_hurts(long object_index, long damage_definition);
 float wii_unit_throttle(long unit_index);
 int wii_unit_eye(long unit_index, float *x, float *y, float *z);
 int wii_unit_facing(long unit_index, float *yaw);
+int wii_pose_build(long unit_index);
+int wii_pose_segments(void);
+int wii_pose_segment(int index, float *x0, float *y0, float *z0, float *x1, float *y1, float *z1);
 /* 1 when the segment hits structure before it ends. scale is the hit fraction. */
 int wii_collision_clip(float x, float y, float z, float dx, float dy, float dz, float *scale, float *hx, float *hy, float *hz);
 void wii_collision_write_floor(uint8_t *file, uint32_t sbsp_at, uint32_t collide_at, uint32_t plane_at, uint32_t node_at, uint32_t leaf_at, uint32_t ref_at, uint32_t surface_at);

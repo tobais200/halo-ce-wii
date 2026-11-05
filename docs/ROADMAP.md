@@ -21,11 +21,11 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Most of the 425 script functions (`object_create`, `cinematic_start`, `camera_control`, device machines, chapter titles) still take the unlinked evaluator. Special forms, `sleep`, and `wake` run. `ai_place()` runs from `game_start`, not from a script's encounter argument.
-- The tag working set is not the whole cache: scenery, device machines, sound tags, and most bitmaps stay on the card.
-- Skinned biped and weapon models are not skinned on GX. The view shows the BSP, effect billboards, and a first-person block, not the cyborg mesh.
-- Weapon audio is the Xbox sound bank. AESND is not fed original samples. Bink, save games, and the network stack need the Xbox device layer this tree does not have.
-- Actor combat is a range shot, not `actor_combat.c` (firing positions, bursts, grenades). Pathfinding is linked and still stubbed underneath.
+- About 120 of the 425 script functions now have an evaluator. Ninety-eight zero-argument calls return without counting as unlinked. `object_create`, `object_destroy`, `object_create_anew`, `unit_kill`, `not`, `print`, `camera_control`, `cinematic_start`, `cinematic_stop`, `cinematic_show_letterbox`, `show_hud`, `game_save`, `game_revert`, and the one-argument `ai_*` calls (`ai_place`, `ai_attack`, `ai_defend`, `ai_retreat`, `ai_kill`, `ai_try_to_fight_player`, and the rest of that set) call the linked game functions. Device machines, chapter titles, and the other three hundred functions still take the unlinked evaluator.
+- The tag working set is 2 MiB: more encounters, squads, weapons, and animations, plus up to 64 object names. Scenery palettes, sound tags, and most bitmaps stay on the card.
+- The biped's model nodes are drawn as a skeleton from the bind-pose translations. Vertex skinning and the weapon mesh are not drawn.
+- Nearby actors chase, backpedal inside 3.5 world units, and fire a three-round burst. That is not `actor_combat.c` (firing positions, grenades, vehicle seats). Pathfinding underneath is still stubbed.
+- A shot plays an AESND click. Xbox sound tags are not decoded. `game_save` writes the player position to memory and to `sd:/halo-ce/save.bin` when that file can be opened. Bink and the network stack are not linked. The OpenGL rasterizer is not compiled.
 
 ### Later, each one blocked until the previous exists
 

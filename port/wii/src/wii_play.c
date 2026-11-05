@@ -12,8 +12,17 @@
 #include "wii_play.h"
 #include "wii_tag_cache.h"
 
+#include <stdint.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
+#ifdef GEKKO
+typedef struct AESNDPB AESNDPB;
+void AESND_Init(void);
+AESNDPB *AESND_AllocateVoiceWithArg(void *callback, void *argument);
+void AESND_PlayVoice(AESNDPB *voice, unsigned int format, void const *buffer, unsigned int length, float frequency, unsigned int delay, int looped);
+enum { WII_VOICE_MONO16 = 2 };
+#endif
 
 enum { WII_SHOTS = 16 };
 
@@ -32,6 +41,10 @@ static int moved;
 static int grounded;
 static int shot_wait;
 static int actor_wait;
+static int burst_left;
+static long sound_tag;
+static int save_valid;
+static float save_x, save_y, save_z, save_yaw;
 
 static void step_unit(long unit_index, float yaw, float forward_throttle, float strafe_throttle, int record)
 {
@@ -121,6 +134,7 @@ static void spawn_shot(long owner, float x, float y, float z, float dx, float dy
 	shots[slot].alive = 1;
 	shots[slot].from_actor = from_actor;
 	wii_effect_emit(x, y, z);
+	wii_sound_impulse(from_actor ? 2 : 1);
 	if (from_actor)
 		actor_shots++;
 	else
@@ -216,11 +230,18 @@ static void actors_fight(long player_unit)
 		dx /= len;
 		dy /= len;
 		dz /= len;
-		step_unit(actor->meta.unit_index, atan2f(dy, dx), 0.45f, 0.f, 0);
-		spawn_shot(actor->meta.unit_index,
-			unit->object.position.x, unit->object.position.y, unit->object.position.z + 0.7f,
-			dx * 0.8f, dy * 0.8f, dz * 0.8f, 1);
-		actor_wait = 8;
+		/* Chase when far, backpedal when inside the burst, otherwise hold and fire. */
+		step_unit(actor->meta.unit_index, atan2f(dy, dx),
+			len > 16.f ? 1.f : (len < 3.5f ? -0.7f : 0.15f), 0.f, 0);
+		if (burst_left <= 0 && len < 22.f)
+			burst_left = 3;
+		if (burst_left > 0) {
+			spawn_shot(actor->meta.unit_index,
+				unit->object.position.x, unit->object.position.y, unit->object.position.z + 0.7f,
+				dx * 0.8f, dy * 0.8f, dz * 0.8f, 1);
+			burst_left--;
+			actor_wait = burst_left ? 2 : 12;
+		}
 		return;
 	}
 }
@@ -252,6 +273,8 @@ void wii_play_after_tick(void)
 	}
 	advance_shots();
 	actors_fight(player);
+	if (player != NONE)
+		wii_pose_build(player);
 }
 
 int wii_play_moved(void)
@@ -272,4 +295,91 @@ int wii_play_ai_shots(void)
 int wii_play_grounded(void)
 {
 	return grounded;
+}
+
+void wii_sound_impulse(long tag_index)
+{
+	sound_tag = tag_index;
+#ifdef GEKKO
+	/* A short click until an Xbox sound tag is decoded into samples. */
+	{
+		static int ready;
+		static AESNDPB *voice;
+		static int16_t click[32];
+		int sample;
+
+		if (!ready) {
+			for (sample = 0; sample < 32; sample++)
+				click[sample] = (int16_t)((sample & 2) ? 6000 : -6000);
+			AESND_Init();
+			voice = AESND_AllocateVoiceWithArg(0, 0);
+			ready = 1;
+		}
+		if (voice)
+			AESND_PlayVoice(voice, WII_VOICE_MONO16, click, sizeof(click), 16000.f, 0, 0);
+	}
+#endif
+}
+
+long wii_sound_last(void)
+{
+	return sound_tag;
+}
+
+int wii_save_checkpoint(void)
+{
+	long unit = wii_game_player_unit();
+	struct object_datum *object = unit == NONE ? NULL : object_get(unit);
+	FILE *file;
+
+	if (!object)
+		return -1;
+	save_x = object->object.position.x;
+	save_y = object->object.position.y;
+	save_z = object->object.position.z;
+	save_yaw = atan2f(object->object.forward.j, object->object.forward.i);
+	save_valid = 1;
+	file = fopen("sd:/halo-ce/save.bin", "wb");
+	if (file) {
+		fwrite(&save_valid, 4, 1, file);
+		fwrite(&save_x, 4, 1, file);
+		fwrite(&save_y, 4, 1, file);
+		fwrite(&save_z, 4, 1, file);
+		fwrite(&save_yaw, 4, 1, file);
+		fclose(file);
+	}
+	return 0;
+}
+
+int wii_save_restore(void)
+{
+	long unit = wii_game_player_unit();
+	struct object_datum *object;
+	FILE *file = fopen("sd:/halo-ce/save.bin", "rb");
+
+	if (file) {
+		fread(&save_valid, 4, 1, file);
+		fread(&save_x, 4, 1, file);
+		fread(&save_y, 4, 1, file);
+		fread(&save_z, 4, 1, file);
+		fread(&save_yaw, 4, 1, file);
+		fclose(file);
+	}
+	if (!save_valid || unit == NONE)
+		return -1;
+	object = object_get(unit);
+	if (!object)
+		return -1;
+	object->object.position.x = save_x;
+	object->object.position.y = save_y;
+	object->object.position.z = save_z;
+	object->object.forward.i = cosf(save_yaw);
+	object->object.forward.j = sinf(save_yaw);
+	object->object.forward.k = 0.f;
+	return 0;
+}
+
+int wii_save_valid(void)
+{
+	return save_valid;
 }

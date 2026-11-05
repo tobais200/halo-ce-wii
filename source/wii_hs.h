@@ -26,6 +26,7 @@ int wii_hs_ready(void);
 void wii_hs_set_time(uint32_t ticks);
 void wii_hs_update(void);
 int wii_hs_unlinked(void);
+int wii_hs_campaign_count(void);
 int wii_hs_last_unlinked(void);
 int wii_hs_global_real(int index, float *value);
 char const *wii_hs_note(void);

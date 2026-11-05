@@ -8,6 +8,8 @@
 #include "objects/damage_effect_definitions.h"
 #include "objects/objects.h"
 #include "units/units.h"
+#include "units/biped_definitions.h"
+#include "models/model_definitions.h"
 #include "physics/collision_bsp.h"
 #include "physics/collision_bsp_definitions.h"
 #include "physics/collision_model_definitions.h"
@@ -652,4 +654,86 @@ int wii_unit_facing(long unit_index, float *yaw)
 		return 0;
 	*yaw = atan2f(object->object.forward.j, object->object.forward.i);
 	return 1;
+}
+
+enum { WII_POSE_MAX = 24 };
+
+static float pose_ax[WII_POSE_MAX], pose_ay[WII_POSE_MAX], pose_az[WII_POSE_MAX];
+static float pose_bx[WII_POSE_MAX], pose_by[WII_POSE_MAX], pose_bz[WII_POSE_MAX];
+static int pose_count;
+
+int wii_pose_segments(void)
+{
+	return pose_count;
+}
+
+int wii_pose_segment(int index, float *x0, float *y0, float *z0, float *x1, float *y1, float *z1)
+{
+	if (index < 0 || index >= pose_count)
+		return 0;
+	if (x0) *x0 = pose_ax[index];
+	if (y0) *y0 = pose_ay[index];
+	if (z0) *z0 = pose_az[index];
+	if (x1) *x1 = pose_bx[index];
+	if (y1) *y1 = pose_by[index];
+	if (z1) *z1 = pose_bz[index];
+	return 1;
+}
+
+int wii_pose_build(long unit_index)
+{
+	struct object_datum *object = object_get(unit_index);
+	struct biped_definition *biped;
+	struct model *model;
+	float node_x[64], node_y[64], node_z[64];
+	float yaw, cy, sy;
+	int count;
+	int index;
+
+	pose_count = 0;
+	if (!object)
+		return 0;
+	biped = tag_get(0x62697064, object->definition_index);
+	if (!biped || biped->object.model.index == NONE)
+		return 0;
+	model = tag_get(0x6d6f6465, biped->object.model.index);
+	if (!model || model->nodes.count < 1 || !model->nodes.address)
+		return 0;
+	count = model->nodes.count;
+	if (count > 64)
+		count = 64;
+	yaw = atan2f(object->object.forward.j, object->object.forward.i);
+	cy = cosf(yaw);
+	sy = sinf(yaw);
+	for (index = 0; index < count; index++) {
+		struct model_node *node = ((struct model_node *)model->nodes.address) + index;
+		int parent = node->parent_node_index;
+		float lx = node->default_translation.x;
+		float ly = node->default_translation.y;
+		float lz = node->default_translation.z;
+
+		if (parent >= 0 && parent < index) {
+			lx += node_x[parent];
+			ly += node_y[parent];
+			lz += node_z[parent];
+		}
+		node_x[index] = lx;
+		node_y[index] = ly;
+		node_z[index] = lz;
+		if (pose_count >= WII_POSE_MAX)
+			continue;
+		pose_ax[pose_count] = object->object.position.x;
+		pose_ay[pose_count] = object->object.position.y;
+		pose_az[pose_count] = object->object.position.z;
+		if (parent >= 0 && parent < index) {
+			pose_ax[pose_count] = object->object.position.x + node_x[parent] * cy - node_y[parent] * sy;
+			pose_ay[pose_count] = object->object.position.y + node_x[parent] * sy + node_y[parent] * cy;
+			pose_az[pose_count] = object->object.position.z + node_z[parent];
+		}
+		pose_bx[pose_count] = object->object.position.x + lx * cy - ly * sy;
+		pose_by[pose_count] = object->object.position.y + lx * sy + ly * cy;
+		pose_bz[pose_count] = object->object.position.z + lz;
+		pose_count++;
+	}
+	return pose_count;
 }

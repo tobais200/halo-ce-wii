@@ -1,6 +1,6 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (at most 1 MiB, inside the
+ * stays on the card. This copies a working set (at most 2 MiB, inside the
  * 8 MiB resident cap) and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
@@ -39,17 +39,17 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = 1u << 20,
+	WII_TAG_ARENA = 2u << 20,
 	WII_TAG_CAP_PLAYERS = 16,
-	WII_TAG_CAP_WEAPONS = 4,
-	WII_TAG_CAP_ENCOUNTERS = 8,
-	WII_TAG_CAP_SQUADS = 4,
+	WII_TAG_CAP_WEAPONS = 8,
+	WII_TAG_CAP_ENCOUNTERS = 16,
+	WII_TAG_CAP_SQUADS = 8,
 	WII_TAG_CAP_NODES = 64,
 	WII_TAG_CAP_SEATS = 8,
 	WII_TAG_CAP_CLASSES = 2,
 	WII_TAG_CAP_TYPES = 2,
 	WII_TAG_CAP_LOCATIONS = 4,
-	WII_TAG_CAP_ANIMS = 4,
+	WII_TAG_CAP_ANIMS = 8,
 	WII_TAG_CAP_MAGAZINES = 2,
 	/* One animation's default pose or frame blob. Four of these still fit
 	   in the 1 MiB arena with the scenario, biped, and weapon tags. */
@@ -1390,6 +1390,31 @@ static int load_scenario(int slot)
 		}
 		scenario->ai_actor_palette.count = palette_count;
 		scenario->ai_actor_palette.address = palette;
+	}
+	if (pull_va(slots[slot].base_va + offsetof(struct scenario, object_names), block, 8) == 0) {
+		int name_count = read_les32(block);
+		uint32_t name_va = read_le32(block + 4);
+		struct scenario_object_name *names;
+
+		if (name_count < 0)
+			name_count = 0;
+		if (name_count > 64)
+			name_count = 64;
+		names = name_count ? bump((uint32_t)name_count * sizeof(*names)) : NULL;
+		if (name_count && !names)
+			return -1;
+		for (index = 0; index < name_count; index++) {
+			uint8_t raw[36];
+
+			if (pull_va(name_va + (uint32_t)index * sizeof(struct scenario_object_name), raw, sizeof(raw)) != 0)
+				return -1;
+			memcpy(names[index].name, raw, 32);
+			names[index].name[31] = 0;
+			names[index].runtime_object_type = read_les16(raw + 32);
+			names[index].runtime_scenario_datum_index = read_les16(raw + 34);
+		}
+		scenario->object_names.count = name_count;
+		scenario->object_names.address = names;
 	}
 	slots[slot].base = scenario;
 	native_scenario = scenario;

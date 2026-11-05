@@ -10,5 +10,10 @@ int wii_play_moved(void);
 int wii_play_shots(void);
 int wii_play_ai_shots(void);
 int wii_play_grounded(void);
+void wii_sound_impulse(long tag_index);
+long wii_sound_last(void);
+int wii_save_checkpoint(void);
+int wii_save_restore(void);
+int wii_save_valid(void);
 
 #endif

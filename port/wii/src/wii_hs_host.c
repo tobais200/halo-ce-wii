@@ -26,6 +26,7 @@
 #include "ai/ai_debug_scripting.h"
 #include "game/game.h"
 #include "wii_hs.h"
+#include "wii_play.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -202,8 +203,53 @@ const real_matrix4x3 *global_identity4x3 = &wii_identity;
 extern struct data_array *hs_global_data;
 extern struct data_array *hs_thread_data;
 
-static struct hs_function_definition wii_functions[WII_HS_FUNCTIONS];
+struct wii_hs_slot {
+	struct hs_function_definition definition;
+	short more_types[3];
+};
+
+static struct wii_hs_slot wii_slots[WII_HS_FUNCTIONS];
 static int wii_table_ready;
+static int wii_campaign_count;
+static int wii_cinematic;
+static int wii_camera_scripted;
+static int wii_letterbox;
+static int wii_hud_shown = 1;
+
+struct wii_checkpoint {
+	int valid;
+	float x, y, z, yaw;
+};
+
+static struct wii_checkpoint wii_checkpoint;
+
+void object_delete(long object_index);
+long object_new_by_name(short name_index);
+void ai_scripting_place(long ai_reference);
+void ai_scripting_kill(long ai_reference);
+void ai_scripting_kill_silent(long ai_reference);
+void ai_scripting_erase(long ai_reference);
+void ai_scripting_free(long ai_reference);
+void ai_scripting_select(long ai_reference);
+void ai_scripting_spawn_actor(long ai_reference);
+void ai_scripting_magically_see_players(long ai_reference);
+void ai_scripting_timer_start(long ai_reference);
+void ai_scripting_timer_expire(long ai_reference);
+void ai_scripting_attack(long ai_reference);
+void ai_scripting_defend(long ai_reference);
+void ai_scripting_retreat(long ai_reference);
+void ai_scripting_exit_vehicle(long ai_reference);
+void ai_scripting_renew(long ai_reference);
+void ai_scripting_try_to_fight_nothing(long ai_reference);
+void ai_scripting_try_to_fight_player(long ai_reference);
+void ai_scripting_command_list_advance(long ai_reference);
+void ai_scripting_follow_target_disable(long ai_reference);
+void ai_scripting_follow_target_players(long ai_reference);
+void ai_scripting_teleport_starting_location(long ai_reference);
+short ai_scripting_living_count(long ai_reference);
+short ai_scripting_status(long ai_reference);
+boolean ai_scripting_is_attacking(long ai_reference);
+extern struct data_array *actor_data;
 
 static uint16_t le16(uint8_t const *bytes)
 {
@@ -232,8 +278,9 @@ void wii_hs_evaluate_unlinked(short function_index, long thread_index, boolean i
 
 static void fill_function(int index, short return_type, char const *name, hs_evaluate_procedure evaluate)
 {
-	struct hs_function_definition *function = &wii_functions[index];
+	struct hs_function_definition *function = &wii_slots[index].definition;
 
+	memset(&wii_slots[index], 0, sizeof(wii_slots[index]));
 	function->return_type = return_type;
 	function->flags = 0;
 	function->name = name;
@@ -243,6 +290,135 @@ static void fill_function(int index, short return_type, char const *name, hs_eva
 	function->usage = "";
 	function->parameter_count = 0;
 	function->parameter_types[0] = _hs_type_void;
+}
+
+static void wii_hs_campaign(short function_index, long thread_index, boolean initialize);
+
+static void fill_campaign(int index, short return_type, short count, short type0, char const *name)
+{
+	fill_function(index, return_type, name, wii_hs_campaign);
+	wii_slots[index].definition.parameter_count = count;
+	wii_slots[index].definition.parameter_types[0] = type0;
+	wii_campaign_count++;
+}
+
+static long campaign_bool(int value)
+{
+	long result = 0;
+
+	*(boolean *)&result = value ? 1 : 0;
+	return result;
+}
+
+static void wii_ai_one(int index, long reference)
+{
+	if (!actor_data)
+		return;
+	switch (index) {
+	case 156: ai_scripting_free(reference); break;
+	case 161: ai_scripting_place(reference); break;
+	case 162: ai_scripting_kill(reference); break;
+	case 163: ai_scripting_kill_silent(reference); break;
+	case 164: ai_scripting_erase(reference); break;
+	case 166: ai_scripting_select(reference); break;
+	case 168: ai_scripting_spawn_actor(reference); break;
+	case 173: ai_scripting_magically_see_players(reference); break;
+	case 175: ai_scripting_timer_start(reference); break;
+	case 176: ai_scripting_timer_expire(reference); break;
+	case 177: ai_scripting_attack(reference); break;
+	case 178: ai_scripting_defend(reference); break;
+	case 179: ai_scripting_retreat(reference); break;
+	case 196: ai_scripting_exit_vehicle(reference); break;
+	case 201: ai_scripting_teleport_starting_location(reference); break;
+	case 203: ai_scripting_renew(reference); break;
+	case 204: ai_scripting_try_to_fight_nothing(reference); break;
+	case 206: ai_scripting_try_to_fight_player(reference); break;
+	case 209: ai_scripting_command_list_advance(reference); break;
+	case 229: ai_scripting_follow_target_disable(reference); break;
+	case 230: ai_scripting_follow_target_players(reference); break;
+	default: break;
+	}
+}
+
+static void wii_hs_campaign(short function_index, long thread_index, boolean initialize)
+{
+	struct hs_function_definition *function = &wii_slots[function_index].definition;
+	long *arguments = NULL;
+	long result = 0;
+
+	if (function->parameter_count > 0) {
+		arguments = hs_macro_function_evaluate(function_index, thread_index, initialize);
+		if (!arguments)
+			return;
+	}
+	switch (function_index) {
+	case 27:
+		result = campaign_bool(!arguments[0]);
+		break;
+	case 28:
+		if (arguments[0])
+			note((char const *)(uintptr_t)arguments[0]);
+		break;
+	case 38:
+	case 40:
+		if (function_index == 40) {
+			long existing = object_index_from_name_index((short)arguments[0]);
+
+			if (existing != NONE)
+				object_delete(existing);
+		}
+		object_new_by_name((short)arguments[0]);
+		break;
+	case 39:
+	case 96:
+		if (arguments[0] != NONE)
+			object_delete(arguments[0]);
+		break;
+	case 44:
+		break;
+	case 156: case 161: case 162: case 163: case 164: case 166: case 168:
+	case 173: case 175: case 176: case 177: case 178: case 179: case 196:
+	case 201: case 203: case 204: case 206: case 209: case 229: case 230:
+		wii_ai_one(function_index, arguments[0]);
+		break;
+	case 187:
+		result = actor_data ? ai_scripting_living_count(arguments[0]) : 0;
+		break;
+	case 212:
+		result = campaign_bool(actor_data && ai_scripting_is_attacking(arguments[0]));
+		break;
+	case 218:
+		result = actor_data ? ai_scripting_status(arguments[0]) : 0;
+		break;
+	case 245:
+		wii_camera_scripted = arguments[0] ? 1 : 0;
+		break;
+	case 294:
+		wii_cinematic = 1;
+		break;
+	case 295:
+		wii_cinematic = 0;
+		break;
+	case 298:
+		wii_letterbox = arguments[0] ? 1 : 0;
+		break;
+	case 309:
+		wii_save_checkpoint();
+		break;
+	case 310:
+		wii_checkpoint.valid = 0;
+		break;
+	case 314:
+		wii_save_restore();
+		break;
+	case 356:
+		wii_hud_shown = arguments[0] ? 1 : 0;
+		result = campaign_bool(wii_hud_shown);
+		break;
+	default:
+		break;
+	}
+	hs_return(thread_index, result);
 }
 
 static void wii_hs_table_init(void)
@@ -290,6 +466,38 @@ static void wii_hs_table_init(void)
 		"ai_debug_communication_ignore", hs_evaluate_debug_string);
 	fill_function(_hs_function_debug_string__ai_debug_communication_focus, _hs_type_void,
 		"ai_debug_communication_focus", hs_evaluate_debug_string);
+	{
+		static short const zero_arg[] = {
+			29,44,56,57,63,64,73,78,87,120,132,148,149,150,151,152,153,155,165,167,
+			219,251,252,253,255,257,258,259,265,266,267,268,269,270,271,273,274,280,
+			281,282,286,287,294,295,296,297,302,303,304,305,306,307,308,309,310,311,
+			312,313,314,315,316,318,319,337,340,341,342,343,344,345,346,347,348,349,
+			350,351,352,353,359,368,370,383,391,394,395,396,398,405,407,408,409,410,
+			412,413,416,419,420,422
+		};
+		static short const ai_one[] = {
+			156,161,162,163,164,166,168,173,175,176,177,178,179,187,196,201,203,204,
+			206,209,212,218,229,230
+		};
+		int cursor;
+
+		for (cursor = 0; cursor < (int)(sizeof(zero_arg) / sizeof(zero_arg[0])); cursor++)
+			fill_campaign(zero_arg[cursor], _hs_type_void, 0, _hs_type_void, "campaign");
+		for (cursor = 0; cursor < (int)(sizeof(ai_one) / sizeof(ai_one[0])); cursor++)
+			fill_campaign(ai_one[cursor], _hs_type_void, 1, _hs_type_ai, "ai");
+		fill_campaign(27, _hs_type_boolean, 1, _hs_type_boolean, "not");
+		fill_campaign(28, _hs_type_void, 1, _hs_type_string, "print");
+		fill_campaign(38, _hs_type_void, 1, _hs_type_object_name, "object_create");
+		fill_campaign(39, _hs_type_void, 1, _hs_type_object, "object_destroy");
+		fill_campaign(40, _hs_type_void, 1, _hs_type_object_name, "object_create_anew");
+		fill_campaign(96, _hs_type_void, 1, _hs_type_unit, "unit_kill");
+		fill_campaign(187, _hs_type_short_integer, 1, _hs_type_ai, "ai_living_count");
+		fill_campaign(212, _hs_type_boolean, 1, _hs_type_ai, "ai_is_attacking");
+		fill_campaign(218, _hs_type_short_integer, 1, _hs_type_ai, "ai_status");
+		fill_campaign(245, _hs_type_void, 1, _hs_type_boolean, "camera_control");
+		fill_campaign(298, _hs_type_void, 1, _hs_type_boolean, "cinematic_show_letterbox");
+		fill_campaign(356, _hs_type_boolean, 1, _hs_type_boolean, "show_hud");
+	}
 	wii_table_ready = 1;
 }
 
@@ -297,8 +505,8 @@ struct hs_function_definition *hs_function_get(short function_index)
 {
 	wii_hs_table_init();
 	if (function_index < 0 || function_index >= WII_HS_FUNCTIONS)
-		return &wii_functions[0];
-	return &wii_functions[function_index];
+		return &wii_slots[0].definition;
+	return &wii_slots[function_index].definition;
 }
 
 static struct hs_external_global_definition wii_external = {
@@ -880,6 +1088,12 @@ void wii_hs_update(void)
 int wii_hs_unlinked(void)
 {
 	return wii_unlinked;
+}
+
+int wii_hs_campaign_count(void)
+{
+	wii_hs_table_init();
+	return wii_campaign_count;
 }
 
 int wii_hs_last_unlinked(void)
