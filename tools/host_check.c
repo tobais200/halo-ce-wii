@@ -527,8 +527,17 @@ int main(void)
 				if (wii_hud_raster(wii_hud_chapter(), glyphs, 64, 8) < 1 || glyphs[0] == 0 && glyphs[65] == 0)
 					return fail("hud glyphs");
 			}
-			if (!wii_mesh_overlay() || !wii_mesh_replacement() || !wii_mesh_marker() || !wii_mesh_hand())
+			if (!wii_mesh_overlay() || !wii_mesh_replacement() || !wii_mesh_marker() || !wii_mesh_hand() || !wii_mesh_third_person())
 				return fail("overlay or marker weapon");
+			if (wii_mesh_shader_count() < 2)
+				return fail("shader count");
+			wii_mesh_build(wii_game_player_unit());
+			if (wii_mesh_frame() < 1)
+				return fail("animation frame");
+			if (wii_play_firing_tested() < 8)
+				return fail("firing search");
+			if (wii_seat_anim_frame(1, 5) != 5 || wii_seat_anim_frame(0, 5) != 0)
+				return fail("seat animation");
 			if (wii_play_grenade_definition() == -1 || wii_play_grenade_definition() != wii_tag_cache_grenade_projectile())
 				return fail("grenade projectile");
 			if (wii_play_grenades() < 1 || !wii_play_flank())

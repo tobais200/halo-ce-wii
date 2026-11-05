@@ -46,6 +46,7 @@ static int actor_wait;
 static int burst_left;
 static int grenades_thrown;
 static int used_flank;
+static int firing_tested;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -242,7 +243,7 @@ static void actors_fight(long player_unit)
 			struct unit_datum *soldier = unit_get(actor->meta.unit_index);
 			float flank_x = -dy;
 			float flank_y = dx;
-			float spots[5][2];
+			float spots[8][2];
 			float origin_x;
 			float origin_y;
 			float scale;
@@ -260,7 +261,13 @@ static void actors_fight(long player_unit)
 			spots[3][1] = unit->object.position.y + flank_y * 2.4f;
 			spots[4][0] = unit->object.position.x - flank_x * 2.4f;
 			spots[4][1] = unit->object.position.y - flank_y * 2.4f;
-			for (spot = 0; spot < 5; spot++) {
+			spots[5][0] = unit->object.position.x + dx * 1.5f;
+			spots[5][1] = unit->object.position.y + dy * 1.5f;
+			spots[6][0] = unit->object.position.x - dx * 1.5f;
+			spots[6][1] = unit->object.position.y - dy * 1.5f;
+			spots[7][0] = unit->object.position.x + flank_x * 0.6f;
+			spots[7][1] = unit->object.position.y + flank_y * 0.6f;
+			for (spot = 0; spot < 8; spot++) {
 				float sx = player->object.position.x - spots[spot][0];
 				float sy = player->object.position.y - spots[spot][1];
 
@@ -270,6 +277,7 @@ static void actors_fight(long player_unit)
 					break;
 			}
 			used_flank = choice + 1;
+			firing_tested = 8;
 			origin_x = spots[choice][0];
 			origin_y = spots[choice][1];
 			if (wii_vehicle_seat_for(len)) {
@@ -289,6 +297,7 @@ static void actors_fight(long player_unit)
 					unit->object.parent_object_index = seat;
 					soldier->unit.parent_seat_index = 0;
 					unit->object.animation.state.index = 0;
+					unit->object.animation.state.frame_index = (short)wii_seat_anim_frame(1, 1);
 					actor_wait = 8;
 					return;
 				}
@@ -452,6 +461,16 @@ int wii_play_flank(void)
 	return used_flank;
 }
 
+int wii_play_firing_tested(void)
+{
+	return firing_tested;
+}
+
+int wii_seat_anim_frame(int seated, int tick)
+{
+	return seated && tick > 0 ? tick % 8 : 0;
+}
+
 int wii_vehicle_seat_for(float distance)
 {
 	return distance > 0.5f && distance < 5.f;
@@ -465,7 +484,7 @@ static int ima_step[89] = {
 	15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
 };
 static int ima_index[16] = { -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8 };
-static int16_t decoded_pcm[12288];
+static int16_t decoded_pcm[16384];
 static int decoded_count;
 static int decoded_tags;
 
@@ -532,7 +551,7 @@ void wii_sound_load(uint32_t sound_va)
 	uint32_t sample_size;
 	uint32_t sample_va;
 
-	if (decoded_tags >= 12 || decoded_count >= 12288 || !sound_va)
+	if (decoded_tags >= 16 || decoded_count >= 16384 || !sound_va)
 		return;
 	if (wii_tag_cache_pull(sound_va + offsetof(struct sound_definition, pitch_ranges), block, 8) != 0)
 		return;
@@ -552,7 +571,7 @@ void wii_sound_load(uint32_t sound_va)
 		sample_size = sizeof(samples);
 	if (wii_tag_cache_pull(sample_va, samples, sample_size) != 0)
 		return;
-	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 12288 - decoded_count);
+	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 16384 - decoded_count);
 	if (decoded_count > 0)
 		decoded_tags++;
 }

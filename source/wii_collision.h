@@ -13,6 +13,7 @@ void *wii_collision_load_model(uint32_t coll_va);
 int wii_collision_model_hits(void *model);
 int wii_damage_hurts(long object_index, long damage_definition);
 void wii_unit_set_shield(long object_index, float shield);
+void wii_unit_set_body(long object_index, float body);
 float wii_unit_throttle(long unit_index);
 int wii_unit_eye(long unit_index, float *x, float *y, float *z);
 int wii_unit_facing(long unit_index, float *yaw);

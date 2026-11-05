@@ -634,6 +634,17 @@ void wii_unit_set_shield(long object_index, float shield)
 	object->object.shield_vitality = shield;
 }
 
+void wii_unit_set_body(long object_index, float body)
+{
+	struct object_datum *object = object_get(object_index);
+
+	if (!object)
+		return;
+	if (body < 0.f)
+		body = 0.f;
+	object->object.body_vitality = body;
+}
+
 float wii_unit_throttle(long unit_index)
 {
 	struct unit_datum *unit = unit_get(unit_index);

@@ -31,9 +31,13 @@ static int skinned;
 static int animated;
 static int overlay_used;
 static int replacement_used;
+static int anim_tick;
+static int anim_frame;
+static int third_person;
 static int hand_placed;
 static int marker_used;
 static int shader_sampled;
+static int shader_count;
 static uint8_t shader_pixels[32 * 32 * 4];
 static uint16_t shader_w;
 static uint16_t shader_h;
@@ -241,7 +245,9 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 	if (!anim || anim->node_count < 1)
 		return 0;
 	memset(orients, 0, sizeof(orients));
-	animation_get_node_orientations(model, anim, 0, orients);
+	anim_frame = anim_tick % 4;
+	animation_get_node_orientations(model, anim,
+		(short)(anim->frame_count > 1 ? anim_frame % anim->frame_count : 0), orients);
 	limit = count < anim->node_count ? count : anim->node_count;
 	if (limit > 32)
 		limit = 32;
@@ -271,7 +277,9 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 		struct animation *overlay = anim + 1;
 
 		if (overlay->type == _animation_overlay) {
-			overlay_animation_apply(overlay, 0, orients);
+			int frame = overlay->frame_count > 1 ? anim_frame % overlay->frame_count : 0;
+
+			overlay_animation_apply(overlay, (short)frame, orients);
 			overlay_used = 1;
 		}
 	}
@@ -279,10 +287,13 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 		struct animation *replacement = anim + 2;
 
 		if (replacement->type == _animation_replacement) {
-			replacement_animation_apply(replacement, 0, orients);
+			int frame = replacement->frame_count > 1 ? anim_frame % replacement->frame_count : 0;
+
+			replacement_animation_apply(replacement, (short)frame, orients);
 			replacement_used = 1;
 		}
 	}
+	anim_tick++;
 	return animated;
 }
 
@@ -299,6 +310,7 @@ static void sample_shader(uint32_t model_va)
 	address = read_u32(block + 4);
 	if (count < 1 || wii_tag_cache_pull(address, ref, 16) != 0)
 		return;
+	shader_count = count > 2 ? 2 : count;
 	shader_sampled = ref[0] != 0;
 	{
 		uint32_t bitmap_va = wii_tag_cache_slot_va((long)read_u32(ref + 12));
@@ -352,9 +364,15 @@ static void skin_weapon(struct wii_mat const *nodes, int node_count, float yaw, 
 		uint32_t weapon_va = wii_tag_cache_slot_va(palette->index);
 		long model_index;
 
-		if (!weapon_va || wii_tag_cache_pull(weapon_va + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 12, model_ref, 4) != 0)
+		if (!weapon_va)
 			return;
-		model_index = (long)read_u32(model_ref);
+		model_index = NONE;
+		if (wii_tag_cache_pull(weapon_va + offsetof(struct weapon_definition, object.model) + 12, model_ref, 4) == 0)
+			model_index = (long)read_u32(model_ref);
+		if (model_index != NONE)
+			third_person = 1;
+		else if (wii_tag_cache_pull(weapon_va + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 12, model_ref, 4) == 0)
+			model_index = (long)read_u32(model_ref);
 		if (model_index == NONE)
 			return;
 		model_va = wii_tag_cache_slot_va(model_index);
@@ -419,6 +437,8 @@ int wii_mesh_build(long unit_index)
 	hand_placed = 0;
 	marker_used = 0;
 	shader_sampled = 0;
+	shader_count = 0;
+	third_person = 0;
 	shader_w = 0;
 	shader_h = 0;
 	if (!object)
@@ -497,6 +517,21 @@ int wii_mesh_replacement(void)
 int wii_mesh_marker(void)
 {
 	return marker_used;
+}
+
+int wii_mesh_frame(void)
+{
+	return anim_frame;
+}
+
+int wii_mesh_third_person(void)
+{
+	return third_person;
+}
+
+int wii_mesh_shader_count(void)
+{
+	return shader_count;
 }
 
 int wii_mesh_hand(void)

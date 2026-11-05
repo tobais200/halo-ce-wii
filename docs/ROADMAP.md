@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Chapter titles are the scenario name (`PILLAR` in the synthetic map) and are rasterized with a font tag's glyphs, the same layout DeLa uses. Help and objective lines use that name when the index matches a loaded title. Most other script functions are still unlinked.
-- Up to twelve `snd!` tags decode into one 12288-sample buffer. The tag working set is 4 MiB.
-- Base, overlay, and replacement animations are applied before skinning. The weapon mesh is placed on the model's `weapon` marker and again in front of the eye. One shader bitmap is decoded.
-- Firing search checks five positions. The grenade uses the projectile reference on the globals grenade tag. Seat entry still parents the unit and sets animation index 0. It is not the full `actor_combat.c` search.
+- Chapter titles are still the scenario name, rasterized with font glyphs. `object_cannot_take_damage`, `unit_set_current_vitality`, `device_get_power`, and `player_effect_start` now have evaluators. Most other script functions are still unlinked.
+- Up to sixteen `snd!` tags decode into one 16384-sample buffer. The tag working set is 5 MiB. Two shader bitmaps are read.
+- The animation clock advances every mesh build. Overlay and replacement receive that frame when the tag has more than one frame. The weapon's world model, when the tag has one, is drawn on the `weapon` marker.
+- Firing search checks eight positions. Grenades still use the grenade projectile tag. Seat entry sets animation frame `tick % 8`. It is not the solver inside `actor_combat.c`.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled.
 
 ### Later, each one blocked until the previous exists

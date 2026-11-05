@@ -1,6 +1,6 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (at most 4 MiB, inside the
+ * stays on the card. This copies a working set (at most 5 MiB, inside the
  * 8 MiB resident cap) and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
@@ -41,7 +41,7 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = 4u << 20,
+	WII_TAG_ARENA = 5u << 20,
 	WII_TAG_CAP_PLAYERS = 16,
 	WII_TAG_CAP_WEAPONS = 8,
 	WII_TAG_CAP_ENCOUNTERS = 16,
@@ -1872,7 +1872,7 @@ int wii_tag_cache_self_test(void)
 	mesh_tri_at = cursor;
 	cursor += 6u;
 	shader_at = cursor;
-	cursor += 16u;
+	cursor += 32u;
 	chapter_at = cursor;
 	cursor += 0x60u;
 	marker_at = cursor;
@@ -2191,18 +2191,28 @@ int wii_tag_cache_self_test(void)
 	file[mesh_tri_at] = 0;
 	file[mesh_tri_at + 2] = 1;
 	file[mesh_tri_at + 4] = 2;
-	put_u32(file + model_at + offsetof(struct model, shaders), 1);
+	put_u32(file + model_at + offsetof(struct model, shaders), 2);
 	put_u32(file + model_at + offsetof(struct model, shaders) + 4, TAG_BASE + shader_at);
 	file[shader_at] = 'b';
 	file[shader_at + 1] = 'i';
 	file[shader_at + 2] = 't';
 	file[shader_at + 3] = 'm';
 	put_u32(file + shader_at + 12, datum[16]);
+	file[shader_at + 16] = 'b';
+	file[shader_at + 17] = 'i';
+	file[shader_at + 18] = 't';
+	file[shader_at + 19] = 'm';
+	put_u32(file + shader_at + 28, datum[16]);
 	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model)] = 'm';
 	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 1] = 'o';
 	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 2] = 'd';
 	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 3] = 'e';
 	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 12, datum[3]);
+	file[weapon_def_at + offsetof(struct weapon_definition, object.model)] = 'm';
+	file[weapon_def_at + offsetof(struct weapon_definition, object.model) + 1] = 'o';
+	file[weapon_def_at + offsetof(struct weapon_definition, object.model) + 2] = 'd';
+	file[weapon_def_at + offsetof(struct weapon_definition, object.model) + 3] = 'e';
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, object.model) + 12, datum[3]);
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats), 1);
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats) + 4, TAG_BASE + seat_at);
 	memcpy(file + seat_at, "stand", 5);
@@ -2221,8 +2231,10 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + anim_at + offsetof(struct animation, default_data) + 12, TAG_BASE + default_at);
 	memcpy(file + overlay_at, file + anim_at, sizeof(struct animation));
 	put_u16(file + overlay_at + offsetof(struct animation, type), 1);
+	put_u16(file + overlay_at + offsetof(struct animation, frame_count), 2);
 	memcpy(file + replace_at, file + anim_at, sizeof(struct animation));
 	put_u16(file + replace_at + offsetof(struct animation, type), 2);
+	put_u16(file + replace_at + offsetof(struct animation, frame_count), 2);
 	put_u16(file + default_at + 6, 32767);
 	put_u16(file + weapon_def_at, (uint16_t)_object_type_weapon);
 	put_f32(file + weapon_def_at + offsetof(struct weapon_definition, object.bounding_radius), 0.2f);

@@ -223,6 +223,9 @@ static float wii_device_power;
 static long wii_camera_point = NONE;
 static long wii_chapter = NONE;
 static float wii_chapter_delay;
+static long wii_protected_list = NONE;
+static float wii_effect_intensity;
+static float wii_effect_attack;
 static char wii_chapter_text[64];
 static char wii_help_text[64];
 static char wii_objective_text[64];
@@ -320,6 +323,13 @@ static void fill_campaign2(int index, short return_type, short type0, short type
 	wii_slots[index].more_types[0] = type1;
 }
 
+static void fill_campaign3(int index, short return_type, short type0, short type1, short type2, char const *name)
+{
+	fill_campaign(index, return_type, 3, type0, name);
+	wii_slots[index].more_types[0] = type1;
+	wii_slots[index].more_types[1] = type2;
+}
+
 static long campaign_bool(int value)
 {
 	long result = 0;
@@ -410,8 +420,22 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		wii_device_position = *(float *)&arguments[1];
 		result = campaign_bool(1);
 		break;
+	case 79:
+		wii_protected_list = arguments[0];
+		break;
+	case 114:
+		wii_unit_set_body(arguments[0], *(float *)&arguments[1]);
+		wii_unit_set_shield(arguments[0], *(float *)&arguments[2]);
+		break;
+	case 137:
+		*(float *)&result = wii_device_power;
+		break;
 	case 140:
 		*(float *)&result = wii_device_index == arguments[0] ? wii_device_position : 0.f;
+		break;
+	case 374:
+		wii_effect_intensity = *(float *)&arguments[0];
+		wii_effect_attack = *(float *)&arguments[1];
 		break;
 	case 241:
 		if (actor_data)
@@ -575,6 +599,10 @@ static void wii_hs_table_init(void)
 		fill_campaign(380, _hs_type_void, 1, _hs_type_boolean, "hud_show_motion_sensor");
 		fill_campaign(381, _hs_type_void, 1, _hs_type_boolean, "hud_blink_motion_sensor");
 		fill_campaign(382, _hs_type_void, 1, _hs_type_boolean, "hud_show_crosshair");
+		fill_campaign(79, _hs_type_void, 1, _hs_type_object_list, "object_cannot_take_damage");
+		fill_campaign(137, _hs_type_real, 1, _hs_type_device, "device_get_power");
+		fill_campaign3(114, _hs_type_void, _hs_type_unit, _hs_type_real, _hs_type_real, "unit_set_current_vitality");
+		fill_campaign2(374, _hs_type_void, _hs_type_real, _hs_type_real, "player_effect_start");
 	}
 	wii_table_ready = 1;
 }

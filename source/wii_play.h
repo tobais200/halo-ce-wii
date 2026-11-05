@@ -18,6 +18,8 @@ int wii_save_valid(void);
 int wii_play_grenades(void);
 long wii_play_grenade_definition(void);
 int wii_play_flank(void);
+int wii_play_firing_tested(void);
+int wii_seat_anim_frame(int seated, int tick);
 int wii_vehicle_seat_for(float distance);
 int wii_sound_decode(uint8_t const *data, int size, int16_t *out, int cap);
 void wii_sound_load(uint32_t sound_va);

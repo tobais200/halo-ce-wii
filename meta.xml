@@ -2,12 +2,12 @@
 <app version="1">
 	<name>Halo CE Wii</name>
 	<coder>halo-ce-wii</coder>
-	<version>0.18.0-glyphs</version>
+	<version>0.19.0-frames</version>
 	<release_date>20261103000000</release_date>
 	<short_description>Engine stub. Not playable.</short_description>
 	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
 
-This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map streams a 4 MiB tag set. Chapter titles are the scenario strings, drawn with font glyphs. The weapon sits on the model marker. Grenades use the grenade projectile tag. The 23 MiB Xbox cache is not mapped. No game data is included.
+This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map streams a 5 MiB tag set. Animation frames advance each build. The weapon world model sits on the marker. Eight firing positions are tested. The 23 MiB Xbox cache is not mapped. No game data is included.
 
 Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
 
