@@ -28,6 +28,7 @@ struct gx_mesh_view {
 
 /* Copies rgba8 (R,G,B,A) into a MEM1 GX_TF_RGBA8 texture. 0 on success. */
 int gx_draw_set_rgba(uint8_t const *rgba, uint16_t width, uint16_t height);
+int gx_draw_set_effect_rgba(uint8_t const *rgba, uint16_t width, uint16_t height);
 void gx_draw_clear_texture(void);
 
 /* GX must already be initialised. Copies the frame onto xfb. */

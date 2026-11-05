@@ -45,6 +45,8 @@ PORT = {
     "wii_collision_host.o": "port/wii/src/wii_collision.c",
     "wii_effects.o": "port/wii/src/wii_effects.c",
     "wii_effects_host.o": "port/wii/src/wii_effects.c",
+    "wii_play.o": "port/wii/src/wii_play.c",
+    "wii_play_host.o": "port/wii/src/wii_play.c",
 }
 
 

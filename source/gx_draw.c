@@ -1,5 +1,6 @@
 #include "gx_draw.h"
 
+#include "wii_effects.h"
 #include "wii_mem.h"
 
 #include <malloc.h>
@@ -11,6 +12,9 @@ static GXTexObj gx_texture;
 static int gx_texture_ready;
 static uint16_t gx_tex_w;
 static uint16_t gx_tex_h;
+static void *gx_fx_texels;
+static GXTexObj gx_fx_texture;
+static int gx_fx_ready;
 
 static void tile_rgba8(uint8_t *destination, uint8_t const *rgba, uint16_t width, uint16_t height, uint16_t full_w, uint16_t full_h)
 {
@@ -75,6 +79,124 @@ int gx_draw_set_rgba(uint8_t const *rgba, uint16_t width, uint16_t height)
 	gx_tex_h = full_h;
 	gx_texture_ready = 1;
 	return 0;
+}
+
+int gx_draw_set_effect_rgba(uint8_t const *rgba, uint16_t width, uint16_t height)
+{
+	uint16_t full_w;
+	uint16_t full_h;
+	uint32_t bytes;
+
+	if (gx_fx_texels)
+		free(gx_fx_texels);
+	gx_fx_texels = 0;
+	gx_fx_ready = 0;
+	if (!rgba || !width || !height || width > WII_GX_TEXTURE_MAX || height > WII_GX_TEXTURE_MAX)
+		return -1;
+	full_w = (uint16_t)((width + 3u) & ~3u);
+	full_h = (uint16_t)((height + 3u) & ~3u);
+	bytes = (uint32_t)full_w * full_h * 4u;
+	gx_fx_texels = memalign(32, bytes);
+	if (!gx_fx_texels)
+		return -1;
+	tile_rgba8(gx_fx_texels, rgba, width, height, full_w, full_h);
+	DCFlushRange(gx_fx_texels, bytes);
+	GX_InitTexObj(&gx_fx_texture, gx_fx_texels, full_w, full_h, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	gx_fx_ready = 1;
+	return 0;
+}
+
+static void overlay_vertex(float x, float y, float z, uint8_t r, uint8_t g, uint8_t b, float u, float v, int textured)
+{
+	GX_Position3f32(x, y, z);
+	GX_Color4u8(r, g, b, 255);
+	if (textured)
+		GX_TexCoord2f32(u, v);
+}
+
+static void draw_overlay(struct gx_mesh_view const *view)
+{
+	struct wii_sprite sprites[64];
+	int count;
+	int index;
+	float yaw;
+	float rx;
+	float ry;
+	int textured;
+
+	count = wii_effect_sprites(sprites, 64);
+	yaw = view->yaw;
+	rx = -sinf(yaw);
+	ry = cosf(yaw);
+	textured = gx_fx_ready && count > 0;
+	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	if (view->eye) {
+		float cy = cosf(view->yaw);
+		float sy = sinf(view->yaw);
+		float cp = cosf(view->pitch);
+		float sp = sinf(view->pitch);
+		float fx = cp * cy;
+		float fy = cp * sy;
+		float fz = sp;
+		float ox = view->center[0] + fx * 0.42f + rx * 0.18f;
+		float oy = view->center[1] + fy * 0.42f + ry * 0.18f;
+		float oz = view->center[2] + fz * 0.42f - 0.18f;
+
+		GX_SetNumTexGens(0);
+		GX_SetNumTevStages(1);
+		GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+		GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+		GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 6);
+		overlay_vertex(ox, oy, oz, 40, 42, 46, 0, 0, 0);
+		overlay_vertex(ox + fx * 0.28f, oy + fy * 0.28f, oz + fz * 0.28f, 70, 74, 78, 0, 0, 0);
+		overlay_vertex(ox + rx * 0.08f, oy + ry * 0.08f, oz - 0.06f, 24, 26, 28, 0, 0, 0);
+		overlay_vertex(ox + fx * 0.28f, oy + fy * 0.28f, oz + fz * 0.28f, 70, 74, 78, 0, 0, 0);
+		overlay_vertex(ox + rx * 0.08f + fx * 0.22f, oy + ry * 0.08f + fy * 0.22f, oz - 0.06f, 50, 52, 56, 0, 0, 0);
+		overlay_vertex(ox + rx * 0.08f, oy + ry * 0.08f, oz - 0.06f, 24, 26, 28, 0, 0, 0);
+		GX_End();
+	}
+	if (count <= 0)
+		return;
+	if (textured) {
+		GX_SetNumTexGens(1);
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+		GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+		GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+		GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+		GX_LoadTexObj(&gx_fx_texture, GX_TEXMAP0);
+	} else {
+		GX_SetNumTexGens(0);
+		GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+		GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+	}
+	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (uint16_t)(count * 6));
+	for (index = 0; index < count; index++) {
+		float s = sprites[index].size;
+		float x = sprites[index].x;
+		float y = sprites[index].y;
+		float z = sprites[index].z;
+		float corners[4][5] = {
+			{ x - s * rx, y - s * ry, z - s, 0.f, 1.f },
+			{ x + s * rx, y + s * ry, z - s, 1.f, 1.f },
+			{ x + s * rx, y + s * ry, z + s, 1.f, 0.f },
+			{ x - s * rx, y - s * ry, z + s, 0.f, 0.f }
+		};
+		int tri;
+
+		for (tri = 0; tri < 2; tri++) {
+			int a = tri == 0 ? 0 : 0;
+			int b = tri == 0 ? 1 : 2;
+			int c = tri == 0 ? 2 : 3;
+
+			overlay_vertex(corners[a][0], corners[a][1], corners[a][2], 255, 220, 120, corners[a][3], corners[a][4], textured);
+			overlay_vertex(corners[b][0], corners[b][1], corners[b][2], 255, 220, 120, corners[b][3], corners[b][4], textured);
+			overlay_vertex(corners[c][0], corners[c][1], corners[c][2], 255, 220, 120, corners[c][3], corners[c][4], textured);
+		}
+	}
+	GX_End();
 }
 
 void gx_draw_clear_texture(void)
@@ -204,6 +326,7 @@ void gx_draw_mesh(GXRModeObj *mode, void *xfb, struct gx_mesh_view const *view)
 		drawn = (uint16_t)(drawn + batch);
 	}
 
+	draw_overlay(view);
 	GX_DrawDone();
 	GX_CopyDisp(xfb, GX_TRUE);
 	VIDEO_SetNextFramebuffer(xfb);

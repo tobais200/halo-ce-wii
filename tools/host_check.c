@@ -14,6 +14,7 @@ unsigned char game_map_loaded(void);
 #include "wii_tag_cache.h"
 #include "wii_collision.h"
 #include "wii_effects.h"
+#include "wii_play.h"
 #include "wii_game.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
@@ -451,6 +452,36 @@ int main(void)
 			return fail("player control");
 		if (wii_effect_live() < 1 || !wii_effect_bitmap_ok())
 			return fail("effect bitmap");
+		{
+			float scale = 1.f;
+			struct wii_sprite sprites[16];
+			int count;
+			float before;
+			int index;
+
+			if (!wii_collision_clip(0.f, 0.f, 2.f, 0.f, 0.f, -4.f, &scale, NULL, NULL, NULL) || scale < 0.2f || scale > 0.8f)
+				return fail("structure clip");
+			wii_play_after_tick();
+			if (!wii_play_moved() || !wii_play_grounded())
+				return fail("biped walk");
+			if (wii_play_shots() < 1)
+				return fail("player shot");
+			if (wii_play_ai_shots() < 1)
+				return fail("actor shot");
+			count = wii_effect_sprites(sprites, 16);
+			if (count < 1)
+				return fail("effect sprites");
+			before = 0.f;
+			for (index = 0; index < count; index++)
+				before += sprites[index].z;
+			wii_effects_tick();
+			count = wii_effect_sprites(sprites, 16);
+			scale = 0.f;
+			for (index = 0; index < count; index++)
+				scale += sprites[index].z;
+			if (count < 1 || scale == before)
+				return fail("effect motion");
+		}
 		if (wii_tag_cache_idle_rotation_w() < 0.9f)
 			return fail("biped idle animation");
 		if (wii_game_live_objects() < 3)

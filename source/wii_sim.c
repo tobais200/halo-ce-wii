@@ -1,6 +1,7 @@
 #include "wii_sim.h"
 
 #include "wii_game.h"
+#include "wii_play.h"
 #include "wii_hs.h"
 #include "wii_tag_cache.h"
 
@@ -271,6 +272,7 @@ void wii_sim_frame(struct wii_sim *sim)
 		sim->ticks++;
 	wii_hs_set_time(sim->ticks);
 	wii_game_tick();
+	wii_play_after_tick();
 	note = wii_hs_note();
 	snprintf(sim->message, sizeof(sim->message),
 		"tick %u %.12s %s unlinked %d  unit %ld%s%s",

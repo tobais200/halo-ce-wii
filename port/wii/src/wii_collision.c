@@ -524,6 +524,40 @@ int wii_collision_hits_floor(void)
 	return result.type == _collision_result_structure && result.t > 0.2f && result.t < 0.8f;
 }
 
+int wii_collision_clip(float x, float y, float z, float dx, float dy, float dz, float *scale, float *hx, float *hy, float *hz)
+{
+	struct collision_result result;
+	real_point3d point;
+	real_vector3d vector;
+	unsigned long flags;
+
+	if (!ready)
+		return 0;
+	point.x = x;
+	point.y = y;
+	point.z = z;
+	vector.i = dx;
+	vector.j = dy;
+	vector.k = dz;
+	flags = (1u << _collision_test_structure_bit)
+		| (1u << _collision_test_front_facing_surfaces_bit)
+		| (1u << _collision_test_back_facing_surfaces_bit);
+	memset(&result, 0, sizeof(result));
+	if (!collision_test_vector(flags, &point, &vector, NONE, &result))
+		return 0;
+	if (result.type != _collision_result_structure || result.t <= 0.f || result.t >= 1.f)
+		return 0;
+	if (scale)
+		*scale = result.t;
+	if (hx)
+		*hx = result.point.x;
+	if (hy)
+		*hy = result.point.y;
+	if (hz)
+		*hz = result.point.z;
+	return 1;
+}
+
 int wii_collision_model_hits(void *model_pointer)
 {
 	struct collision_model *model = model_pointer;

@@ -175,6 +175,21 @@ float wii_control_pitch(void)
 	return control_pitch;
 }
 
+float wii_control_forward(void)
+{
+	return control_forward;
+}
+
+float wii_control_strafe(void)
+{
+	return control_strafe;
+}
+
+int wii_control_fire(void)
+{
+	return control_fire;
+}
+
 boolean update_client_dequeue(struct player_action *actions)
 {
 	int index;

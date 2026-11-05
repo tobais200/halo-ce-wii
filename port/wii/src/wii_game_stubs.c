@@ -156,7 +156,8 @@ int effects_dispose(void) { return 0; }
 int effects_dispose_from_old_map(void) { return 0; }
 int effects_initialize(void) { return 0; }
 int effects_initialize_for_new_map(void) { return 0; }
-int effects_update(void) { return 0; }
+void wii_effects_tick(void);
+int effects_update(void) { wii_effects_tick(); return 0; }
 int event_manager_dispose(void) { return 0; }
 int event_manager_initialize(void) { return 0; }
 int game_in_editor(void) { return 0; }

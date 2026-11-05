@@ -8,6 +8,7 @@
 #include "effects/contrails.h"
 #include "effects/effect_definitions.h"
 #include "effects/effects.h"
+#include "objects/objects.h"
 #include "wii_effects.h"
 #include "wii_tag_cache.h"
 #include "wii_tex.h"
@@ -22,6 +23,51 @@
 static struct wii_resident_effect decoded;
 static int live_effects;
 static int live_contrails;
+
+enum { WII_PARTICLES = 48, WII_BOLTS = 24 };
+
+struct wii_particle {
+	float x, y, z;
+	float vx, vy, vz;
+	float life;
+	float size;
+	int alive;
+};
+
+static struct wii_particle particles[WII_PARTICLES];
+static struct wii_sprite bolts[WII_BOLTS];
+static int bolt_count;
+static unsigned particle_seed = 1u;
+
+static float particle_rand(void)
+{
+	particle_seed = particle_seed * 1664525u + 1013904223u;
+	return (float)((particle_seed >> 8) & 255u) / 255.f - 0.5f;
+}
+
+static void emit_at(float x, float y, float z)
+{
+	int spawned;
+	int index;
+
+	for (spawned = 0; spawned < 8; spawned++) {
+		for (index = 0; index < WII_PARTICLES; index++) {
+			if (!particles[index].alive)
+				break;
+		}
+		if (index == WII_PARTICLES)
+			index = spawned % WII_PARTICLES;
+		particles[index].x = x;
+		particles[index].y = y;
+		particles[index].z = z;
+		particles[index].vx = particle_rand() * 0.08f;
+		particles[index].vy = particle_rand() * 0.08f;
+		particles[index].vz = 0.06f + particle_rand() * 0.04f;
+		particles[index].life = 24.f;
+		particles[index].size = 0.18f;
+		particles[index].alive = 1;
+	}
+}
 
 static uint32_t read_le32(uint8_t const *p)
 {
@@ -94,7 +140,7 @@ static int decode_bitmap(uint32_t bitmap_va, struct wii_resident_effect *effect)
 	}
 	memset(&image, 0, sizeof(image));
 	image.pixels = effect->pixels;
-	image.cap = 32;
+	image.cap = WII_EFFECT_BITMAP_CAP;
 	linear = (flags & (1u << 4)) != 0 || format >= 14;
 	if (wii_tex_decode(encoded, pixels_size, (int)format, linear, width, height, &image) != 0) {
 		free(encoded);
@@ -115,15 +161,91 @@ static void remember(struct wii_resident_effect const *effect)
 		decoded = *effect;
 }
 
-static long spawn_effect(long definition_index)
+static long spawn_effect(long definition_index, long object_index, real_point3d const *point)
 {
 	struct wii_resident_effect *effect;
+	struct object_datum *object;
+	float x = 0.f;
+	float y = 0.f;
+	float z = 1.f;
 
 	effect = wii_tag_cache_get((long)FCC('e', 'f', 'f', 'e'), definition_index);
 	remember(effect);
 	if (live_effects < 32767)
 		live_effects++;
+	if (point) {
+		x = point->x;
+		y = point->y;
+		z = point->z;
+	} else {
+		object = object_index == NONE ? NULL : object_get(object_index);
+		if (object) {
+			x = object->object.position.x;
+			y = object->object.position.y;
+			z = object->object.position.z;
+		}
+	}
+	emit_at(x, y, z);
 	return live_effects;
+}
+
+void wii_effects_tick(void)
+{
+	int index;
+
+	for (index = 0; index < WII_PARTICLES; index++) {
+		if (!particles[index].alive)
+			continue;
+		particles[index].x += particles[index].vx;
+		particles[index].y += particles[index].vy;
+		particles[index].z += particles[index].vz;
+		particles[index].vz -= 0.004f;
+		particles[index].life -= 1.f;
+		if (particles[index].life <= 0.f)
+			particles[index].alive = 0;
+	}
+}
+
+void wii_effect_begin_frame(void)
+{
+	bolt_count = 0;
+}
+
+void wii_effect_emit(float x, float y, float z)
+{
+	emit_at(x, y, z);
+}
+
+void wii_effect_push_bolt(float x, float y, float z, float size)
+{
+	if (bolt_count >= WII_BOLTS)
+		return;
+	bolts[bolt_count].x = x;
+	bolts[bolt_count].y = y;
+	bolts[bolt_count].z = z;
+	bolts[bolt_count].size = size;
+	bolt_count++;
+}
+
+int wii_effect_sprites(struct wii_sprite *out, int cap)
+{
+	int index;
+	int count = 0;
+
+	if (!out || cap <= 0)
+		return 0;
+	for (index = 0; index < WII_PARTICLES && count < cap; index++) {
+		if (!particles[index].alive)
+			continue;
+		out[count].x = particles[index].x;
+		out[count].y = particles[index].y;
+		out[count].z = particles[index].z;
+		out[count].size = particles[index].size;
+		count++;
+	}
+	for (index = 0; index < bolt_count && count < cap; index++)
+		out[count++] = bolts[index];
+	return count;
 }
 
 void *wii_effect_load(uint32_t effect_va)
@@ -201,7 +323,7 @@ long effect_new_from_object(
 	(void)scale_b;
 	(void)color;
 	(void)impulse_field;
-	return spawn_effect(definition_index);
+	return spawn_effect(definition_index, object_index, NULL);
 }
 
 long effect_new_attached_from_markers(
@@ -229,7 +351,7 @@ long effect_new_attached_from_markers(
 	(void)scale_b;
 	(void)color;
 	(void)impulse_field;
-	return spawn_effect(definition_index);
+	return spawn_effect(definition_index, object_index, NULL);
 }
 
 long effect_new_unattached_from_markers(
@@ -257,7 +379,7 @@ long effect_new_unattached_from_markers(
 	(void)color;
 	(void)impulse_field;
 	(void)can_be_deterministic;
-	return spawn_effect(definition_index);
+	return spawn_effect(definition_index, NONE, marker_count > 0 ? marker_points : NULL);
 }
 
 long effect_new_looping(
@@ -271,7 +393,7 @@ long effect_new_looping(
 	(void)scale_a_function_index;
 	(void)scale_b_function_index;
 	(void)change_color_index;
-	return spawn_effect(definition_index);
+	return spawn_effect(definition_index, object_index, NULL);
 }
 
 long contrail_new(long definition_index, long object_index, short attachment_index)

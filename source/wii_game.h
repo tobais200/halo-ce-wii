@@ -15,6 +15,9 @@ long wii_game_spawn_projectile(void);
 void wii_control_set(float forward, float strafe, float yaw, float pitch, int fire);
 float wii_control_yaw(void);
 float wii_control_pitch(void);
+float wii_control_forward(void);
+float wii_control_strafe(void);
+int wii_control_fire(void);
 
 extern int wii_game_unit_ticks;
 extern int wii_game_ai_ticks;

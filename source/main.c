@@ -22,6 +22,7 @@
 #include "wii_game.h"
 #include "wii_collision.h"
 #include "wii_effects.h"
+#include "wii_play.h"
 #include <ogc/pad.h>
 #include "wii_widget.h"
 
@@ -391,8 +392,16 @@ int main(int argc, char **argv)
 					gx_draw_mesh(rmode, console_xfb, &view);
 				printf("\x1b[2;0H%s  %u tris\n", stats.maps[selected].name, (unsigned)preview.triangles);
 				wii_sim_frame(&sim);
+				{
+					uint16_t effect_w = 0;
+					uint16_t effect_h = 0;
+					uint8_t const *effect_pixels = wii_effect_pixels(&effect_w, &effect_h);
+
+					if (effect_pixels)
+						gx_draw_set_effect_rgba(effect_pixels, effect_w, effect_h);
+				}
 				printf("%s\n%s\n", preview.message, sim.message);
-				printf("B back  stick move  D-pad look  %s%s\n",
+				printf("B back  stick walk  A fire  %s%s\n",
 					view.texture_mode ? "cache bitmap" : "no bitmap decoded",
 					wii_effect_bitmap_ok() ? "  fx" : "");
 			}
