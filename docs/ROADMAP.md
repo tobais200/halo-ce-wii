@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Chapter titles (`cinematic_set_title`, `cinematic_set_title_delayed`), `hud_set_help_text`, `hud_set_objective_text`, and `object_create_containing` now have evaluators, with the earlier device, volume, shield, camera, and AI calls. Most of the remaining script functions are still unlinked.
-- Up to four `snd!` tags are decoded from Xbox IMA ADPCM into one 4096-sample PCM buffer and played on AESND. A shot with no decoded tag still plays a click.
-- `animation_get_node_orientations` supplies the node pose before the compressed vertices are skinned. The weapon's first-person model is skinned again in front of the eye. The model's first shader reference is read; the triangles stay vertex-colored.
-- An actor tries the muzzle and both flanks and keeps the first line the structure BSP does not block. A grenade comes out of `grenade_counts` (seeded from the variant's lower bound). A vehicle inside 5 world units becomes the unit's parent at seat 0. That is not the full search in `actor_combat.c`.
+- Chapter titles and HUD help/objective text are formatted and printed on the BSP view. HUD show/blink calls for health, shield, motion sensor, and crosshair set that line too. Most other script functions are still unlinked.
+- Up to eight `snd!` tags are decoded from Xbox IMA ADPCM into one 8192-sample buffer. The tag working set is 3 MiB.
+- After the base animation, an overlay animation is applied with `overlay_animation_apply`. The weapon mesh is drawn on the first node and again in front of the eye. The shader's bitmap is decoded with `wii_tex` and tints the triangles.
+- The firing check, grenade count, and vehicle parent/seat write are unchanged in kind. Seat entry also sets the unit animation index to 0. It is still not `actor_combat.c`.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled.
 
 ### Later, each one blocked until the previous exists

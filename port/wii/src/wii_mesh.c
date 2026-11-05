@@ -12,6 +12,7 @@
 #include "scenario/scenario_definitions.h"
 #include "wii_mesh.h"
 #include "wii_tag_cache.h"
+#include "wii_tex.h"
 
 #include <math.h>
 #include <string.h>
@@ -28,7 +29,12 @@ static int tri_count;
 static int weapon_from = -1;
 static int skinned;
 static int animated;
+static int overlay_used;
+static int hand_placed;
 static int shader_sampled;
+static uint8_t shader_pixels[32 * 32 * 4];
+static uint16_t shader_w;
+static uint16_t shader_h;
 
 static void quat_axes(float i, float j, float k, float w, float m[3][3])
 {
@@ -259,6 +265,14 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 			nodes[index] = local;
 		animated = 1;
 	}
+	if (graph->animations.count > 1) {
+		struct animation *overlay = anim + 1;
+
+		if (overlay->type == _animation_overlay) {
+			overlay_animation_apply(overlay, 0, orients);
+			overlay_used = 1;
+		}
+	}
 	return animated;
 }
 
@@ -276,6 +290,37 @@ static void sample_shader(uint32_t model_va)
 	if (count < 1 || wii_tag_cache_pull(address, ref, 16) != 0)
 		return;
 	shader_sampled = ref[0] != 0;
+	{
+		uint32_t bitmap_va = wii_tag_cache_slot_va((long)read_u32(ref + 12));
+		uint8_t group[0x6c];
+		uint8_t data[0x30];
+		uint8_t pixels_header[20];
+		uint8_t encoded[256];
+		struct wii_rgba image;
+		uint32_t pixels_size;
+		uint32_t blob_va;
+
+		if (!bitmap_va || wii_tag_cache_pull(bitmap_va, group, sizeof(group)) != 0)
+			return;
+		if (read_u32(group + 0x60) < 1 || wii_tag_cache_pull(read_u32(group + 0x64), data, sizeof(data)) != 0)
+			return;
+		pixels_size = read_u32(data + 0x1c);
+		if (pixels_size < 1 || pixels_size > sizeof(encoded))
+			pixels_size = sizeof(encoded);
+		if (wii_tag_cache_pull(bitmap_va + 0x30, pixels_header, sizeof(pixels_header)) != 0)
+			return;
+		blob_va = read_u32(pixels_header + 12);
+		if (wii_tag_cache_pull(blob_va + read_u32(data + 0x18), encoded, pixels_size) != 0)
+			return;
+		memset(&image, 0, sizeof(image));
+		image.pixels = shader_pixels;
+		image.cap = 32;
+		if (wii_tex_decode(encoded, pixels_size, (int)read_u16(data + 0x0c), 1, read_u16(data + 4), read_u16(data + 6), &image) == 0) {
+			shader_w = image.width;
+			shader_h = image.height;
+			shader_sampled = image.ok && shader_pixels[0] != 0;
+		}
+	}
 }
 
 static void skin_weapon(struct wii_mat const *nodes, int node_count, float yaw, float ox, float oy, float oz)
@@ -311,9 +356,13 @@ static void skin_weapon(struct wii_mat const *nodes, int node_count, float yaw, 
 	if (read_s32(block) < 1)
 		return;
 	before = tri_count;
+	skin_part(read_u32(block + 4), nodes, node_count, yaw, ox + nodes[0].x, oy + nodes[0].y, oz + nodes[0].z);
+	if (tri_count > before)
+		hand_placed = 1;
+	before = tri_count;
 	skin_part(read_u32(block + 4), nodes, node_count, yaw,
 		ox + cosf(yaw) * 0.35f, oy + sinf(yaw) * 0.35f, oz - 0.2f);
-	if (tri_count > before)
+	if (tri_count > before && weapon_from < 0)
 		weapon_from = before;
 }
 
@@ -336,7 +385,11 @@ int wii_mesh_build(long unit_index)
 	weapon_from = -1;
 	skinned = 0;
 	animated = 0;
+	overlay_used = 0;
+	hand_placed = 0;
 	shader_sampled = 0;
+	shader_w = 0;
+	shader_h = 0;
 	if (!object)
 		return 0;
 	biped = tag_get(0x62697064, object->definition_index);
@@ -398,6 +451,27 @@ int wii_mesh_weapon(void)
 int wii_mesh_shader(void)
 {
 	return shader_sampled;
+}
+
+int wii_mesh_overlay(void)
+{
+	return overlay_used;
+}
+
+int wii_mesh_hand(void)
+{
+	return hand_placed;
+}
+
+const uint8_t *wii_mesh_shader_pixels(uint16_t *width, uint16_t *height)
+{
+	if (!shader_sampled)
+		return NULL;
+	if (width)
+		*width = shader_w;
+	if (height)
+		*height = shader_h;
+	return shader_pixels;
 }
 
 int wii_mesh_is_weapon(int index)

@@ -1,6 +1,6 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (at most 2 MiB, inside the
+ * stays on the card. This copies a working set (at most 3 MiB, inside the
  * 8 MiB resident cap) and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
@@ -40,7 +40,7 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = 2u << 20,
+	WII_TAG_ARENA = 3u << 20,
 	WII_TAG_CAP_PLAYERS = 16,
 	WII_TAG_CAP_WEAPONS = 8,
 	WII_TAG_CAP_ENCOUNTERS = 16,
@@ -1744,6 +1744,7 @@ int wii_tag_cache_self_test(void)
 	uint32_t class_anim_at;
 	uint32_t type_at;
 	uint32_t anim_at;
+	uint32_t overlay_at;
 	uint32_t default_at;
 	uint32_t weapon_def_at;
 	uint32_t variant_at;
@@ -1829,6 +1830,8 @@ int wii_tag_cache_self_test(void)
 	type_at = cursor;
 	cursor += sizeof(struct animation_graph_weapon_type);
 	anim_at = cursor;
+	cursor += sizeof(struct animation);
+	overlay_at = cursor;
 	cursor += sizeof(struct animation);
 	default_at = cursor;
 	cursor += 24u;
@@ -2130,12 +2133,14 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, animations), 1);
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, animations) + 4, TAG_BASE + class_anim_at);
 	put_u16(file + class_anim_at, 0);
-	put_u32(file + graph_at + offsetof(struct animation_graph, animations), 1);
+	put_u32(file + graph_at + offsetof(struct animation_graph, animations), 2);
 	put_u32(file + graph_at + offsetof(struct animation_graph, animations) + 4, TAG_BASE + anim_at);
 	put_u16(file + anim_at + offsetof(struct animation, frame_count), 1);
 	put_u16(file + anim_at + offsetof(struct animation, node_count), 1);
 	put_u32(file + anim_at + offsetof(struct animation, default_data), 24);
 	put_u32(file + anim_at + offsetof(struct animation, default_data) + 12, TAG_BASE + default_at);
+	memcpy(file + overlay_at, file + anim_at, sizeof(struct animation));
+	put_u16(file + overlay_at + offsetof(struct animation, type), 1);
 	put_u16(file + default_at + 6, 32767);
 	put_u16(file + weapon_def_at, (uint16_t)_object_type_weapon);
 	put_f32(file + weapon_def_at + offsetof(struct weapon_definition, object.bounding_radius), 0.2f);

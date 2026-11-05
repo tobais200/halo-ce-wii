@@ -20,6 +20,7 @@
 #include "wii_sim.h"
 #include "wii_tex.h"
 #include "wii_game.h"
+#include "wii_hs.h"
 #include "wii_collision.h"
 #include "wii_effects.h"
 #include "wii_play.h"
@@ -405,6 +406,12 @@ int main(int argc, char **argv)
 						gx_draw_set_effect_rgba(effect_pixels, effect_w, effect_h);
 				}
 				printf("%s\n%s\n", preview.message, sim.message);
+				if (wii_hud_chapter()[0])
+					printf("%s\n", wii_hud_chapter());
+				if (wii_hud_help()[0])
+					printf("%s\n", wii_hud_help());
+				if (wii_hud_objective()[0])
+					printf("%s\n", wii_hud_objective());
 				printf("B back  stick walk  A fire  %s%s\n",
 					view.texture_mode ? "cache bitmap" : "no bitmap decoded",
 					wii_effect_bitmap_ok() ? "  fx" : "");

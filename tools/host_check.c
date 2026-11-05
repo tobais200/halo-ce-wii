@@ -506,6 +506,20 @@ int main(void)
 				return fail("weapon mesh");
 			if (!wii_mesh_shader())
 				return fail("shader sample");
+			{
+				uint16_t shader_width = 0;
+				uint16_t shader_height = 0;
+
+				if (!wii_mesh_shader_pixels(&shader_width, &shader_height) || shader_width < 1)
+					return fail("shader bitmap");
+			}
+			if (!wii_mesh_overlay() || !wii_mesh_hand())
+				return fail("overlay or hand weapon");
+			wii_hud_show(0, 2, 0.f);
+			wii_hud_show(1, 4, 0.f);
+			wii_hud_show(2, 5, 1.5f);
+			if (!wii_hud_chapter()[0] || !wii_hud_help()[0] || !wii_hud_objective()[0])
+				return fail("hud text");
 			if (wii_play_grenades() < 1 || !wii_play_flank())
 				return fail("actor grenade");
 			if (!wii_vehicle_seat_for(2.f) || wii_vehicle_seat_for(20.f))

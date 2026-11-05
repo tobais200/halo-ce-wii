@@ -219,9 +219,12 @@ static void draw_overlay(struct gx_mesh_view const *view)
 				continue;
 			{
 				int weapon_tri = wii_mesh_is_weapon(mesh_index);
-				uint8_t red = weapon_tri ? 70 : 90;
-				uint8_t green = weapon_tri ? 90 : 140;
-				uint8_t blue = weapon_tri ? 140 : 90;
+				uint16_t shader_width = 0;
+				uint16_t shader_height = 0;
+				uint8_t const *shader_px = wii_mesh_shader_pixels(&shader_width, &shader_height);
+				uint8_t red = shader_px ? shader_px[0] : (weapon_tri ? 70 : 90);
+				uint8_t green = shader_px ? shader_px[1] : (weapon_tri ? 90 : 140);
+				uint8_t blue = shader_px ? shader_px[2] : (weapon_tri ? 140 : 90);
 
 				for (corner = 0; corner < 3; corner++)
 					overlay_vertex(xyz[corner * 3], xyz[corner * 3 + 1], xyz[corner * 3 + 2], red, green, blue, 0, 0, 0);

@@ -280,6 +280,7 @@ static void actors_fight(long player_unit)
 				if (seat != NONE && soldier) {
 					unit->object.parent_object_index = seat;
 					soldier->unit.parent_seat_index = 0;
+					unit->object.animation.state.index = 0;
 					actor_wait = 8;
 					return;
 				}
@@ -451,7 +452,7 @@ static int ima_step[89] = {
 	15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
 };
 static int ima_index[16] = { -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8 };
-static int16_t decoded_pcm[4096];
+static int16_t decoded_pcm[8192];
 static int decoded_count;
 static int decoded_tags;
 
@@ -518,7 +519,7 @@ void wii_sound_load(uint32_t sound_va)
 	uint32_t sample_size;
 	uint32_t sample_va;
 
-	if (decoded_tags >= 4 || decoded_count >= 4096 || !sound_va)
+	if (decoded_tags >= 8 || decoded_count >= 8192 || !sound_va)
 		return;
 	if (wii_tag_cache_pull(sound_va + offsetof(struct sound_definition, pitch_ranges), block, 8) != 0)
 		return;
@@ -538,7 +539,7 @@ void wii_sound_load(uint32_t sound_va)
 		sample_size = sizeof(samples);
 	if (wii_tag_cache_pull(sample_va, samples, sample_size) != 0)
 		return;
-	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 4096 - decoded_count);
+	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 8192 - decoded_count);
 	if (decoded_count > 0)
 		decoded_tags++;
 }

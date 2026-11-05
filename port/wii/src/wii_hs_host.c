@@ -222,6 +222,9 @@ static float wii_device_power;
 static long wii_camera_point = NONE;
 static long wii_chapter = NONE;
 static float wii_chapter_delay;
+static char wii_chapter_text[64];
+static char wii_help_text[64];
+static char wii_objective_text[64];
 
 struct wii_checkpoint {
 	int valid;
@@ -417,15 +420,19 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		wii_camera_point = arguments[0];
 		break;
 	case 299:
-		wii_chapter = arguments[0];
+		wii_hud_show(0, arguments[0], 0.f);
 		break;
 	case 300:
-		wii_chapter = arguments[0];
-		wii_chapter_delay = *(float *)&arguments[1];
+		wii_hud_show(0, arguments[0], *(float *)&arguments[1]);
+		break;
+	case 376: case 377: case 378: case 379: case 380: case 381: case 382:
+		wii_hud_show(3, arguments[0], (float)(function_index - 376));
 		break;
 	case 384:
+		wii_hud_show(1, arguments[0], 0.f);
+		break;
 	case 385:
-		wii_chapter = arguments[0];
+		wii_hud_show(2, arguments[0], 0.f);
 		break;
 	case 156: case 161: case 162: case 163: case 164: case 166: case 168:
 	case 173: case 175: case 176: case 177: case 178: case 179: case 196:
@@ -560,6 +567,13 @@ static void wii_hs_table_init(void)
 		fill_campaign2(300, _hs_type_void, _hs_type_cutscene_title, _hs_type_real, "cinematic_set_title_delayed");
 		fill_campaign(384, _hs_type_void, 1, _hs_type_hud_message, "hud_set_help_text");
 		fill_campaign(385, _hs_type_void, 1, _hs_type_hud_message, "hud_set_objective_text");
+		fill_campaign(376, _hs_type_void, 1, _hs_type_boolean, "hud_show_health");
+		fill_campaign(377, _hs_type_void, 1, _hs_type_boolean, "hud_blink_health");
+		fill_campaign(378, _hs_type_void, 1, _hs_type_boolean, "hud_show_shield");
+		fill_campaign(379, _hs_type_void, 1, _hs_type_boolean, "hud_blink_shield");
+		fill_campaign(380, _hs_type_void, 1, _hs_type_boolean, "hud_show_motion_sensor");
+		fill_campaign(381, _hs_type_void, 1, _hs_type_boolean, "hud_blink_motion_sensor");
+		fill_campaign(382, _hs_type_void, 1, _hs_type_boolean, "hud_show_crosshair");
 	}
 	wii_table_ready = 1;
 }
@@ -1157,6 +1171,37 @@ int wii_hs_campaign_count(void)
 {
 	wii_hs_table_init();
 	return wii_campaign_count;
+}
+
+void wii_hud_show(int kind, long index, float delay)
+{
+	wii_chapter = index;
+	wii_chapter_delay = delay;
+	if (kind == 0 && delay > 0.f)
+		snprintf(wii_chapter_text, sizeof(wii_chapter_text), "chapter %ld +%.1fs", (long)index, delay);
+	else if (kind == 0)
+		snprintf(wii_chapter_text, sizeof(wii_chapter_text), "chapter %ld", (long)index);
+	else if (kind == 1)
+		snprintf(wii_help_text, sizeof(wii_help_text), "help %ld", (long)index);
+	else if (kind == 2)
+		snprintf(wii_objective_text, sizeof(wii_objective_text), "objective %ld", (long)index);
+	else
+		snprintf(wii_help_text, sizeof(wii_help_text), "hud %d %s", (int)delay, index ? "on" : "off");
+}
+
+char const *wii_hud_chapter(void)
+{
+	return wii_chapter_text;
+}
+
+char const *wii_hud_help(void)
+{
+	return wii_help_text;
+}
+
+char const *wii_hud_objective(void)
+{
+	return wii_objective_text;
 }
 
 int wii_hs_last_unlinked(void)

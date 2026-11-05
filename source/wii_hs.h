@@ -30,5 +30,9 @@ int wii_hs_campaign_count(void);
 int wii_hs_last_unlinked(void);
 int wii_hs_global_real(int index, float *value);
 char const *wii_hs_note(void);
+void wii_hud_show(int kind, long index, float delay);
+char const *wii_hud_chapter(void);
+char const *wii_hud_help(void);
+char const *wii_hud_objective(void);
 
 #endif
