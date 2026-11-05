@@ -255,3 +255,87 @@
 		if (actor_data)
 			ai_scripting_allow_dormant(arguments[0], (boolean)arguments[1]);
 		break;
+	case 71:
+		object_set_ranged_attack_inhibited(arguments[0], (boolean)arguments[1]);
+		break;
+	case 72:
+		object_set_melee_attack_inhibited(arguments[0], (boolean)arguments[1]);
+		break;
+	case 77:
+		objects_scripting_detach(arguments[0], arguments[1]);
+		break;
+	case 80:
+		object_can_take_damage(arguments[0]);
+		break;
+	case 81:
+		object_beautify(arguments[0], (boolean)arguments[1]);
+		break;
+	case 83:
+		object_definition_predict(arguments[0]);
+		break;
+	case 84:
+		object_pvs_activate(arguments[0]);
+		break;
+	case 85:
+		object_pvs_set_object(arguments[0]);
+		break;
+	case 86:
+		object_pvs_set_camera_point((unsigned short)arguments[0]);
+		break;
+	case 94:
+		unit_open(arguments[0]);
+		break;
+	case 95:
+		unit_close(arguments[0]);
+		break;
+	case 97:
+		unit_kill_silent(arguments[0]);
+		break;
+	case 98:
+		result = unit_get_custom_animation_time(arguments[0]);
+		break;
+	case 99:
+		unit_stop_custom_animation(arguments[0]);
+		break;
+	case 104:
+		unit_aim_without_turning(arguments[0], (boolean)arguments[1]);
+		break;
+	case 105:
+		unit_set_emotion(arguments[0], (unsigned short)arguments[1]);
+		break;
+	case 106:
+		unit_set_enterable_by_player(arguments[0], (boolean)arguments[1]);
+		break;
+	case 118:
+		scripting_set_magic_base_seat(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "");
+		break;
+	case 133:
+		units_set_desired_flashlight_state(arguments[0], (boolean)arguments[1]);
+		break;
+	case 134:
+		unit_set_desired_flashlight_state(arguments[0], (boolean)arguments[1]);
+		break;
+	case 154:
+		cheat_active_camouflage_local_player((unsigned short)arguments[0]);
+		break;
+	case 192:
+		result = object_list_from_ai_reference(arguments[0]);
+		break;
+	case 256:
+		game_set_game_variant_from_name(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "");
+		break;
+	case 283:
+		ai_globals_ai_active((boolean)arguments[0]);
+		break;
+	case 284:
+		ai_globals_dialogue_triggers_enabled((boolean)arguments[0]);
+		break;
+	case 285:
+		ai_globals_grenades_enabled((boolean)arguments[0]);
+		break;
+	case 336:
+		vehicle_hover(arguments[0], (boolean)arguments[1]);
+		break;
+	case 338:
+		player_input_enable((boolean)arguments[0]);
+		break;

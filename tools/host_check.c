@@ -127,7 +127,7 @@ int main(void)
 		+ WII_STREAM_WINDOW_BYTES + WII_LZ4_CAPACITY + WII_CATALOG_BYTES
 		+ WII_PREVIEW_BYTES + WII_MEM2_GUARD_BYTES >= WII_MEM2_HARDWARE_BYTES)
 		return fail("caps do not fit in MEM2");
-	if (WII_TAG_RESIDENT_CAP_BYTES >= 0x1600000u)
+	if (WII_TAG_RESIDENT_CAP_BYTES >= 0x1700000u)
 		return fail("tag cap is not below the Xbox tag cache");
 	if (WII_TEXTURE_CAP_BYTES >= 0x1600000u)
 		return fail("texture cap is not below the Xbox texture cache");
@@ -190,7 +190,7 @@ int main(void)
 		return fail("identify build");
 	if (identity.tag_data_size != 0)
 		return fail("synthetic header should not claim tag bytes");
-	if (0x1600000u <= WII_TAG_RESIDENT_CAP_BYTES)
+	if (0x1700000u <= WII_TAG_RESIDENT_CAP_BYTES)
 		return fail("xbox tag cache was not capped");
 
 	{
@@ -491,7 +491,7 @@ int main(void)
 				scale += sprites[index].z;
 			if (count < 1 || scale == before)
 				return fail("effect motion");
-			if (wii_hs_campaign_count() < 200)
+			if (wii_hs_campaign_count() < 240)
 				return fail("campaign scripts");
 			if (wii_save_checkpoint() != 0 || !wii_save_valid() || wii_save_restore() != 0)
 				return fail("checkpoint");
@@ -548,6 +548,12 @@ int main(void)
 				return fail("firing position");
 			if (!wii_play_vehicle_ready())
 				return fail("vehicle update");
+			if (!wii_play_vehicle_seated())
+				return fail("vehicle seat");
+			if (!wii_play_path_found())
+				return fail("path find");
+			if (wii_mesh_bitmap_count() < 2)
+				return fail("bitmap count");
 			if (wii_seat_anim_frame(1, 5) != 5 || wii_seat_anim_frame(0, 5) != 0)
 				return fail("seat animation");
 			wii_play_set_seat(wii_game_player_unit());

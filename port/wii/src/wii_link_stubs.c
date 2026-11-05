@@ -373,10 +373,35 @@ int game_statistics_record_kill(void) { return 0; }
 int game_time_menu_scene(void) { return 0; }
 int game_time_reset_speed(void) { return 0; }
 int get_global_local_random_seed_address(void) { return 0; }
-/* No structure tag is resident. A zeroed bsp keeps objects_update's cluster
-walk at count 0 until the map's sbsp is fixed up. */
-static unsigned char wii_structure_bsp[0x1000];
-void *global_structure_bsp_get(void) { return wii_structure_bsp; }
+/* One collision surface and no edges. Cluster count stays 0, so the object
+cluster walk does not run. path_state_find can start on surface 0 and finish.
+Layouts match structure_bsp.collision_bsp at 176 and collision_bsp.surfaces
+at 60. A tag block is count, address, definition. */
+struct wii_tag_block { long count; void *address; void *definition; };
+struct wii_path_surface { long plane; long first_edge; short flags; short material; };
+struct wii_path_bsp { unsigned char prefix[60]; struct wii_tag_block surfaces, edges, vertices; };
+static struct wii_path_surface wii_path_surface;
+static struct wii_path_bsp wii_path_bsp;
+static unsigned char wii_structure_bsp[0x400];
+static int wii_path_bsp_ready;
+
+void *global_structure_bsp_get(void)
+{
+	if (!wii_path_bsp_ready) {
+		struct wii_tag_block *collision = (struct wii_tag_block *)(wii_structure_bsp + 176);
+
+		memset(wii_structure_bsp, 0, sizeof(wii_structure_bsp));
+		memset(&wii_path_bsp, 0, sizeof(wii_path_bsp));
+		memset(&wii_path_surface, 0, sizeof(wii_path_surface));
+		wii_path_surface.first_edge = -1;
+		wii_path_bsp.surfaces.count = 1;
+		wii_path_bsp.surfaces.address = &wii_path_surface;
+		collision->count = 1;
+		collision->address = &wii_path_bsp;
+		wii_path_bsp_ready = 1;
+	}
+	return wii_structure_bsp;
+}
 int global_scenario_try_and_get(void) { return 0; }
 int global_structure_bsp_index_get(void) { return 0; }
 int halo_interpolation_enabled(void) { return 0; }
@@ -987,8 +1012,10 @@ void actor_path_input_new(long actor_index, void *input)
 	(void)actor_index;
 	if (input) {
 		memset(input, 0, 72);
-		/* start_surface_index. NONE keeps path_state_begin off a missing BSP. */
-		*(long *)((char *)input + 32) = -1;
+		/* pathfinding radius, then start_surface_index at 0x20. Surface 0 is
+		   the one collision surface on the structure BSP. */
+		*(float *)input = 0.4f;
+		*(long *)((char *)input + 0x20) = 0;
 	}
 }
 

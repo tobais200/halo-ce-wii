@@ -22,6 +22,8 @@ int wii_play_firing_tested(void);
 int wii_play_firing_index(void);
 int wii_play_firing_real(void);
 int wii_play_vehicle_ready(void);
+int wii_play_vehicle_seated(void);
+int wii_play_path_found(void);
 float wii_play_firing_score(void);
 void wii_play_set_seat(long unit_index);
 int wii_play_magic_seat(void);

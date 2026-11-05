@@ -38,6 +38,7 @@ static int hand_placed;
 static int marker_used;
 static int shader_sampled;
 static int shader_count;
+static int bitmap_count;
 static uint8_t shader_pixels[32 * 32 * 4];
 static uint16_t shader_w;
 static uint16_t shader_h;
@@ -333,6 +334,7 @@ static void sample_shader(uint32_t model_va)
 			return;
 		if (read_u32(group + 0x60) < 1 || wii_tag_cache_pull(read_u32(group + 0x64), data, sizeof(data)) != 0)
 			return;
+		bitmap_count = read_u32(group + 0x60) > 2 ? 2 : (int)read_u32(group + 0x60);
 		pixels_size = read_u32(data + 0x1c);
 		if (pixels_size < 1 || pixels_size > sizeof(encoded))
 			pixels_size = sizeof(encoded);
@@ -457,6 +459,7 @@ int wii_mesh_build(long unit_index)
 	marker_used = 0;
 	shader_sampled = 0;
 	shader_count = 0;
+	bitmap_count = 0;
 	third_person = 0;
 	shader_w = 0;
 	shader_h = 0;
@@ -551,6 +554,11 @@ int wii_mesh_third_person(void)
 int wii_mesh_shader_count(void)
 {
 	return shader_count;
+}
+
+int wii_mesh_bitmap_count(void)
+{
+	return bitmap_count;
 }
 
 float wii_mesh_pose_x(void)

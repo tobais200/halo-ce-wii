@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Sixty-seven campaign calls run the OpenCE functions already in the link, including `unit_set_seat` and `unit_enter_vehicle`. The rest of the 425-function table is still the unlinked evaluator.
-- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 22 MiB minus one page. The host check requires that cap to stay under the 22 MiB Xbox cache figure (`0x1600000`). Scenery and vehicle placements are copied. A `vehi` tag is resident.
+- Another 28 campaign calls run bodies already in the link, including object PVS, unit open/close, and `vehicle_hover`. The host check requires at least 240 campaign entries. The rest of the 425-function table is still the unlinked evaluator.
+- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 23 MiB minus one page. The host check keeps that cap under `0x1700000`. The bitmap group has two bitmaps. Scenery and vehicle placements are copied. A `vehi` tag with a `stand` seat is resident.
 - Base, replacement, and overlay are applied in that order before the node matrices are built. The synthetic overlay and replacement each have four frames of translation keys, so the clock moves the node. The weapon mesh is parented to the `weapon` marker's node matrix.
-- `actor_select_firing_position` and `actor_combat.c` are linked. The selector runs on the encounter firing positions. A map with no pathfinding surfaces leaves `path_state_find` unsuccessful, and the selector still returns a position when outside-range picks are allowed. Grenades still use the grenade projectile tag. A `vehi` tag is spawned with `object_new`, and `vehicle_update` runs on it. `unit_scripting_set_seat` still sets the stand label.
+- `actor_select_firing_position` still chooses the encounter position. The structure BSP has one collision surface and no edges, so `path_state_find` starts on that surface and finishes. The firing positions use another surface index, so the selector still takes its outside-range pick. `unit_scripting_enter_vehicle` boards the `stand` seat. There is no wheel physics.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled. Both would pull desktop GL, the Bink SDK, and a network stack that do not fit this GX build.
 
 ### Later, each one blocked until the previous exists

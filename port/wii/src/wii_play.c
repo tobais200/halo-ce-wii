@@ -58,6 +58,8 @@ static struct path_state firing_path;
 static struct firing_position_evaluation_context firing_context;
 static long vehicle_object = NONE;
 static int vehicle_updated;
+static int vehicle_seated;
+static int path_found;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -403,6 +405,17 @@ static void spawn_vehicle(void)
 		vehicle_updated = vehicle_update(created) ? 1 : 0;
 }
 
+static void enter_vehicle_seat(void)
+{
+	struct unit_datum *rider;
+
+	if (!vehicle_updated || vehicle_seated || vehicle_object == NONE)
+		return;
+	unit_scripting_enter_vehicle(wii_game_player_unit(), vehicle_object, "stand");
+	rider = unit_get(wii_game_player_unit());
+	vehicle_seated = rider && rider->object.parent_object_index == vehicle_object;
+}
+
 void wii_play_after_tick(void)
 {
 	long player;
@@ -435,6 +448,14 @@ void wii_play_after_tick(void)
 		wii_pose_build(player);
 		wii_mesh_build(player);
 	}
+	{
+		struct path_input input;
+
+		actor_path_input_new(NONE, &input);
+		path_state_new(&input, &firing_path, NULL);
+		path_found = path_state_find(&firing_path) ? 1 : 0;
+	}
+	enter_vehicle_seat();
 }
 
 int wii_play_moved(void)
@@ -553,6 +574,16 @@ int wii_play_firing_real(void)
 int wii_play_vehicle_ready(void)
 {
 	return vehicle_object != NONE && vehicle_updated;
+}
+
+int wii_play_vehicle_seated(void)
+{
+	return vehicle_seated;
+}
+
+int wii_play_path_found(void)
+{
+	return path_found;
 }
 
 float wii_play_firing_score(void)

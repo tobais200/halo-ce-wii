@@ -20,6 +20,7 @@ int wii_mesh_marker(void);
 int wii_mesh_frame(void);
 int wii_mesh_third_person(void);
 int wii_mesh_shader_count(void);
+int wii_mesh_bitmap_count(void);
 float wii_mesh_pose_x(void);
 float wii_mesh_pose_z(void);
 float wii_mesh_weapon_z(void);
