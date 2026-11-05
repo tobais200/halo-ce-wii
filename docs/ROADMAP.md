@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Another 28 campaign calls run bodies already in the link, including object PVS, unit open/close, and `vehicle_hover`. The host check requires at least 240 campaign entries. The rest of the 425-function table is still the unlinked evaluator.
-- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 23 MiB minus one page. The host check keeps that cap under `0x1700000`. The bitmap group has two bitmaps. Scenery and vehicle placements are copied. A `vehi` tag with a `stand` seat is resident.
+- Device calls from `devices.c` are linked, plus the zero-argument campaign calls whose bodies were already in the link. The host check requires at least 260 campaign entries. The rest of the 425-function table is still the unlinked evaluator.
+- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 23 MiB. The bitmap group has three bitmaps. Scenery and vehicle placements are copied. A `vehi` tag with a `stand` seat is resident.
 - Base, replacement, and overlay are applied in that order before the node matrices are built. The synthetic overlay and replacement each have four frames of translation keys, so the clock moves the node. The weapon mesh is parented to the `weapon` marker's node matrix.
-- `actor_select_firing_position` still chooses the encounter position. The structure BSP has one collision surface and no edges, so `path_state_find` starts on that surface and finishes. The firing positions use another surface index, so the selector still takes its outside-range pick. `unit_scripting_enter_vehicle` boards the `stand` seat. There is no wheel physics.
+- `path_state_find` walks an edge from surface 0 onto surface 1. Firing positions use surface 0, so `actor_select_firing_position` keeps the path and does not take the outside-range pick. `unit_enter_vehicle` boards `stand` and starts the seat-enter animation. There are still no wheels or mass points. Props and pursuit search are not what the synthetic map runs.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled. Both would pull desktop GL, the Bink SDK, and a network stack that do not fit this GX build.
 
 ### Later, each one blocked until the previous exists

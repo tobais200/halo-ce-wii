@@ -1,7 +1,7 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (23 MiB minus one page, the
- * resident cap) and byte-swaps it. Structure BSPs are not copied.
+ * stays on the card. This copies a working set (23 MiB, the resident cap)
+ * and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
 #include "game/game_globals.h"
@@ -41,7 +41,7 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = (23u << 20) - 4096u,
+	WII_TAG_ARENA = 23u << 20,
 	WII_TAG_CAP_PLAYERS = 16,
 	WII_TAG_CAP_WEAPONS = 8,
 	WII_TAG_CAP_ENCOUNTERS = 16,
@@ -626,6 +626,29 @@ static int load_animation(int slot)
 		if (pull_va(seat_va + (uint32_t)seat_index * sizeof(seat_raw), seat_raw, sizeof(seat_raw)) != 0)
 			return -1;
 		memcpy(seats[seat_index].label, seat_raw, 32);
+		{
+			int listed = read_les32(seat_raw + offsetof(struct animation_graph_unit_seat, animations));
+			uint32_t listed_va = read_le32(seat_raw + offsetof(struct animation_graph_unit_seat, animations) + 4);
+			struct animation_graph_animation_index *indices;
+			int listed_index;
+
+			if (listed < 0)
+				listed = 0;
+			if (listed > 8)
+				listed = 8;
+			indices = listed ? bump((uint32_t)listed * sizeof(*indices)) : NULL;
+			if (listed && !indices)
+				return -1;
+			for (listed_index = 0; listed_index < listed; listed_index++) {
+				uint8_t index_raw[2];
+
+				if (pull_va(listed_va + (uint32_t)listed_index * sizeof(struct animation_graph_animation_index), index_raw, 2) != 0)
+					break;
+				indices[listed_index].animation_index = read_les16(index_raw);
+			}
+			seats[seat_index].animations.count = listed;
+			seats[seat_index].animations.address = indices;
+		}
 		class_count = read_les32(seat_raw + offsetof(struct animation_graph_unit_seat, weapon_classes));
 		class_va = read_le32(seat_raw + offsetof(struct animation_graph_unit_seat, weapon_classes) + 4);
 		if (class_count < 0)
@@ -1924,6 +1947,7 @@ int wii_tag_cache_self_test(void)
 	uint32_t seat_at;
 	uint32_t class_at;
 	uint32_t class_anim_at;
+	uint32_t enter_anims_at;
 	uint32_t type_at;
 	uint32_t anim_at;
 	uint32_t overlay_at;
@@ -2042,6 +2066,8 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct animation_graph_weapon_class);
 	class_anim_at = cursor;
 	cursor += sizeof(struct animation_graph_animation_index);
+	enter_anims_at = cursor;
+	cursor += 64u;
 	type_at = cursor;
 	cursor += sizeof(struct animation_graph_weapon_type);
 	anim_at = cursor;
@@ -2117,9 +2143,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0x60u;
+	cursor += 0x90u;
 	pixels_at = cursor;
-	cursor += 32u;
+	cursor += 48u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2212,15 +2238,18 @@ int wii_tag_cache_self_test(void)
 	put_f32(file + firing_at, 7.5f);
 	put_f32(file + firing_at + 4, 2.5f);
 	put_f32(file + firing_at + 8, 3.5f);
-	put_u32(file + firing_at + 20, 1);
+	put_u16(file + firing_at + 14, 0xffffu);
+	put_u32(file + firing_at + 20, 0);
 	put_f32(file + firing_at + 24, 1.5f);
 	put_f32(file + firing_at + 28, 8.5f);
 	put_f32(file + firing_at + 32, 3.5f);
-	put_u32(file + firing_at + 44, 1);
+	put_u16(file + firing_at + 38, 0xffffu);
+	put_u32(file + firing_at + 44, 0);
 	put_f32(file + firing_at + 48, 1.9f);
 	put_f32(file + firing_at + 52, 2.7f);
 	put_f32(file + firing_at + 56, 3.5f);
-	put_u32(file + firing_at + 68, 1);
+	put_u16(file + firing_at + 62, 0xffffu);
+	put_u32(file + firing_at + 68, 0);
 	put_u32(file + scenario_at + offsetof(struct scenario, scenery), 1);
 	put_u32(file + scenario_at + offsetof(struct scenario, scenery) + 4, TAG_BASE + scenery_at);
 	put_u16(file + scenery_at, 0);
@@ -2432,6 +2461,9 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats), 1);
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats) + 4, TAG_BASE + seat_at);
 	memcpy(file + seat_at, "stand", 5);
+	put_u32(file + seat_at + offsetof(struct animation_graph_unit_seat, animations), 8);
+	put_u32(file + seat_at + offsetof(struct animation_graph_unit_seat, animations) + 4, TAG_BASE + enter_anims_at);
+	put_u16(file + enter_anims_at + 7u * 8u, 0);
 	put_u32(file + seat_at + offsetof(struct animation_graph_unit_seat, weapon_classes), 1);
 	put_u32(file + seat_at + offsetof(struct animation_graph_unit_seat, weapon_classes) + 4, TAG_BASE + class_at);
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, weapon_types), 1);
@@ -2530,7 +2562,7 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 2);
+	put_u32(file + bitm_at + 0x60, 3);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
@@ -2538,10 +2570,14 @@ int wii_tag_cache_self_test(void)
 	put_u16(file + bitm_data_at + 0x0e, 1u << 4);
 	put_u32(file + bitm_data_at + 0x1c, 16);
 	memcpy(file + bitm_data_at + 0x30, file + bitm_data_at, 0x30);
+	memcpy(file + bitm_data_at + 0x60, file + bitm_data_at, 0x30);
 	put_u32(file + bitm_data_at + 0x30 + 0x18, 16);
 	put_u32(file + bitm_data_at + 0x30 + 0x1c, 16);
+	put_u32(file + bitm_data_at + 0x60 + 0x18, 32);
+	put_u32(file + bitm_data_at + 0x60 + 0x1c, 16);
 	memset(file + pixels_at, 0xff, 16);
 	memset(file + pixels_at + 16, 0x40, 16);
+	memset(file + pixels_at + 32, 0x80, 16);
 	put_u16(file + eqip_at + offsetof(struct equipment_definition, equipment.powerup_type), 1);
 	put_u32(file + model_at + offsetof(struct model, markers), 1);
 	put_u32(file + model_at + offsetof(struct model, markers) + 4, TAG_BASE + marker_at);

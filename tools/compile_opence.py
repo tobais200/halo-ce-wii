@@ -41,6 +41,7 @@ SOURCES = {
     "bsp3d.o": "physics/bsp3d.c",
     "game_engine.o": "game/game_engine.c",
     "sort.o": "cseries/sort.c",
+    "devices.o": "devices/devices.c",
 }
 
 PORT = {

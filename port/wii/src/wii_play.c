@@ -60,6 +60,9 @@ static long vehicle_object = NONE;
 static int vehicle_updated;
 static int vehicle_seated;
 static int path_found;
+static int path_nodes;
+static int firing_on_path;
+static int enter_anim;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -306,6 +309,7 @@ static void actors_fight(long player_unit)
 			firing_context.specific_target_enable = TRUE;
 			firing_context.specific_target_point = player->object.position;
 			firing_context.specific_target_surface_index = NONE;
+			firing_context.specific_target_cluster_index = NONE;
 			firing_context.evaluation_mode = _firing_point_evaluation_mode_fight;
 			firing_context.allow_outside_range = TRUE;
 			firing_context.allow_rejected_positions = TRUE;
@@ -320,6 +324,7 @@ static void actors_fight(long player_unit)
 				memset(&chosen, 0, sizeof(chosen));
 				picked = actor_select_firing_position(index, &firing_context, &chosen, &owner, &firing_path, &path_valid);
 				firing_real = picked;
+				firing_on_path = path_valid && picked >= 0;
 				if (picked >= 0) {
 					firing_index = picked;
 					if (chosen.evaluation > 0.f)
@@ -414,6 +419,7 @@ static void enter_vehicle_seat(void)
 	unit_scripting_enter_vehicle(wii_game_player_unit(), vehicle_object, "stand");
 	rider = unit_get(wii_game_player_unit());
 	vehicle_seated = rider && rider->object.parent_object_index == vehicle_object;
+	enter_anim = rider && rider->unit.animation.state == _unit_state_entering_seat;
 }
 
 void wii_play_after_tick(void)
@@ -454,6 +460,7 @@ void wii_play_after_tick(void)
 		actor_path_input_new(NONE, &input);
 		path_state_new(&input, &firing_path, NULL);
 		path_found = path_state_find(&firing_path) ? 1 : 0;
+		path_nodes = path_found ? firing_path.node_count : 0;
 	}
 	enter_vehicle_seat();
 }
@@ -584,6 +591,21 @@ int wii_play_vehicle_seated(void)
 int wii_play_path_found(void)
 {
 	return path_found;
+}
+
+int wii_play_path_nodes(void)
+{
+	return path_nodes;
+}
+
+int wii_play_firing_on_path(void)
+{
+	return firing_on_path;
+}
+
+int wii_play_enter_anim(void)
+{
+	return enter_anim;
 }
 
 float wii_play_firing_score(void)

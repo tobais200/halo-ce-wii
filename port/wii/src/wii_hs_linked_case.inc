@@ -339,3 +339,69 @@
 	case 338:
 		player_input_enable((boolean)arguments[0]);
 		break;
+	case 73:
+		objects_dump_memory();
+		break;
+	case 78:
+		garbage_collect_now();
+		break;
+	case 87:
+		object_pvs_clear();
+		break;
+	case 120:
+		scripting_magic_melee_attack();
+		break;
+	case 132:
+		result = campaign_bool(unit_solo_player_integrated_night_vision_is_active());
+		break;
+	case 136:
+		device_set_never_appears_locked(arguments[0], (boolean)arguments[1]);
+		break;
+	case 145:
+		device_one_sided_set(arguments[0], (boolean)arguments[1]);
+		break;
+	case 146:
+		device_operates_automatically_set(arguments[0], (boolean)arguments[1]);
+		break;
+	case 149:
+		cheat_all_powerups();
+		break;
+	case 150:
+		cheat_all_weapons();
+		break;
+	case 151:
+		cheat_all_vehicles();
+		break;
+	case 152:
+		cheat_teleport_to_camera();
+		break;
+	case 153:
+		cheat_active_camouflage();
+		break;
+	case 155:
+		cheats_load();
+		break;
+	case 165:
+		ai_scripting_erase_all();
+		break;
+	case 167:
+		ai_scripting_deselect();
+		break;
+	case 219:
+		ai_scripting_reconnect();
+		break;
+	case 257:
+		result = game_difficulty_level_get_ignore_easy();
+		break;
+	case 258:
+		result = game_difficulty_level_get();
+		break;
+	case 306:
+		result = campaign_bool(game_all_quiet());
+		break;
+	case 307:
+		result = campaign_bool(game_safe_to_speak());
+		break;
+	case 308:
+		result = campaign_bool(game_is_cooperative());
+		break;

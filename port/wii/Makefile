@@ -44,7 +44,7 @@ opence:
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
 	@echo "  effect_new decodes a contrail bitmap; GX draws particles and the contrail"
 	@echo "  animation-graph skinning applies base, replacement, and overlay keys"
-	@echo "  path_state_find walks one surface; unit_enter_vehicle boards the stand seat"
+	@echo "  path_state_find crosses one edge; unit_enter_vehicle starts the seat-enter animation"
 	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:

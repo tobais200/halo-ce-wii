@@ -333,9 +333,7 @@ int debug_objects_biped_autoaim_pills(void) { return 0; }
 int debug_objects_biped_physics_pills(void) { return 0; }
 int debug_objects_vehicle_powered_mass_points(void) { return 0; }
 void *depths_of_hell;
-int device_can_change_position(void) { return 0; }
-int device_frontfacing(void) { return 0; }
-int device_touched(void) { return 0; }
+int device_group_unused(void) { return 0; }
 int dialogue_get_vocalization_name(void) { return 0; }
 int director_get_perspective(void) { return 0; }
 int director_inhibit_input(void) { return 0; }
@@ -380,7 +378,16 @@ at 60. A tag block is count, address, definition. */
 struct wii_tag_block { long count; void *address; void *definition; };
 struct wii_path_surface { long plane; long first_edge; short flags; short material; };
 struct wii_path_bsp { unsigned char prefix[60]; struct wii_tag_block surfaces, edges, vertices; };
-static struct wii_path_surface wii_path_surface;
+struct wii_path_edge {
+	long vertices[2];
+	long next_edge[2];
+	long surfaces[2];
+};
+struct wii_path_vertex { float x, y, z; long first_edge; };
+static struct wii_path_surface wii_path_surfaces[2];
+static struct wii_path_edge wii_path_edge;
+static struct wii_path_vertex wii_path_vertices[2];
+static unsigned char wii_path_flags[2];
 static struct wii_path_bsp wii_path_bsp;
 static unsigned char wii_structure_bsp[0x400];
 static int wii_path_bsp_ready;
@@ -389,15 +396,35 @@ void *global_structure_bsp_get(void)
 {
 	if (!wii_path_bsp_ready) {
 		struct wii_tag_block *collision = (struct wii_tag_block *)(wii_structure_bsp + 176);
+		struct wii_tag_block *paths = (struct wii_tag_block *)(wii_structure_bsp + 484);
 
 		memset(wii_structure_bsp, 0, sizeof(wii_structure_bsp));
 		memset(&wii_path_bsp, 0, sizeof(wii_path_bsp));
-		memset(&wii_path_surface, 0, sizeof(wii_path_surface));
-		wii_path_surface.first_edge = -1;
-		wii_path_bsp.surfaces.count = 1;
-		wii_path_bsp.surfaces.address = &wii_path_surface;
+		memset(wii_path_surfaces, 0, sizeof(wii_path_surfaces));
+		memset(&wii_path_edge, 0, sizeof(wii_path_edge));
+		memset(wii_path_vertices, 0, sizeof(wii_path_vertices));
+		/* Surface 0 and surface 1 share one edge. Bit 6 is walkable. */
+		wii_path_surfaces[0].first_edge = 0;
+		wii_path_surfaces[1].first_edge = 0;
+		wii_path_edge.vertices[0] = 0;
+		wii_path_edge.vertices[1] = 1;
+		wii_path_edge.next_edge[0] = 0;
+		wii_path_edge.next_edge[1] = 0;
+		wii_path_edge.surfaces[0] = 0;
+		wii_path_edge.surfaces[1] = 1;
+		wii_path_vertices[1].x = 1.f;
+		wii_path_flags[0] = 1u << 6;
+		wii_path_flags[1] = 1u << 6;
+		wii_path_bsp.surfaces.count = 2;
+		wii_path_bsp.surfaces.address = wii_path_surfaces;
+		wii_path_bsp.edges.count = 1;
+		wii_path_bsp.edges.address = &wii_path_edge;
+		wii_path_bsp.vertices.count = 2;
+		wii_path_bsp.vertices.address = wii_path_vertices;
 		collision->count = 1;
 		collision->address = &wii_path_bsp;
+		paths->count = 2;
+		paths->address = wii_path_flags;
 		wii_path_bsp_ready = 1;
 	}
 	return wii_structure_bsp;
@@ -771,16 +798,9 @@ int controls_initialize(void) { return 0; }
 int controls_initialize_for_new_map(void) { return 0; }
 int control_update(void) { return 0; }
 int custom_edition_vehicle_placement_allowed(void) { return 0; }
-int device_delete(void) { return 0; }
-int device_export_function_values(void) { return 0; }
-int device_new(void) { return 0; }
-int device_preprocess_node_orientations(void) { return 0; }
-int device_render_debug(void) { return 0; }
-int devices_dispose(void) { return 0; }
-int devices_dispose_from_old_map(void) { return 0; }
-int devices_initialize(void) { return 0; }
-int devices_initialize_for_new_map(void) { return 0; }
-int device_update(void) { return 0; }
+int device_group_link(void) { return 0; }
+int device_port_linked(void) { return 0; }
+int device_group_ready(void) { return 0; }
 int garbage_new(void) { return 0; }
 int garbage_update(void) { return 0; }
 int item_delete(void) { return 0; }
@@ -965,6 +985,11 @@ int touch_postgame_pressed(void) { return 0; }
 int usnprintf(void) { return 0; }
 int usprintf(void) { return 0; }
 int ustring_format_checked(void) { return 0; }
+void control_touched(long device_index, long unit_index) { (void)device_index; (void)unit_index; }
+void machine_bumped(long device_index, long unit_index) { (void)device_index; (void)unit_index; }
+void network_coop_note_device_snap(short group_index) { (void)group_index; }
+int debug_objects_devices;
+void *device_groups_data;
 
 struct wii_vec3 { float i, j, k; };
 

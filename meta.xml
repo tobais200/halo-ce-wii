@@ -2,12 +2,12 @@
 <app version="1">
 	<name>Halo CE Wii</name>
 	<coder>halo-ce-wii</coder>
-	<version>0.22.0-path</version>
+	<version>0.23.0-edge</version>
 	<release_date>20261103000000</release_date>
 	<short_description>Engine stub. Not playable.</short_description>
 	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
 
-This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map streams a tag set of 23 MiB minus one page. Path search starts on one collision surface. A vehicle seat can be entered. The full Xbox cache is not mapped. No game data is included.
+This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map streams a 23 MiB tag set. Path search crosses one edge onto a second surface. Entering a vehicle starts the seat-enter animation. The Xbox cache address is not mapped. No game data is included.
 
 Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
 

@@ -93,3 +93,16 @@
 		fill_campaign(285, _hs_type_void, 1, _hs_type_boolean, "ai_grenades");
 		fill_campaign2(336, _hs_type_void, _hs_type_vehicle, _hs_type_boolean, "vehicle_hover");
 		fill_campaign(338, _hs_type_void, 1, _hs_type_boolean, "player_enable_input");
+		fill_campaign2(136, _hs_type_void, _hs_type_device, _hs_type_boolean, "device_set_never_appears_locked");
+		fill_campaign2(145, _hs_type_void, _hs_type_device, _hs_type_boolean, "device_one_sided_set");
+		fill_campaign2(146, _hs_type_void, _hs_type_device, _hs_type_boolean, "device_operates_automatically_set");
+		fill_campaign(153, _hs_type_void, 0, _hs_type_void, "cheat_active_camouflage");
+		fill_campaign(155, _hs_type_void, 0, _hs_type_void, "cheats_load");
+		fill_campaign(165, _hs_type_void, 0, _hs_type_void, "ai_erase_all");
+		fill_campaign(167, _hs_type_void, 0, _hs_type_void, "ai_deselect");
+		fill_campaign(219, _hs_type_void, 0, _hs_type_void, "ai_reconnect");
+		fill_campaign(257, _hs_type_enum_game_difficulty, 0, _hs_type_void, "game_difficulty_get");
+		fill_campaign(258, _hs_type_enum_game_difficulty, 0, _hs_type_void, "game_difficulty_get_real");
+		fill_campaign(306, _hs_type_boolean, 0, _hs_type_void, "game_all_quiet");
+		fill_campaign(307, _hs_type_boolean, 0, _hs_type_void, "game_safe_to_speak");
+		fill_campaign(308, _hs_type_boolean, 0, _hs_type_void, "game_is_cooperative");
