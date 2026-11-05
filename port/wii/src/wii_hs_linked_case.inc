@@ -774,6 +774,9 @@
 	case 353:
 		result = campaign_bool(player_control_action_test_move_relative_all_directions());
 		break;
+	case 410:
+		player_ui_activate_all_solo_levels();
+		break;
 	case 411:
 		player0_look_invert_pitch((boolean)arguments[0]);
 		break;

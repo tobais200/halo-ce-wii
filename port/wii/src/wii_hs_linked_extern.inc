@@ -358,6 +358,7 @@ boolean player_control_action_test_look_relative_right( void);
 boolean player_control_action_test_look_relative_all_directions( void);
 boolean player_control_action_test_move_relative_all_directions( void);
 void player0_look_invert_pitch( boolean invert);
+void player_ui_activate_all_solo_levels(void);
 boolean player0_look_pitch_is_inverted( void);
 boolean player0_joystick_set_is_normal( void);
 boolean hs_objects_can_see_object( long object_list_index, long object_index, real degrees);

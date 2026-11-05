@@ -10,6 +10,7 @@
 #include "wii_stream.h"
 
 #include "wii_mem.h"
+#include "wii_retail.h"
 #include "xdvdfs.h"
 
 #include "cache_file_formats.h"
@@ -640,27 +641,13 @@ void wii_stream_bringup(struct wii_stream_stats *stats)
 	uint8_t *window;
 	uint8_t *lz4_buffer;
 	uint8_t *catalog;
-	static char const *loose_dirs[] = {
-		"sd:/halo-ce/maps",
-		"sd:/apps/halo-ce/maps",
-		"sd:/maps",
-		"usb:/halo-ce/maps",
-		"usb:/maps",
-		0
-	};
-	static char const *iso_files[] = {
-		"sd:/halo-ce/game.iso",
-		"sd:/apps/halo-ce/game.iso",
-		"usb:/halo-ce/game.iso",
-		"usb:/game.iso",
-		0
-	};
 	int index;
 
 	if (!stats)
 		return;
 	memset(stats, 0, sizeof(*stats));
 	lz4_self_test(stats);
+	wii_retail_record(stats);
 
 	fatInitDefault();
 	if (!directory_open("sd:/"))
@@ -675,22 +662,30 @@ void wii_stream_bringup(struct wii_stream_stats *stats)
 	stats->mem2_window_ok = window && lz4_buffer && catalog;
 	if (!stats->mem2_window_ok) {
 		add_line(stats, "MEM2 window allocation failed");
+		wii_retail_record(stats);
 		return;
 	}
 
 	if (stats->sd_mounted)
 		load_catalog(stats, catalog, lz4_buffer, WII_LZ4_CAPACITY);
 
-	for (index = 0; loose_dirs[index]; index++)
-		scan_loose_dir(loose_dirs[index], stats, lz4_buffer, WII_LZ4_CAPACITY);
-	for (index = 0; iso_files[index]; index++)
-		consider_iso(iso_files[index], stats, window, lz4_buffer, WII_LZ4_CAPACITY);
-	if (stats->sd_mounted)
-		scan_iso_dir("sd:/halo-ce", stats, window, lz4_buffer, WII_LZ4_CAPACITY);
-	if (stats->usb_mounted)
-		scan_iso_dir("usb:/halo-ce", stats, window, lz4_buffer, WII_LZ4_CAPACITY);
+	for (index = 0; index < wii_retail_loose_count(); index++)
+		scan_loose_dir(wii_retail_loose_dir(index), stats, lz4_buffer, WII_LZ4_CAPACITY);
+	/* A loose .map is the layout we can seek. Skip game.iso when one identified
+	   so a disc image past 2 GiB is never fseek'd. */
+	if (stats->maps_identified == 0) {
+		for (index = 0; index < wii_retail_iso_count(); index++)
+			consider_iso(wii_retail_iso_file(index), stats, window, lz4_buffer, WII_LZ4_CAPACITY);
+		if (stats->sd_mounted)
+			scan_iso_dir("sd:/halo-ce", stats, window, lz4_buffer, WII_LZ4_CAPACITY);
+		if (stats->usb_mounted)
+			scan_iso_dir("usb:/halo-ce", stats, window, lz4_buffer, WII_LZ4_CAPACITY);
+		if (stats->sd_mounted && stats->maps_identified == 0)
+			scan_iso_dir("sd:/apps/halo-ce", stats, window, lz4_buffer, WII_LZ4_CAPACITY);
+	}
 
-	if (!stats->line_count)
-		add_line(stats, "no map yet: sd:/halo-ce/maps or game.iso");
+	wii_retail_record(stats);
+	if (stats->retail_message[0])
+		add_line(stats, stats->retail_message);
 	store_catalog(stats, catalog, lz4_buffer, WII_LZ4_CAPACITY);
 }

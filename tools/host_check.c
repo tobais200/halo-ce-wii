@@ -7,6 +7,7 @@
 #include "cache_file_formats.h"
 #include "lz4.h"
 #include "wii_mem.h"
+#include "wii_retail.h"
 #include "wii_tex.h"
 unsigned char game_map_loaded(void);
 
@@ -131,6 +132,27 @@ int main(void)
 		return fail("tag cap is above the Xbox tag cache");
 	if (WII_TEXTURE_CAP_BYTES >= 0x1600000u)
 		return fail("texture cap is not below the Xbox texture cache");
+	{
+		struct wii_stream_stats retail;
+
+		memset(&retail, 0, sizeof(retail));
+		if (wii_retail_loose_count() < 1
+			|| !wii_retail_loose_dir(0)
+			|| strcmp(wii_retail_loose_dir(0), "sd:/apps/halo-ce/maps") != 0
+			|| wii_retail_iso_count() < 1
+			|| !wii_retail_iso_file(0)
+			|| strcmp(wii_retail_iso_file(0), "sd:/apps/halo-ce/game.iso") != 0)
+			return fail("retail map path probed");
+		wii_retail_record(&retail);
+		if (retail.retail_paths_probed < wii_retail_loose_count() + wii_retail_iso_count()
+			|| !retail.retail_missing_reported
+			|| !strstr(retail.retail_message, "No retail map"))
+			return fail("missing map reported");
+		retail.map_count = 1;
+		wii_retail_record(&retail);
+		if (!retail.retail_map_reported || retail.retail_missing_reported)
+			return fail("retail map path probed");
+	}
 
 	memset(header, 0, sizeof(header));
 	header[0] = 'h';

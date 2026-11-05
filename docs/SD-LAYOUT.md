@@ -4,22 +4,32 @@ The repository does not contain an ISO, a cache map, or any other Halo data. The
 
 ## English
 
-Copy `dist/apps/halo-ce/` to the card as `sd:/apps/halo-ce/` (`boot.dol`, `boot.elf`, `meta.xml`, `icon.png`).
-
-Put the game data in either of these places:
+Copy `dist/apps/halo-ce/` to the card as `sd:/apps/halo-ce/`:
 
 ```
-sd:/halo-ce/maps/*.map
-sd:/halo-ce/game.iso
+sd:/apps/halo-ce/boot.dol
+sd:/apps/halo-ce/boot.elf
+sd:/apps/halo-ce/meta.xml
+sd:/apps/halo-ce/icon.png
+sd:/apps/halo-ce/maps/README.txt
+```
+
+Put your own maps in the folder next to the app. Loose `.map` is preferred. `game.iso` is opened only when no loose map was identified.
+
+```
+sd:/apps/halo-ce/maps/*.map
+sd:/apps/halo-ce/game.iso
 ```
 
 Also searched, and the same names under `usb:`:
 
 ```
-sd:/apps/halo-ce/maps/*.map
+sd:/halo-ce/maps/*.map
 sd:/maps/*.map
+usb:/apps/halo-ce/maps/*.map
 usb:/halo-ce/maps/*.map
 usb:/maps/*.map
+usb:/apps/halo-ce/game.iso
 usb:/halo-ce/game.iso
 usb:/game.iso
 ```
@@ -47,16 +57,9 @@ Wiimote: D-pad selects, A draws, B returns from the view, HOME exits. Shaders ar
 
 El repositorio no lleva ISO, mapas ni otros datos de Halo. El DOL solo lee archivos de tu propia copia de Xbox de Halo: Combat Evolved.
 
-Copia `dist/apps/halo-ce/` a la tarjeta como `sd:/apps/halo-ce/`.
+Copia `dist/apps/halo-ce/` a la tarjeta como `sd:/apps/halo-ce/` (`boot.dol`, `boot.elf`, `meta.xml`, `icon.png`, `maps/README.txt`).
 
-Los datos del juego:
-
-```
-sd:/halo-ce/maps/*.map
-sd:/halo-ce/game.iso
-```
-
-También se buscan `sd:/apps/halo-ce/maps`, `sd:/maps` y las mismas rutas en `usb:`. Un `.iso` tiene que ser una imagen XDVDFS. El offset máximo de lectura es 2 GiB con este toolchain; los `.map` sueltos son la forma fiable.
+Los `.map` sueltos van en `sd:/apps/halo-ce/maps/`. `game.iso` solo se abre si no se identificó ningún `.map`. También se buscan `sd:/halo-ce/maps`, `sd:/maps` y las mismas rutas en `usb:`. Un `.iso` tiene que ser una imagen XDVDFS. El offset máximo de lectura es 2 GiB con este toolchain; los `.map` sueltos son la forma fiable.
 
 Si `ui` está en la tarjeta, el DOL lo abre y dibuja el widget DeLa, incluidos los glifos de su lista de texto con la fuente del cache. Un botón con manejador de evento abre el widget, vuelve, mueve la lista o lanza un id de campaña escrito en el script del manejador. Las demás funciones de evento quedan sin enlazar.
 

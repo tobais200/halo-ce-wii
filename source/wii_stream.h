@@ -29,6 +29,10 @@ struct wii_stream_stats {
 	int maps_seen;
 	int maps_identified;
 	int seek_rejected;
+	int retail_paths_probed;
+	int retail_missing_reported;
+	int retail_map_reported;
+	char retail_message[WII_STREAM_LINE_BYTES];
 	int directory_skipped;
 	uint32_t bytes_from_media;
 	uint32_t bytes_from_lz4;

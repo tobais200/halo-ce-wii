@@ -32,9 +32,9 @@ Measured with `powerpc-eabi-size` / `powerpc-eabi-readelf` on the `boot.elf` pro
 
 | Section | Bytes |
 | --- | --- |
-| `boot.dol` file | 1957312 |
-| `powerpc-eabi-size` text | 1558604 |
-| `powerpc-eabi-size` data | 398394 |
+| `boot.dol` file | 1958016 |
+| `powerpc-eabi-size` text | 1559132 |
+| `powerpc-eabi-size` data | 398558 |
 | `powerpc-eabi-size` bss | 1817056 |
 
 `.bss` includes libogc (`memb_mem_pool_pbufs` 0x32280, `s_mainStack` 0x20000, `ram_block` 0x10010) and the script VM's fixed buffers: the retail node array (`0x38 + 19001 * 0x14` = 380076 bytes), 64 KiB of script strings, and the script and global tables (512 records each). Thread storage (`0x100 * 0x218`) and the global datum array (`0x400 * 8`) are `malloc`'d when a map's scripts mount, on the MEM1 heap. The 256 KiB stream window is still allocated at runtime from MEM2. `objects_initialize` also `malloc`s the object pool at the Xbox size, 1 MiB (`0x100000`), instead of the desktop 8 MiB. That pool is not in `.bss`. A MEM1 `malloc` of 1 MiB can still fail once the DOL, framebuffers, and script VM are up; this tree was not booted on hardware, so that failure is not measured. The tag working set is a separate 23 MiB block from MEM2 (`wii_mem2_alloc`). Mount allocates that block and clears it, which is the Xbox cache size, then fills the rest of that block with the pixel slab. The host check rejects a larger cap, requires the mounted arena to be exactly 23 MiB, and requires the resident fill to come within 16 bytes of that cap. The fixed Xbox address `0x803A6000` is not mapped. A structure collision BSP gets its own 4 MiB MEM2 arena and is copied only when the whole tree fits. Tag bytes copied into the arena are the streamed set, not a retail cache image. `.bss` also holds four actor-debug records (`4 × 0x657c`) so `actor_new` can clear the record for the first spawned actors.
@@ -45,9 +45,9 @@ Measured with `powerpc-eabi-size` / `powerpc-eabi-readelf` on the `boot.elf` pro
 
 The menu can draw the first structure BSP with one cache bitmap, and a DeLa screen composited into a 256×256 RGBA buffer in MEM2 (a second buffer holds the bitmap being decoded). Resident BSP geometry stays at 3072 vertices and 4096 triangles. The GX texture is at most 256×256 RGBA8 in MEM1 (`WII_GX_TEXTURE_BYTES`) because the GPU does not read MEM2. Decode follows OpenCE `xbox_textures.c` for bitmap formats 0–3, 6, 8–11, and 14–16. See [SD-LAYOUT.md](SD-LAYOUT.md).
 
-Loose maps: `sd:/halo-ce/maps/*.map`, `sd:/apps/halo-ce/maps`, `sd:/maps`, and the same under `usb:`.
+Loose maps, first: `sd:/apps/halo-ce/maps/*.map`, then `sd:/halo-ce/maps`, `sd:/maps`, and the same under `usb:`.
 
-XISO: `sd:/halo-ce/game.iso` (also `usb:/halo-ce/game.iso` and `*.iso` directly inside `sd:/halo-ce` or `usb:/halo-ce`). The Xbox volume descriptor is read at byte `0x10000`. Directories bigger than the 256 KiB window are skipped. Only `.map` headers are identified.
+XISO is opened only when no loose map was identified: `sd:/apps/halo-ce/game.iso`, then `sd:/halo-ce/game.iso` (also the `usb:` names, and `*.iso` directly inside `sd:/halo-ce`, `usb:/halo-ce`, or `sd:/apps/halo-ce`). The Xbox volume descriptor is read at byte `0x10000`. Directories bigger than the 256 KiB window are skipped. Only `.map` headers are identified.
 
 LZ4 (Yann Collet's library, `third_party/lz4`) compresses that 2 KiB header into `sd:/halo-ce/cache/chunks/<name>/<offset>.lz4` and the on-screen lines into `sd:/halo-ce/cache/catalog.lz4`. The next boot can decompress the header instead of reading it again. The rest of the map is not written to the cache and is not loaded.
 
@@ -63,6 +63,6 @@ La pantalla imprime el techo y luego el tamaño real de las arenas. Esas arenas 
 
 No se llama a `custom_edition_cache_load` ni a `physical_memory_allocate`. El primero pide 23 MiB de tags y puede reservar un BSP entero. El segundo usa direcciones fijas de Xbox dentro de MEM1.
 
-El `boot.dol` de esta compilación pesa 1957312 bytes. El `.bss` es de 1817056 bytes: libogc/BTE más el arreglo fijo de 19001 nodos de script (380076 bytes) y 64 KiB de cadenas. Los hilos de script se piden con `malloc` al montar un mapa. El pool de objetos es otro `malloc`, de 1 MiB (el tamaño de Xbox, no los 8 MiB de escritorio). Cabe en el techo de MEM1 solo si el heap todavía tiene ese bloque; esta compilación no se arrancó en hardware. El conjunto de tags es un bloque de 23 MiB en MEM2, reservado y puesto a cero al montar. La dirección de Xbox `0x803A6000` no se mapea. El BSP de colisión tiene otro bloque de 4 MiB y solo se copia si el árbol cabe entero. El `.bss` también guarda cuatro registros de depuración de actores (`4 × 0x657c`) para que `actor_new` pueda limpiar el registro de los primeros actores.
+El `boot.dol` de esta compilación pesa 1958016 bytes. El `.bss` es de 1817056 bytes: libogc/BTE más el arreglo fijo de 19001 nodos de script (380076 bytes) y 64 KiB de cadenas. Los hilos de script se piden con `malloc` al montar un mapa. El pool de objetos es otro `malloc`, de 1 MiB (el tamaño de Xbox, no los 8 MiB de escritorio). Cabe en el techo de MEM1 solo si el heap todavía tiene ese bloque; esta compilación no se arrancó en hardware. El conjunto de tags es un bloque de 23 MiB en MEM2, reservado y puesto a cero al montar. La dirección de Xbox `0x803A6000` no se mapea. El BSP de colisión tiene otro bloque de 4 MiB y solo se copia si el árbol cabe entero. El `.bss` también guarda cuatro registros de depuración de actores (`4 × 0x657c`) para que `actor_new` pueda limpiar el registro de los primeros actores.
 
 La lectura es por trozos. El menú puede dibujar el primer structure BSP, con tope de 3072 vértices y 4096 triángulos (unos 72 KiB en MEM2). El resto del BSP sigue en la tarjeta. Solo la cabecera de 2 KiB se guarda comprimida con LZ4 en `sd:/halo-ce/cache/`. `fseek` aquí es de 32 bits: un offset por encima de 2 GiB se rechaza.

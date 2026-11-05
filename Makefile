@@ -180,7 +180,7 @@ host-check: $(OPENCE_GEN)
 		-I$(CURDIR)/third_party/OpenCE/source/cseries \
 		-c $(CURDIR)/port/wii/src/wii_link_stubs.c -o $(CURDIR)/build/wii_link_stubs_host.o
 	gcc -m32 -std=c11 -Wall -Wextra -I$(CURDIR)/third_party/OpenCE/port/linux/game -I$(CURDIR)/third_party/lz4 -I$(CURDIR)/source \
-		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/bsp_preview.c $(CURDIR)/source/wii_tex.c $(CURDIR)/source/wii_widget.c $(CURDIR)/source/wii_sim.c $(CURDIR)/source/wii_hud.c \
+		$(CURDIR)/tools/host_check.c $(OPENCE_GEN) $(CURDIR)/third_party/lz4/lz4.c $(CURDIR)/source/xdvdfs.c $(CURDIR)/source/wii_retail.c $(CURDIR)/source/bsp_preview.c $(CURDIR)/source/wii_tex.c $(CURDIR)/source/wii_widget.c $(CURDIR)/source/wii_sim.c $(CURDIR)/source/wii_hud.c \
 		$(CURDIR)/build/hs_runtime_host.o $(CURDIR)/build/data_host.o $(CURDIR)/build/wii_hs_host_host.o \
 		$(CURDIR)/build/wii_game_stubs_host.o $(CURDIR)/build/wii_player_spawn_host.o $(CURDIR)/build/wii_tag_cache_host.o $(CURDIR)/build/wii_collision_host.o $(CURDIR)/build/wii_effects_host.o $(CURDIR)/build/wii_play_host.o $(CURDIR)/build/wii_mesh_host.o $(CURDIR)/build/wii_link_stubs_host.o \
 		$(addprefix $(CURDIR)/build/,$(OPENCE_OBJS)) \
@@ -194,7 +194,9 @@ dist: $(BUILD)
 	@test -f $(TARGET).elf
 	@rm -rf $(DISTDIR)
 	@mkdir -p $(DISTDIR)
+	@mkdir -p $(DISTDIR)/maps
 	@cp -f $(TARGET).dol $(TARGET).elf meta.xml icon.png $(DISTDIR)/
+	@cp -f apps/halo-ce/maps/README.txt $(DISTDIR)/maps/README.txt
 	@echo "HBC layout: $(DISTDIR)/"
 
 #---------------------------------------------------------------------------------
