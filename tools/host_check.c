@@ -491,7 +491,7 @@ int main(void)
 				scale += sprites[index].z;
 			if (count < 1 || scale == before)
 				return fail("effect motion");
-			if (wii_hs_campaign_count() < 80)
+			if (wii_hs_campaign_count() < 200)
 				return fail("campaign scripts");
 			if (wii_save_checkpoint() != 0 || !wii_save_valid() || wii_save_restore() != 0)
 				return fail("checkpoint");
@@ -531,13 +531,28 @@ int main(void)
 				return fail("overlay or marker weapon");
 			if (wii_mesh_shader_count() < 2)
 				return fail("shader count");
-			wii_mesh_build(wii_game_player_unit());
-			if (wii_mesh_frame() < 1)
-				return fail("animation frame");
-			if (wii_play_firing_tested() < 8)
-				return fail("firing search");
+			{
+				float pose_x = wii_mesh_pose_x();
+				float pose_z = wii_mesh_pose_z();
+				float weapon_z = wii_mesh_weapon_z();
+
+				wii_mesh_build(wii_game_player_unit());
+				if (wii_mesh_frame() < 1)
+					return fail("animation frame");
+				if (wii_mesh_pose_x() == pose_x || wii_mesh_pose_z() == pose_z)
+					return fail("animation keys");
+				if (wii_mesh_weapon_z() == weapon_z)
+					return fail("weapon marker");
+			}
+			if (wii_play_firing_tested() < 3 || wii_play_firing_index() != 2 || wii_play_firing_score() < 10.f)
+				return fail("firing position");
 			if (wii_seat_anim_frame(1, 5) != 5 || wii_seat_anim_frame(0, 5) != 0)
 				return fail("seat animation");
+			wii_play_set_seat(wii_game_player_unit());
+			if (wii_play_magic_seat() != 2)
+				return fail("seat label");
+			if (wii_tag_cache_scenery_count() < 1 || wii_tag_cache_vehicle_count() < 1)
+				return fail("scenery vehicle");
 			if (wii_play_grenade_definition() == -1 || wii_play_grenade_definition() != wii_tag_cache_grenade_projectile())
 				return fail("grenade projectile");
 			if (wii_play_grenades() < 1 || !wii_play_flank())

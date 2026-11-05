@@ -1,0 +1,179 @@
+short ai_scripting_conversation_line(
+	short conversation_index);
+short ai_scripting_conversation_status(
+	short conversation_index);
+void ai_scripting_vehicle_enterable_team(
+	long object_list_index,
+	short team);
+void ai_scripting_vehicle_enterable_actor_type(
+	long object_list_index,
+	short actor_type);
+void ai_scripting_vehicle_enterable_actors(
+	long vehicle_index,
+	long actor_list_index);
+void ai_scripting_vehicle_enterable_disable(
+	long vehicle_index);
+void ai_scripting_detach_unit(
+	long unit_index);
+void ai_scripting_attach_unit(
+	long unit_index,
+	long ai_reference);
+void ai_scripting_magically_see_unit(
+	long ai_reference,
+	long unit_index);
+void ai_scripting_go_to_vehicle(
+	long ai_reference,
+	long unit_index,
+	char const *seat_substring_name);
+void ai_scripting_go_to_vehicle_override(
+	long ai_reference,
+	long unit_index,
+	char const *seat_substring_name);
+void ai_scripting_maneuver(
+	long ai_reference);
+void ai_scripting_maneuver_enable(
+	long ai_reference,
+	boolean enable);
+void ai_scripting_migrate_by_unit(
+	long object_list_index,
+	long target_ai_reference);
+void ai_scripting_migrate_and_speak(
+	long source_ai_reference,
+	long target_ai_reference,
+	char const *speech_type);
+void ai_scripting_allegiance_remove(
+	short team_a,
+	short team_b);
+void ai_scripting_berserk(
+	long ai_reference,
+	boolean berserk);
+void ai_scripting_playfight(
+	long ai_reference,
+	boolean playfight);
+void ai_scripting_braindead(
+	long ai_reference,
+	boolean braindead);
+void ai_scripting_allow_charge(
+	long ai_reference,
+	boolean allow);
+void ai_scripting_allow_dormant(
+	long ai_reference,
+	boolean allow);
+void ai_scripting_automatic_migration_target(
+	long ai_reference,
+	boolean automatic);
+void ai_scripting_follow_target_unit(
+	long ai_reference,
+	long unit_index);
+void ai_scripting_follow_target_ai(
+	long ai_reference,
+	long target_ai_reference);
+void ai_scripting_force_active(
+	long ai_reference,
+	boolean force);
+void ai_scripting_set_respawn(
+	long ai_reference,
+	boolean respawn);
+void ai_scripting_set_deaf(
+	long ai_reference,
+	boolean deaf);
+void ai_scripting_set_blind(
+	long ai_reference,
+	boolean blind);
+short ai_scripting_swarm_count(
+	long ai_reference);
+short ai_scripting_nonswarm_count(
+	long ai_reference);
+real ai_scripting_living_fraction(
+	long ai_reference);
+real ai_scripting_strength(
+	long ai_reference);
+short ai_scripting_going_to_vehicle(
+	long ai_reference);
+void ai_scripting_migrate(
+	long source_ai_index,
+	long destination_ai_index);
+void ai_scripting_vehicle_encounter(
+	long unit_index,
+	long ai_reference);
+void ai_scripting_allegiance(
+	short team_index0,
+	short team_index1);
+void ai_scripting_conversation_stop(
+	short conversation_index);
+void ai_scripting_conversation_advance(
+	short conversation_index);
+void ai_scripting_stop_looking(
+	long ai_index);
+void ai_scripting_braindead_by_unit(
+	long object_list_index,
+	boolean braindead);
+void ai_scripting_force_active_by_unit(
+	long unit_index,
+	boolean force);
+void ai_scripting_attach_free(
+	long unit_index,
+	long actor_variant_definition_index);
+void ai_scripting_try_to_fight(
+	long ai_reference,
+	long target_ai_reference);
+void ai_scripting_set_return_state(
+	long ai_reference,
+	short default_state);
+void ai_scripting_magically_see_encounter(
+	long ai_reference,
+	long target_ai_reference);
+void ai_scripting_link_activation(
+	long ai_reference,
+	long link_ai_reference);
+void ai_scripting_free_units(
+	long object_list_index);
+void ai_scripting_set_current_state(
+	long ai_reference,
+	short current_state);
+void ai_scripting_command_list(
+	long ai_reference,
+	short command_list_index);
+void ai_scripting_command_list_by_unit(
+	long unit_index,
+	short command_list_index);
+void ai_scripting_ignore(
+	long object_list_index,
+	boolean ignore);
+void ai_scripting_prefer_target(
+	long object_list_index,
+	boolean prefer);
+void ai_scripting_teleport_starting_location_if_unsupported(
+	long ai_reference);
+void ai_scripting_look_at_object(
+	long unit_index,
+	long object_index);
+void ai_scripting_command_list_advance_by_unit(
+	long unit_index);
+short ai_scripting_command_list_status(
+	long ai_reference);
+long unit_scripting_unit_riders(
+	long unit_index);
+void unit_scripting_set_seat(
+	long unit_index,
+	char const *seat_label);
+long unit_scripting_unit_driver(
+	long unit_index);
+long unit_scripting_unit_gunner(
+	long unit_index);
+void unit_scripting_exit_vehicle(
+	long unit_index);
+void unit_scripting_can_blink(
+	long unit_index,
+	boolean can_blink);
+void unit_scripting_doesnt_drop_items(
+	long object_list_index);
+void unit_scripting_set_emotion_animation(long unit_index, char const *animation_name);
+void unit_scripting_suspended(
+	long unit_index,
+	boolean suspended);
+void unit_scripting_enter_vehicle(
+	long unit_index,
+	long vehicle_index,
+	char const *seat_name);
+void object_scripting_set_collideable(long object_index, boolean collideable);

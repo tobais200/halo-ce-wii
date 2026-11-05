@@ -21,11 +21,11 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Chapter titles are still the scenario name, rasterized with font glyphs. `object_cannot_take_damage`, `unit_set_current_vitality`, `device_get_power`, and `player_effect_start` now have evaluators. Most other script functions are still unlinked.
-- Up to sixteen `snd!` tags decode into one 16384-sample buffer. The tag working set is 5 MiB. Two shader bitmaps are read.
-- The animation clock advances every mesh build. Overlay and replacement receive that frame when the tag has more than one frame. The weapon's world model, when the tag has one, is drawn on the `weapon` marker.
-- Firing search checks eight positions. Grenades still use the grenade projectile tag. Seat entry sets animation frame `tick % 8`. It is not the solver inside `actor_combat.c`.
-- Bink and the network stack are not linked. The OpenGL rasterizer is not compiled.
+- Sixty-seven more campaign calls now run the OpenCE functions already in the link (`ai_scripting_*`, `unit_scripting_*`, `object_scripting_set_collideable`), including `unit_set_seat` and `unit_enter_vehicle`. Chapter titles, devices, HUD, and the earlier AI calls stay. The rest of the 425-function table is still the unlinked evaluator. `actor_firing_position.c` is not linked.
+- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 20 MiB. Scenery and vehicle placements are copied (16 and 8). Two shader references are read, and a weapon triangle uses the bitmap's second pixel when the bitmap is wider than one pixel.
+- Base, replacement, and overlay are applied in that order before the node matrices are built. The synthetic overlay and replacement each have four frames of translation keys, so the clock moves the node. The weapon mesh is parented to the `weapon` marker's node matrix.
+- Firing picks the encounter firing position with the attack-evaluator split: a clear line scores 15, a blocked line is rejected, and a nearer clear spot wins. Grenades still use the grenade projectile tag. `unit_scripting_set_seat` sets the stand seat. It is not `actor_select_firing_position`.
+- Bink and the network stack are not linked. The OpenGL rasterizer is not compiled. Both would pull desktop GL, the Bink SDK, and a network stack that do not fit this GX build.
 
 ### Later, each one blocked until the previous exists
 

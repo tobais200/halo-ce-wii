@@ -25,7 +25,7 @@
 /* Ceilings for a later full renderer. The BSP preview below is what this
    build actually allocates. Xbox tag cache is 22 MiB, desktop texture cache
    is 256 MiB, desktop sound cache is 16 MiB. */
-#define WII_TAG_RESIDENT_CAP_BYTES (8u * 1024u * 1024u)
+#define WII_TAG_RESIDENT_CAP_BYTES (20u * 1024u * 1024u)
 #define WII_TEXTURE_CAP_BYTES (8u * 1024u * 1024u)
 #define WII_SOUND_CAP_BYTES (2u * 1024u * 1024u)
 #define WII_MEM2_GUARD_BYTES (1u * 1024u * 1024u)

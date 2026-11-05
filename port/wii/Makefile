@@ -43,8 +43,8 @@ opence:
 	@echo "  projectile, equipment, grenade, and major-upgrade tags are resident"
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
 	@echo "  effect_new decodes a contrail bitmap; GX draws particles and the contrail"
-	@echo "  animation-graph skinning draws the biped and the first-person weapon"
-	@echo "  actors throw one grenade; the first snd! tag is IMA-decoded"
+	@echo "  animation-graph skinning applies base, replacement, and overlay keys"
+	@echo "  actors score encounter firing positions; up to 32 snd! tags are IMA-decoded"
 	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:

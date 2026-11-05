@@ -21,6 +21,7 @@
 #include "hs/object_lists.h"
 #include "scenario/scenario_definitions.h"
 #include "objects/objects.h"
+#include "ai/ai_script.h"
 #include "physics/collisions.h"
 #include "render/render.h"
 #include "ai/ai_debug_scripting.h"
@@ -265,6 +266,7 @@ short ai_scripting_living_count(long ai_reference);
 short ai_scripting_status(long ai_reference);
 boolean ai_scripting_is_attacking(long ai_reference);
 extern struct data_array *actor_data;
+#include "wii_hs_linked_extern.inc"
 
 static uint16_t le16(uint8_t const *bytes)
 {
@@ -328,6 +330,14 @@ static void fill_campaign3(int index, short return_type, short type0, short type
 	fill_campaign(index, return_type, 3, type0, name);
 	wii_slots[index].more_types[0] = type1;
 	wii_slots[index].more_types[1] = type2;
+}
+
+static void fill_campaign4(int index, short return_type, short type0, short type1, short type2, short type3, char const *name)
+{
+	fill_campaign(index, return_type, 4, type0, name);
+	wii_slots[index].more_types[0] = type1;
+	wii_slots[index].more_types[1] = type2;
+	wii_slots[index].more_types[2] = type3;
 }
 
 static long campaign_bool(int value)
@@ -498,6 +508,7 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		wii_hud_shown = arguments[0] ? 1 : 0;
 		result = campaign_bool(wii_hud_shown);
 		break;
+#include "wii_hs_linked_case.inc"
 	default:
 		break;
 	}
@@ -603,6 +614,7 @@ static void wii_hs_table_init(void)
 		fill_campaign(137, _hs_type_real, 1, _hs_type_device, "device_get_power");
 		fill_campaign3(114, _hs_type_void, _hs_type_unit, _hs_type_real, _hs_type_real, "unit_set_current_vitality");
 		fill_campaign2(374, _hs_type_void, _hs_type_real, _hs_type_real, "player_effect_start");
+#include "wii_hs_linked_fill.inc"
 	}
 	wii_table_ready = 1;
 }

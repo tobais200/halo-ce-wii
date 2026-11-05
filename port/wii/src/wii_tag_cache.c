@@ -1,7 +1,7 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (at most 5 MiB, inside the
- * 8 MiB resident cap) and byte-swaps it. Structure BSPs are not copied.
+ * stays on the card. This copies a working set (at most 20 MiB, the
+ * resident cap) and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
 #include "game/game_globals.h"
@@ -41,7 +41,7 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = 5u << 20,
+	WII_TAG_ARENA = 20u << 20,
 	WII_TAG_CAP_PLAYERS = 16,
 	WII_TAG_CAP_WEAPONS = 8,
 	WII_TAG_CAP_ENCOUNTERS = 16,
@@ -84,6 +84,8 @@ static struct biped_definition *native_biped;
 static int weapon_published;
 static int encounter_published;
 static int location_published;
+static int scenery_published;
+static int vehicle_published;
 static int magazine_rounds;
 static int grenade_count;
 static long grenade_projectile = -1;
@@ -1208,6 +1210,47 @@ static int load_variant(int slot)
 	return 0;
 }
 
+static int publish_placements(uint32_t scenario_va, uint32_t block_offset, uint32_t stride, int cap, struct tag_block *out, int *published)
+{
+	uint8_t block[8];
+	int count;
+	uint32_t address;
+	struct scenario_object_datum *placed;
+	int index;
+
+	*published = 0;
+	out->count = 0;
+	out->address = NULL;
+	if (pull_va(scenario_va + block_offset, block, 8) != 0)
+		return 0;
+	count = read_les32(block);
+	address = read_le32(block + 4);
+	if (count < 0)
+		count = 0;
+	if (count > cap)
+		count = cap;
+	if (count < 1)
+		return 0;
+	placed = bump((uint32_t)count * sizeof(*placed));
+	if (!placed)
+		return -1;
+	for (index = 0; index < count; index++) {
+		uint8_t raw[0x28];
+
+		if (stride < sizeof(raw) || pull_va(address + (uint32_t)index * stride, raw, sizeof(raw)) != 0)
+			return -1;
+		placed[index].palette_entry_index = read_les16(raw);
+		placed[index].name_index = NONE;
+		placed[index].position.x = read_lef(raw + 8);
+		placed[index].position.y = read_lef(raw + 12);
+		placed[index].position.z = read_lef(raw + 16);
+	}
+	out->count = count;
+	out->address = placed;
+	*published = count;
+	return 0;
+}
+
 static int load_scenario(int slot)
 {
 	struct scenario *scenario;
@@ -1383,12 +1426,44 @@ static int load_scenario(int slot)
 				}
 				encounters[index].squads.count = squad_count;
 				encounters[index].squads.address = squads;
+				{
+					int fp_count = read_les32(raw + offsetof(struct encounter_definition, firing_positions));
+					uint32_t fp_va = read_le32(raw + offsetof(struct encounter_definition, firing_positions) + 4);
+					struct firing_position_definition *positions;
+					int fp_index;
+
+					if (fp_count < 0)
+						fp_count = 0;
+					if (fp_count > 8)
+						fp_count = 8;
+					positions = fp_count ? bump((uint32_t)fp_count * sizeof(*positions)) : NULL;
+					if (fp_count && !positions)
+						return -1;
+					for (fp_index = 0; fp_index < fp_count; fp_index++) {
+						uint8_t fp_raw[sizeof(struct firing_position_definition)];
+
+						if (pull_va(fp_va + (uint32_t)fp_index * sizeof(fp_raw), fp_raw, sizeof(fp_raw)) != 0)
+							return -1;
+						positions[fp_index].position.x = read_lef(fp_raw);
+						positions[fp_index].position.y = read_lef(fp_raw + 4);
+						positions[fp_index].position.z = read_lef(fp_raw + 8);
+						positions[fp_index].group_index = read_les16(fp_raw + 12);
+						positions[fp_index].cluster_index = read_les16(fp_raw + 14);
+						positions[fp_index].surface_index = read_les32(fp_raw + 20);
+					}
+					encounters[index].firing_positions.count = fp_count;
+					encounters[index].firing_positions.address = positions;
+				}
 			}
 			scenario->ai_encounters.count = count;
 			scenario->ai_encounters.address = encounters;
 			encounter_published = count;
 		}
 	}
+	if (publish_placements(slots[slot].base_va, offsetof(struct scenario, scenery), 0x48u, 16, &scenario->scenery, &scenery_published) != 0)
+		return -1;
+	if (publish_placements(slots[slot].base_va, offsetof(struct scenario, vehicles), 0x4cu, 8, &scenario->vehicles, &vehicle_published) != 0)
+		return -1;
 	if (pull_va(slots[slot].base_va + offsetof(struct scenario, ai_actor_palette), block, 8) == 0) {
 		int palette_count = read_les32(block);
 		uint32_t palette_va = read_le32(block + 4);
@@ -1556,6 +1631,8 @@ void wii_tag_cache_unmount(void)
 	weapon_published = 0;
 	encounter_published = 0;
 	location_published = 0;
+	scenery_published = 0;
+	vehicle_published = 0;
 	magazine_rounds = 0;
 	grenade_count = 0;
 	grenade_projectile = -1;
@@ -1596,6 +1673,16 @@ int wii_tag_cache_encounter_count(void)
 int wii_tag_cache_location_count(void)
 {
 	return location_published;
+}
+
+int wii_tag_cache_scenery_count(void)
+{
+	return scenery_published;
+}
+
+int wii_tag_cache_vehicle_count(void)
+{
+	return vehicle_published;
 }
 
 int wii_tag_cache_magazine_rounds(void)
@@ -1800,6 +1887,13 @@ int wii_tag_cache_self_test(void)
 	uint32_t marker_at;
 	uint32_t marker_inst_at;
 	uint32_t default_at;
+	uint32_t overlay_keys_at;
+	uint32_t replace_keys_at;
+	uint32_t firing_at;
+	uint32_t scenery_at;
+	uint32_t scenery_pal_at;
+	uint32_t vehicle_at;
+	uint32_t vehicle_pal_at;
 	uint32_t weapon_def_at;
 	uint32_t variant_at;
 	uint32_t actor_at;
@@ -1907,6 +2001,20 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct animation);
 	default_at = cursor;
 	cursor += 24u;
+	overlay_keys_at = cursor;
+	cursor += 48u;
+	replace_keys_at = cursor;
+	cursor += 48u;
+	firing_at = cursor;
+	cursor += 72u;
+	scenery_at = cursor;
+	cursor += 0x48u;
+	scenery_pal_at = cursor;
+	cursor += 16u;
+	vehicle_at = cursor;
+	cursor += 0x4cu;
+	vehicle_pal_at = cursor;
+	cursor += 16u;
 	weapon_def_at = cursor;
 	cursor += sizeof(struct weapon_definition);
 	variant_at = cursor;
@@ -2045,6 +2153,43 @@ int wii_tag_cache_self_test(void)
 	put_u16(file + encounter_at + offsetof(struct encounter_definition, team_index), 1);
 	put_u32(file + encounter_at + offsetof(struct encounter_definition, squads), 1);
 	put_u32(file + encounter_at + offsetof(struct encounter_definition, squads) + 4, TAG_BASE + squad_at);
+	put_u32(file + encounter_at + offsetof(struct encounter_definition, firing_positions), 3);
+	put_u32(file + encounter_at + offsetof(struct encounter_definition, firing_positions) + 4, TAG_BASE + firing_at);
+	put_f32(file + firing_at, 7.5f);
+	put_f32(file + firing_at + 4, 2.5f);
+	put_f32(file + firing_at + 8, 3.5f);
+	put_f32(file + firing_at + 24, 1.5f);
+	put_f32(file + firing_at + 28, 8.5f);
+	put_f32(file + firing_at + 32, 3.5f);
+	put_f32(file + firing_at + 48, 1.9f);
+	put_f32(file + firing_at + 52, 2.7f);
+	put_f32(file + firing_at + 56, 3.5f);
+	put_u32(file + scenario_at + offsetof(struct scenario, scenery), 1);
+	put_u32(file + scenario_at + offsetof(struct scenario, scenery) + 4, TAG_BASE + scenery_at);
+	put_u16(file + scenery_at, 0);
+	put_f32(file + scenery_at + 8, 4.f);
+	put_f32(file + scenery_at + 12, 5.f);
+	put_f32(file + scenery_at + 16, 3.5f);
+	put_u32(file + scenario_at + offsetof(struct scenario, scenery_palette), 1);
+	put_u32(file + scenario_at + offsetof(struct scenario, scenery_palette) + 4, TAG_BASE + scenery_pal_at);
+	file[scenery_pal_at] = 'b';
+	file[scenery_pal_at + 1] = 'i';
+	file[scenery_pal_at + 2] = 'p';
+	file[scenery_pal_at + 3] = 'd';
+	put_u32(file + scenery_pal_at + 12, datum[2]);
+	put_u32(file + scenario_at + offsetof(struct scenario, vehicles), 1);
+	put_u32(file + scenario_at + offsetof(struct scenario, vehicles) + 4, TAG_BASE + vehicle_at);
+	put_u16(file + vehicle_at, 0);
+	put_f32(file + vehicle_at + 8, 6.f);
+	put_f32(file + vehicle_at + 12, 6.f);
+	put_f32(file + vehicle_at + 16, 3.5f);
+	put_u32(file + scenario_at + offsetof(struct scenario, vehicle_palette), 1);
+	put_u32(file + scenario_at + offsetof(struct scenario, vehicle_palette) + 4, TAG_BASE + vehicle_pal_at);
+	file[vehicle_pal_at] = 'b';
+	file[vehicle_pal_at + 1] = 'i';
+	file[vehicle_pal_at + 2] = 'p';
+	file[vehicle_pal_at + 3] = 'd';
+	put_u32(file + vehicle_pal_at + 12, datum[2]);
 	memcpy(file + squad_at, "squad", 5);
 	put_u32(file + squad_at + offsetof(struct squad_definition, flags), 0);
 	put_u16(file + squad_at + offsetof(struct squad_definition, actor_palette_index), 0);
@@ -2225,16 +2370,32 @@ int wii_tag_cache_self_test(void)
 	put_u16(file + class_anim_at, 0);
 	put_u32(file + graph_at + offsetof(struct animation_graph, animations), 3);
 	put_u32(file + graph_at + offsetof(struct animation_graph, animations) + 4, TAG_BASE + anim_at);
-	put_u16(file + anim_at + offsetof(struct animation, frame_count), 1);
+	put_u16(file + anim_at + offsetof(struct animation, frame_count), 4);
 	put_u16(file + anim_at + offsetof(struct animation, node_count), 1);
 	put_u32(file + anim_at + offsetof(struct animation, default_data), 24);
 	put_u32(file + anim_at + offsetof(struct animation, default_data) + 12, TAG_BASE + default_at);
 	memcpy(file + overlay_at, file + anim_at, sizeof(struct animation));
 	put_u16(file + overlay_at + offsetof(struct animation, type), 1);
-	put_u16(file + overlay_at + offsetof(struct animation, frame_count), 2);
+	put_u16(file + overlay_at + offsetof(struct animation, frame_count), 4);
+	put_u16(file + overlay_at + offsetof(struct animation, frame_size), 12);
+	put_u32(file + overlay_at + offsetof(struct animation, nodes_with_translation_flags), 1);
+	put_u32(file + overlay_at + offsetof(struct animation, data), 48);
+	put_u32(file + overlay_at + offsetof(struct animation, data) + 12, TAG_BASE + overlay_keys_at);
 	memcpy(file + replace_at, file + anim_at, sizeof(struct animation));
 	put_u16(file + replace_at + offsetof(struct animation, type), 2);
-	put_u16(file + replace_at + offsetof(struct animation, frame_count), 2);
+	put_u16(file + replace_at + offsetof(struct animation, frame_count), 4);
+	put_u16(file + replace_at + offsetof(struct animation, frame_size), 12);
+	put_u32(file + replace_at + offsetof(struct animation, nodes_with_translation_flags), 1);
+	put_u32(file + replace_at + offsetof(struct animation, data), 48);
+	put_u32(file + replace_at + offsetof(struct animation, data) + 12, TAG_BASE + replace_keys_at);
+	put_f32(file + overlay_keys_at + 0, 0.f);
+	put_f32(file + overlay_keys_at + 12, 0.08f);
+	put_f32(file + overlay_keys_at + 24, 0.16f);
+	put_f32(file + overlay_keys_at + 36, 0.24f);
+	put_f32(file + replace_keys_at + 8, 0.10f);
+	put_f32(file + replace_keys_at + 20, 0.25f);
+	put_f32(file + replace_keys_at + 32, 0.40f);
+	put_f32(file + replace_keys_at + 44, 0.55f);
 	put_u16(file + default_at + 6, 32767);
 	put_u16(file + weapon_def_at, (uint16_t)_object_type_weapon);
 	put_f32(file + weapon_def_at + offsetof(struct weapon_definition, object.bounding_radius), 0.2f);

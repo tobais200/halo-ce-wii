@@ -41,6 +41,9 @@ static int shader_count;
 static uint8_t shader_pixels[32 * 32 * 4];
 static uint16_t shader_w;
 static uint16_t shader_h;
+static float pose_x;
+static float pose_z;
+static float weapon_z;
 
 static void quat_axes(float i, float j, float k, float w, float m[3][3])
 {
@@ -248,6 +251,26 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 	anim_frame = anim_tick % 4;
 	animation_get_node_orientations(model, anim,
 		(short)(anim->frame_count > 1 ? anim_frame % anim->frame_count : 0), orients);
+	if (graph->animations.count > 2) {
+		struct animation *replacement = anim + 2;
+
+		if (replacement->type == _animation_replacement) {
+			int frame = replacement->frame_count > 1 ? anim_frame % replacement->frame_count : 0;
+
+			replacement_animation_apply(replacement, (short)frame, orients);
+			replacement_used = 1;
+		}
+	}
+	if (graph->animations.count > 1) {
+		struct animation *overlay = anim + 1;
+
+		if (overlay->type == _animation_overlay) {
+			int frame = overlay->frame_count > 1 ? anim_frame % overlay->frame_count : 0;
+
+			overlay_animation_apply(overlay, (short)frame, orients);
+			overlay_used = 1;
+		}
+	}
 	limit = count < anim->node_count ? count : anim->node_count;
 	if (limit > 32)
 		limit = 32;
@@ -273,25 +296,9 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 			nodes[index] = local;
 		animated = 1;
 	}
-	if (graph->animations.count > 1) {
-		struct animation *overlay = anim + 1;
-
-		if (overlay->type == _animation_overlay) {
-			int frame = overlay->frame_count > 1 ? anim_frame % overlay->frame_count : 0;
-
-			overlay_animation_apply(overlay, (short)frame, orients);
-			overlay_used = 1;
-		}
-	}
-	if (graph->animations.count > 2) {
-		struct animation *replacement = anim + 2;
-
-		if (replacement->type == _animation_replacement) {
-			int frame = replacement->frame_count > 1 ? anim_frame % replacement->frame_count : 0;
-
-			replacement_animation_apply(replacement, (short)frame, orients);
-			replacement_used = 1;
-		}
+	if (limit > 0) {
+		pose_x = nodes[0].x;
+		pose_z = nodes[0].z;
 	}
 	anim_tick++;
 	return animated;
@@ -391,16 +398,28 @@ static void skin_weapon(struct wii_mat const *nodes, int node_count, float yaw, 
 
 		if (wii_tag_cache_pull(model_va + offsetof(struct model, markers), marker_head, 8) == 0 && read_s32(marker_head) >= 1) {
 			uint8_t instances[8];
-			uint8_t point[12];
+			uint8_t instance[16];
 
 			if (wii_tag_cache_pull(read_u32(marker_head + 4) + 52, instances, 8) == 0 && read_s32(instances) >= 1
-				&& wii_tag_cache_pull(read_u32(instances + 4) + 4, point, 12) == 0) {
-				mx = read_f32(point);
-				my = read_f32(point + 4);
-				mz = read_f32(point + 8);
+				&& wii_tag_cache_pull(read_u32(instances + 4), instance, 16) == 0) {
+				int node = instance[2];
+				float lx = read_f32(instance + 4);
+				float ly = read_f32(instance + 8);
+				float lz = read_f32(instance + 12);
+				struct wii_mat const *joint = &nodes[0];
+
+				if (node >= 0 && node < node_count)
+					joint = &nodes[node];
+				mx = joint->m[0][0] * lx + joint->m[0][1] * ly + joint->m[0][2] * lz;
+				my = joint->m[1][0] * lx + joint->m[1][1] * ly + joint->m[1][2] * lz;
+				mz = joint->m[2][0] * lx + joint->m[2][1] * ly + joint->m[2][2] * lz;
+				weapon_z = oz + joint->z + mz;
 				marker_used = 1;
+				third_person = 1;
 			}
 		}
+		if (!marker_used)
+			weapon_z = oz + mz;
 		before = tri_count;
 		skin_part(read_u32(block + 4), nodes, node_count, yaw, ox + mx, oy + my, oz + mz);
 	}
@@ -532,6 +551,21 @@ int wii_mesh_third_person(void)
 int wii_mesh_shader_count(void)
 {
 	return shader_count;
+}
+
+float wii_mesh_pose_x(void)
+{
+	return pose_x;
+}
+
+float wii_mesh_pose_z(void)
+{
+	return pose_z;
+}
+
+float wii_mesh_weapon_z(void)
+{
+	return weapon_z;
 }
 
 int wii_mesh_hand(void)

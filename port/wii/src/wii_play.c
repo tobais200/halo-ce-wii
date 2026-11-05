@@ -4,7 +4,9 @@
  */
 #include "cseries/cseries.h"
 #include "ai/actors.h"
+#include "ai/ai_scenario_definitions.h"
 #include "objects/objects.h"
+#include "scenario/scenario_definitions.h"
 #include "sound/sound_definitions.h"
 #include "units/units.h"
 #include "wii_collision.h"
@@ -47,6 +49,8 @@ static int burst_left;
 static int grenades_thrown;
 static int used_flank;
 static int firing_tested;
+static int firing_index = -1;
+static float firing_score;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -241,45 +245,54 @@ static void actors_fight(long player_unit)
 		dz /= len;
 		{
 			struct unit_datum *soldier = unit_get(actor->meta.unit_index);
-			float flank_x = -dy;
-			float flank_y = dx;
-			float spots[8][2];
-			float origin_x;
-			float origin_y;
-			float scale;
-			int spot;
-			int choice = 2;
+			float origin_x = unit->object.position.x;
+			float origin_y = unit->object.position.y;
 			int stock;
+			struct scenario *scenario = wii_tag_cache_scenario();
+			struct encounter_definition *encounter;
+			struct firing_position_definition *positions;
+			int count = 0;
+			int spot;
+			float best_score = -1000.f;
+			int best = -1;
 
-			spots[0][0] = unit->object.position.x;
-			spots[0][1] = unit->object.position.y;
-			spots[1][0] = unit->object.position.x + flank_x * 1.2f;
-			spots[1][1] = unit->object.position.y + flank_y * 1.2f;
-			spots[2][0] = unit->object.position.x - flank_x * 1.2f;
-			spots[2][1] = unit->object.position.y - flank_y * 1.2f;
-			spots[3][0] = unit->object.position.x + flank_x * 2.4f;
-			spots[3][1] = unit->object.position.y + flank_y * 2.4f;
-			spots[4][0] = unit->object.position.x - flank_x * 2.4f;
-			spots[4][1] = unit->object.position.y - flank_y * 2.4f;
-			spots[5][0] = unit->object.position.x + dx * 1.5f;
-			spots[5][1] = unit->object.position.y + dy * 1.5f;
-			spots[6][0] = unit->object.position.x - dx * 1.5f;
-			spots[6][1] = unit->object.position.y - dy * 1.5f;
-			spots[7][0] = unit->object.position.x + flank_x * 0.6f;
-			spots[7][1] = unit->object.position.y + flank_y * 0.6f;
-			for (spot = 0; spot < 8; spot++) {
-				float sx = player->object.position.x - spots[spot][0];
-				float sy = player->object.position.y - spots[spot][1];
-
-				choice = spot;
-				if (!wii_collision_clip(spots[spot][0], spots[spot][1], unit->object.position.z + 0.7f,
-						sx, sy, dz * len, &scale, 0, 0, 0))
-					break;
+			if (scenario && scenario->ai_encounters.count > 0 && scenario->ai_encounters.address) {
+				encounter = scenario->ai_encounters.address;
+				count = encounter->firing_positions.count;
+				positions = encounter->firing_positions.address;
+				if (count > 8)
+					count = 8;
 			}
-			used_flank = choice + 1;
-			firing_tested = 8;
-			origin_x = spots[choice][0];
-			origin_y = spots[choice][1];
+			firing_tested = count;
+			for (spot = 0; spot < count && positions; spot++) {
+				float px = positions[spot].position.x;
+				float py = positions[spot].position.y;
+				float sx = player->object.position.x - px;
+				float sy = player->object.position.y - py;
+				float dist = sqrtf((px - unit->object.position.x) * (px - unit->object.position.x)
+					+ (py - unit->object.position.y) * (py - unit->object.position.y));
+				float scale;
+				int blocked = wii_collision_clip(px, py, unit->object.position.z + 0.7f,
+					sx, sy, dz * len, &scale, 0, 0, 0);
+				/* Same clear/reject split as post_evaluator_attack: a clear
+				   line scores 15, a blocked line is rejected. Nearer spots
+				   win when more than one line is clear. */
+				float score = blocked ? -100.f : 15.f - dist * 0.35f;
+
+				if (score > best_score) {
+					best_score = score;
+					best = spot;
+					origin_x = px;
+					origin_y = py;
+				}
+			}
+			if (best < 0) {
+				best = 0;
+				best_score = 0.f;
+			}
+			firing_index = best;
+			firing_score = best_score;
+			used_flank = best + 1;
 			if (wii_vehicle_seat_for(len)) {
 				long seat = NONE;
 				long other = NONE;
@@ -298,6 +311,7 @@ static void actors_fight(long player_unit)
 					soldier->unit.parent_seat_index = 0;
 					unit->object.animation.state.index = 0;
 					unit->object.animation.state.frame_index = (short)wii_seat_anim_frame(1, 1);
+					unit_scripting_set_seat(actor->meta.unit_index, "stand");
 					actor_wait = 8;
 					return;
 				}
@@ -466,6 +480,28 @@ int wii_play_firing_tested(void)
 	return firing_tested;
 }
 
+int wii_play_firing_index(void)
+{
+	return firing_index;
+}
+
+float wii_play_firing_score(void)
+{
+	return firing_score;
+}
+
+void wii_play_set_seat(long unit_index)
+{
+	unit_scripting_set_seat(unit_index, "stand");
+}
+
+int wii_play_magic_seat(void)
+{
+	struct unit_datum *unit = unit_get(wii_game_player_unit());
+
+	return unit ? unit->unit.magic_seat_index : -1;
+}
+
 int wii_seat_anim_frame(int seated, int tick)
 {
 	return seated && tick > 0 ? tick % 8 : 0;
@@ -484,7 +520,7 @@ static int ima_step[89] = {
 	15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
 };
 static int ima_index[16] = { -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8 };
-static int16_t decoded_pcm[16384];
+static int16_t decoded_pcm[32768];
 static int decoded_count;
 static int decoded_tags;
 
@@ -551,7 +587,7 @@ void wii_sound_load(uint32_t sound_va)
 	uint32_t sample_size;
 	uint32_t sample_va;
 
-	if (decoded_tags >= 16 || decoded_count >= 16384 || !sound_va)
+	if (decoded_tags >= 32 || decoded_count >= 32768 || !sound_va)
 		return;
 	if (wii_tag_cache_pull(sound_va + offsetof(struct sound_definition, pitch_ranges), block, 8) != 0)
 		return;
@@ -571,7 +607,7 @@ void wii_sound_load(uint32_t sound_va)
 		sample_size = sizeof(samples);
 	if (wii_tag_cache_pull(sample_va, samples, sample_size) != 0)
 		return;
-	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 16384 - decoded_count);
+	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 32768 - decoded_count);
 	if (decoded_count > 0)
 		decoded_tags++;
 }

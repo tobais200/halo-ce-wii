@@ -27,6 +27,8 @@ float wii_tag_cache_camera_height(void);
 int wii_tag_cache_weapon_count(void);
 int wii_tag_cache_encounter_count(void);
 int wii_tag_cache_location_count(void);
+int wii_tag_cache_scenery_count(void);
+int wii_tag_cache_vehicle_count(void);
 int wii_tag_cache_magazine_rounds(void);
 int wii_tag_cache_grenade_count(void);
 long wii_tag_cache_grenade_projectile(void);
