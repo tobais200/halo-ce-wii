@@ -1,0 +1,52 @@
+#include "wii_menu.h"
+
+#include <stdio.h>
+
+static unsigned kib(uint32_t bytes)
+{
+	return (unsigned)(bytes / 1024u);
+}
+
+void wii_menu_draw(
+	struct wii_stream_stats const *stats,
+	struct wii_ram_sample const *sample,
+	int selected,
+	char const *note)
+{
+	int index;
+
+	printf("\x1b[2J\x1b[2;0H");
+	printf("Halo CE Wii\n");
+	printf("MEM1 heap %u/%u KiB   MEM2 %u/%u KiB\n",
+		sample ? kib(sample->mem1_heap_used) : 0,
+		sample ? kib(sample->mem1_heap_free + sample->mem1_heap_used) : 0,
+		sample ? kib(sample->mem2_used) : 0,
+		sample ? kib(sample->mem2_heap_size) : 0);
+	printf("SD %s  USB %s\n",
+		stats && stats->sd_mounted ? "yes" : "no",
+		stats && stats->usb_mounted ? "yes" : "no");
+	if (stats && stats->retail_message[0])
+		printf("%s\n", stats->retail_message);
+	else if (!stats || !stats->map_count)
+		printf("No retail map. Put *.map in sd:/apps/halo-ce/maps\n");
+	printf("\n");
+	if (!stats || !stats->map_count) {
+		printf("No cache file identified yet.\n");
+	} else {
+		for (index = 0; index < stats->map_count; index++) {
+			struct wii_map_entry const *map = &stats->maps[index];
+			char const *kind = "map";
+
+			if (map->main_menu)
+				kind = "main menu";
+			else if (map->campaign)
+				kind = "campaign";
+			printf("%c %.20s  %s\n", index == selected ? '>' : ' ', map->name, kind);
+		}
+	}
+	if (note && note[0])
+		printf("\n%s\n", note);
+	printf("\nA draw BSP/bitmap   D-pad select   HOME exit\n");
+	printf("A retail .map on the card is still required.\n");
+	printf("This DOL is not a finished campaign.\n");
+}

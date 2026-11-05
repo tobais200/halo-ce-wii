@@ -1,0 +1,9 @@
+# devkitPPC / libogc outputs. The Homebrew Channel folder is produced
+# by `make dist` and is not source.
+build/
+dist/
+*.elf
+*.dol
+*.map
+*.o
+*.d

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+	<name>Halo CE Wii</name>
+	<coder>halo-ce-wii</coder>
+	<version>0.23.0-edge</version>
+	<release_date>20261103000000</release_date>
+	<short_description>Engine stub. Not playable.</short_description>
+	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
+
+This build looks for *.map in sd:/apps/halo-ce/maps (loose files first; game.iso only if none were identified, and not past 2 GiB). It lists those cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Without a map the screen says the retail file is missing. With one, it says the map was found. That is not a finished campaign. Script special forms execute. Opening a map allocates a 23 MiB tag arena and fills the rest of it with a pixel slab. Fifteen portals join sixteen clusters, and a point outside a portal quad is rejected. Four wheels settle on the floor over many ticks while tire slip friction drives the jeep, holds it on line, and builds a ground contact point. Entering a vehicle starts the seat-enter animation. The Xbox cache address is not mapped. No game data is included.
+
+Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
+
+Stub no oficial del canal Homebrew. No es jugable y no incluye datos del juego. HOME sale al loader.
+	</long_description>
+</app>
