@@ -452,13 +452,10 @@ int global_structure_bsp_index_get(void) { return 0; }
 int halo_interpolation_enabled(void) { return 0; }
 int halo_model_detail_scale(void) { return 0; }
 int hs_compile_and_evaluate(void) { return 0; }
-int hud_fix_unit_data(void) { return 0; }
-int hud_fix_weapon_data(void) { return 0; }
 int hud_picked_up_ammunition(void) { return 0; }
 int hud_picked_up_grenade(void) { return 0; }
 int hud_picked_up_powerup(void) { return 0; }
 int hud_picked_up_weapon(void) { return 0; }
-int hud_tick_shield(void) { return 0; }
 int infection_allow_weapon_drop(void) { return 0; }
 int infection_can_delete_skull(void) { return 0; }
 int infection_melee_multiplier(void) { return 0; }
@@ -562,7 +559,6 @@ struct wii_point3 *matrix4x3_transform_point(struct wii_matrix4x3 const *matrix,
 }
 int matrix4x3_inverse_transform_normal(void) { return 0; }
 int matrix4x3_inverse_transform_vector(void) { return 0; }
-int matrix4x3_multiply(void) { return 0; }
 int matrix4x3_rotation_from_axis_and_angle(void) { return 0; }
 int matrix4x3_rotation_from_vectors(void) { return 0; }
 int matrix4x3_rotation_to_quaternion(void) { return 0; }
@@ -582,6 +578,78 @@ struct wii_point3 *matrix4x3_transform_normal(struct wii_matrix4x3 const *matrix
 	result->y = matrix->n[2][1] * z + matrix->n[1][1] * y + matrix->n[0][1] * x;
 	result->z = matrix->n[2][2] * z + matrix->n[1][2] * y + matrix->n[0][2] * x;
 	return result;
+}
+
+struct wii_quaternion_v { float i, j, k, w; };
+
+void matrix4x3_rotation_from_quaternion(struct wii_matrix4x3 *matrix, struct wii_quaternion_v const *quaternion)
+{
+	float scale = quaternion->i * quaternion->i + quaternion->j * quaternion->j
+		+ quaternion->k * quaternion->k + quaternion->w * quaternion->w;
+	float x, y, z, wx, wy, wz, xx, xy, xz, yy, yz, zz;
+
+	scale = scale != 0.f ? 2.f / scale : 0.f;
+	x = scale * quaternion->i;
+	y = scale * quaternion->j;
+	z = scale * quaternion->k;
+	wx = quaternion->w * x;
+	wy = quaternion->w * y;
+	wz = quaternion->w * z;
+	xx = quaternion->i * x;
+	xy = quaternion->i * y;
+	xz = quaternion->i * z;
+	yy = quaternion->j * y;
+	yz = quaternion->j * z;
+	zz = quaternion->k * z;
+	memset(matrix, 0, sizeof(*matrix));
+	matrix->scale = 1.f;
+	matrix->n[0][0] = 1.f - (yy + zz);
+	matrix->n[0][1] = xy - wz;
+	matrix->n[0][2] = xz + wy;
+	matrix->n[1][0] = xy + wz;
+	matrix->n[1][1] = 1.f - (xx + zz);
+	matrix->n[1][2] = yz - wx;
+	matrix->n[2][0] = xz - wy;
+	matrix->n[2][1] = yz + wx;
+	matrix->n[2][2] = 1.f - (xx + yy);
+}
+
+void matrix4x3_transpose(struct wii_matrix4x3 *matrix)
+{
+	float temporary;
+
+	temporary = matrix->n[1][0];
+	matrix->n[1][0] = matrix->n[0][1];
+	matrix->n[0][1] = temporary;
+	temporary = matrix->n[2][0];
+	matrix->n[2][0] = matrix->n[0][2];
+	matrix->n[0][2] = temporary;
+	temporary = matrix->n[2][1];
+	matrix->n[2][1] = matrix->n[1][2];
+	matrix->n[1][2] = temporary;
+}
+
+void matrix4x3_multiply(struct wii_matrix4x3 const *a, struct wii_matrix4x3 const *b, struct wii_matrix4x3 *result)
+{
+	float product[12];
+	int row;
+	int column;
+	float const *a_elements = &a->n[0][0];
+	float const *b_elements = &b->n[0][0];
+
+	for (row = 0; row < 4; row++) {
+		for (column = 0; column < 3; column++) {
+			float value = b_elements[row * 3 + 0] * a_elements[column]
+				+ b_elements[row * 3 + 1] * a_elements[3 + column]
+				+ b_elements[row * 3 + 2] * a_elements[6 + column];
+
+			if (row == 3)
+				value = value * a->scale + a_elements[9 + column];
+			product[row * 3 + column] = value;
+		}
+	}
+	memcpy(result->n, product, sizeof(product));
+	result->scale = a->scale * b->scale;
 }
 int matrix4x3_transform_plane(void) { return 0; }
 int matrix4x3_translation(void) { return 0; }
@@ -1188,8 +1256,6 @@ int convex_hull2d_test_circle(short count, float const *points, float const *cen
 }
 int environment_vertex_compressed_get_point(void) { return 0; }
 int matrix3x3_transform_vector(void) { return 0; }
-int matrix4x3_rotation_from_quaternion(void) { return 0; }
-int matrix4x3_transpose(void) { return 0; }
 int point_in_triangle3d(void) { return 0; }
 int rasterizer_debug_line(void) { return 0; }
 int rasterizer_debug_line_shaded(void) { return 0; }
@@ -1215,15 +1281,17 @@ int structure_detail_objects_initialize(void) { return 0; }
 int structure_detail_objects_initialize_for_new_map(void) { return 0; }
 int structure_render_set_fog_offset(void) { return 0; }
 
-/* Three clusters. Portal 0 joins 0 and 1 at x=1.5. Portal 1 joins 1 and 2 at x=2.5. */
+/* Five clusters in a line. Portal n joins cluster n and n+1 at x = n + 1.5. */
 short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
+
+enum { WII_PORTAL_CLUSTERS = 5, WII_PORTAL_QUADS = 4 };
 
 static int portal_from(short start, float x, float y, float radius, short *first, short *second)
 {
 	struct wii_tag_block *clusters = (struct wii_tag_block *)(wii_structure_bsp + 308);
 	struct wii_tag_block *portals = (struct wii_tag_block *)(wii_structure_bsp + 340);
-	static unsigned char cluster_bytes[3][0x68];
-	static short portal_list[3][2];
+	static unsigned char cluster_bytes[WII_PORTAL_CLUSTERS][0x68];
+	static short portal_list[WII_PORTAL_CLUSTERS][2];
 	static struct {
 		short cluster_indices[2];
 		long plane_index;
@@ -1232,48 +1300,46 @@ static int portal_from(short start, float x, float y, float radius, short *first
 		unsigned long flags;
 		long unused[6];
 		struct wii_tag_block vertices;
-	} portal[2];
-	static float vertices[2][4][3];
+	} portal[WII_PORTAL_QUADS];
+	static float vertices[WII_PORTAL_QUADS][4][3];
 	float point[3];
 	short found[8];
 	short count;
+	int index;
 
 	global_structure_bsp_get();
 	memset(cluster_bytes, 0, sizeof(cluster_bytes));
 	memset(portal, 0, sizeof(portal));
+	memset(portal_list, 0, sizeof(portal_list));
+	for (index = 0; index < WII_PORTAL_QUADS; index++) {
+		float left = 1.f + (float)index;
+
+		portal[index].cluster_indices[0] = (short)index;
+		portal[index].cluster_indices[1] = (short)(index + 1);
+		portal[index].centroid[0] = left + 0.5f;
+		portal[index].bounding_radius = 1.2f;
+		vertices[index][0][0] = left; vertices[index][0][1] = -1.f;
+		vertices[index][1][0] = left + 1.f; vertices[index][1][1] = -1.f;
+		vertices[index][2][0] = left + 1.f; vertices[index][2][1] = 1.f;
+		vertices[index][3][0] = left; vertices[index][3][1] = 1.f;
+		portal[index].vertices.count = 4;
+		portal[index].vertices.address = vertices[index];
+	}
 	portal_list[0][0] = 0;
-	portal_list[1][0] = 0;
-	portal_list[1][1] = 1;
-	portal_list[2][0] = 1;
 	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->count = 1;
 	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->address = &portal_list[0][0];
-	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->count = 2;
-	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->address = portal_list[1];
-	((struct wii_tag_block *)(cluster_bytes[2] + 0x5C))->count = 1;
-	((struct wii_tag_block *)(cluster_bytes[2] + 0x5C))->address = &portal_list[2][0];
-	portal[0].cluster_indices[0] = 0;
-	portal[0].cluster_indices[1] = 1;
-	portal[0].centroid[0] = 1.5f;
-	portal[0].bounding_radius = 1.2f;
-	vertices[0][0][0] = 1.f; vertices[0][0][1] = -1.f;
-	vertices[0][1][0] = 2.f; vertices[0][1][1] = -1.f;
-	vertices[0][2][0] = 2.f; vertices[0][2][1] = 1.f;
-	vertices[0][3][0] = 1.f; vertices[0][3][1] = 1.f;
-	portal[0].vertices.count = 4;
-	portal[0].vertices.address = vertices[0];
-	portal[1].cluster_indices[0] = 1;
-	portal[1].cluster_indices[1] = 2;
-	portal[1].centroid[0] = 2.5f;
-	portal[1].bounding_radius = 1.2f;
-	vertices[1][0][0] = 2.f; vertices[1][0][1] = -1.f;
-	vertices[1][1][0] = 3.f; vertices[1][1][1] = -1.f;
-	vertices[1][2][0] = 3.f; vertices[1][2][1] = 1.f;
-	vertices[1][3][0] = 2.f; vertices[1][3][1] = 1.f;
-	portal[1].vertices.count = 4;
-	portal[1].vertices.address = vertices[1];
-	clusters->count = 3;
+	for (index = 1; index < WII_PORTAL_CLUSTERS - 1; index++) {
+		portal_list[index][0] = (short)(index - 1);
+		portal_list[index][1] = (short)index;
+		((struct wii_tag_block *)(cluster_bytes[index] + 0x5C))->count = 2;
+		((struct wii_tag_block *)(cluster_bytes[index] + 0x5C))->address = portal_list[index];
+	}
+	portal_list[WII_PORTAL_CLUSTERS - 1][0] = WII_PORTAL_QUADS - 1;
+	((struct wii_tag_block *)(cluster_bytes[WII_PORTAL_CLUSTERS - 1] + 0x5C))->count = 1;
+	((struct wii_tag_block *)(cluster_bytes[WII_PORTAL_CLUSTERS - 1] + 0x5C))->address = &portal_list[WII_PORTAL_CLUSTERS - 1][0];
+	clusters->count = WII_PORTAL_CLUSTERS;
 	clusters->address = cluster_bytes;
-	portals->count = 2;
+	portals->count = WII_PORTAL_QUADS;
 	portals->address = portal;
 	point[0] = x;
 	point[1] = y;
@@ -1308,12 +1374,15 @@ int wii_structure_portal_hops(void)
 	short second = -1;
 	int hops = 0;
 
-	if (portal_from(0, 1.5f, 0.f, 0.15f, &first, &second) >= 2 && first == 0 && second == 1)
-		hops++;
-	first = -1;
-	second = -1;
-	if (portal_from(1, 2.5f, 0.f, 0.15f, &first, &second) >= 2 && first == 1 && second == 2)
-		hops++;
+	for (hops = 0; hops < WII_PORTAL_QUADS; hops++) {
+		float x = 1.5f + (float)hops;
+
+		first = -1;
+		second = -1;
+		if (portal_from((short)hops, x, 0.f, 0.15f, &first, &second) < 2
+			|| first != (short)hops || second != (short)(hops + 1))
+			return hops;
+	}
 	return hops;
 }
 
@@ -1387,3 +1456,25 @@ wchar_t *ustrncpy_terminated(wchar_t *dest, wchar_t const *src, int count)
 	(void)src;
 	return dest;
 }
+
+int custom_edition_cache_relies_on(void) { return 0; }
+int get_flash_duration(void) { return 0; }
+void hud_draw_bitmap(void) {}
+void hud_draw_last_left(void) {}
+void hud_draw_meter(void) {}
+void hud_draw_static_element(void) {}
+void hud_draw_weapon_overlays(void) {}
+float hud_globals_get_scale(void) { return 1.f; }
+void hud_hires_crosshair_bitmap(void) {}
+int hud_multitexture_overlays_follow_zoom(void) { return 0; }
+int hud_number_shows_only_when_zoomed(void) { return 0; }
+void hud_play_sound(void) {}
+void hud_zoomed_layout_begin(void) {}
+void hud_zoomed_layout_end(void) {}
+void motion_sensor_draw_screen(void) {}
+void network_chat_note_motion_sensor(void) {}
+void passenger_camera_reticle_begin(void) {}
+void passenger_camera_reticle_end(void) {}
+short unit_definition_get_active_hud_index(void) { return -1; }
+short unit_definition_get_seat_active_hud_index(void) { return -1; }
+int verify_tag_reference(void) { return 0; }

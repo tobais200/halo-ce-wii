@@ -764,6 +764,17 @@ static int load_vehicle(int slot)
 	{
 		static struct physics_definition physics;
 		static struct mass_point_definition point[4];
+		static struct {
+			char name[32];
+			unsigned long flags;
+			float antigrav_strength;
+			float antigrav_offset;
+			float antigrav_height;
+			float antigrav_damp_fraction;
+			float antigrav_normal_k1;
+			float antigrav_normal_k0;
+			float unused[17];
+		} powered[2];
 		static float const wheel_xy[4][2] = {
 			{ 0.7f, 1.1f }, { -0.7f, 1.1f }, { 0.7f, -1.1f }, { -0.7f, -1.1f }
 		};
@@ -771,15 +782,19 @@ static int load_vehicle(int slot)
 
 		memset(&physics, 0, sizeof(physics));
 		memset(point, 0, sizeof(point));
+		memset(powered, 0, sizeof(powered));
+		powered[0].flags = 1u;
+		powered[1].flags = 1u;
 		for (wheel = 0; wheel < 4; wheel++) {
-			point[wheel].powered_mass_point_index = (short)NONE;
+			point[wheel].powered_mass_point_index = wheel < 2 ? (short)wheel : (short)NONE;
 			point[wheel].model_node_index = 0;
 			point[wheel].mass = 20.f;
 			point[wheel].relative_mass = 0.25f;
 			point[wheel].radius = 0.3f;
 			point[wheel].position.x = wheel_xy[wheel][0];
 			point[wheel].position.y = wheel_xy[wheel][1];
-			point[wheel].up.k = -1.f;
+			point[wheel].forward.i = 1.f;
+			point[wheel].up.k = 1.f;
 		}
 		physics.mass = 80.f;
 		physics.radius = 0.5f;
@@ -788,6 +803,10 @@ static int load_vehicle(int slot)
 		physics.ground_depth = 0.8f;
 		ground_depth = physics.ground_depth;
 		physics.ground_damp_fraction = 0.3f;
+		physics.ground_normal_k0 = 0.f;
+		physics.ground_normal_k1 = 1.f;
+		physics.powered_mass_points.count = 2;
+		physics.powered_mass_points.address = powered;
 		physics.mass_points.count = 4;
 		physics.mass_points.address = point;
 		if (slot_count < WII_TAG_SLOTS) {
@@ -1770,13 +1789,13 @@ int wii_tag_cache_mount(
 		return -1;
 	{
 		/* Resident pixel pages inside the 23 MiB arena. The group names
-		   sixty-four bitmaps; this slab is the bytes they can grow into. */
-		unsigned char *pages = bump(20u << 20);
+		   ninety-six bitmaps; this slab is the bytes they can grow into. */
+		unsigned char *pages = bump(22u << 20);
 
 		if (!pages)
 			return -1;
 		pages[0] = 0xff;
-		pages[(20u << 20) - 1] = 0xff;
+		pages[(22u << 20) - 1] = 0xff;
 	}
 	return 0;
 }
@@ -2269,9 +2288,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0xC00u;
+	cursor += 0x1200u;
 	pixels_at = cursor;
-	cursor += 1024u;
+	cursor += 1536u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2688,7 +2707,7 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 64);
+	put_u32(file + bitm_at + 0x60, 96);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
@@ -2698,7 +2717,7 @@ int wii_tag_cache_self_test(void)
 	{
 		int bitmap;
 
-		for (bitmap = 1; bitmap < 64; bitmap++) {
+		for (bitmap = 1; bitmap < 96; bitmap++) {
 			memcpy(file + bitm_data_at + (uint32_t)bitmap * 0x30u, file + bitm_data_at, 0x30);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x18, (uint32_t)bitmap * 16u);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x1c, 16);

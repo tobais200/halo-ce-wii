@@ -77,6 +77,8 @@ int scenario_load(char const *name)
 }
 
 void hud_messaging_initialize(void);
+void hud_initialize_unit_interface(void);
+void hud_initialize_weapon_interface(void);
 
 void wii_game_boot(void)
 {
@@ -86,6 +88,8 @@ void wii_game_boot(void)
 		return;
 	hud_messaging_initialize();
 	game_initialize();
+	hud_initialize_unit_interface();
+	hud_initialize_weapon_interface();
 	game_options_new(&options);
 	if (game_load(&options)) {
 		game_initialize_for_new_map();

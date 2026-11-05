@@ -54,6 +54,8 @@ SOURCES = {
     "structures.o": "structures/structures.c",
     "hud_messaging.o": "interface/hud_messaging.c",
     "player_effects.o": "effects/player_effects.c",
+    "hud_unit.o": "interface/hud_unit.c",
+    "hud_weapon.o": "interface/hud_weapon.c",
 }
 
 PORT = {

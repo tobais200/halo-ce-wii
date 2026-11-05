@@ -63,7 +63,7 @@ export OPENCE_OBJS := game.o players.o cheats.o game_allegiance.o weapons.o proj
 	collisions.o collision_bsp.o collision_models.o collision_features.o bsp2d.o bsp3d.o game_engine.o sort.o devices.o \
 	unit_scripting_commands.o scenery.o recorded_animations.o camera_scripting.o cinematics.o \
 	hud_nav_points.o game_sound.o hs_library_external.o physics.o structures.o \
-	hud_messaging.o player_effects.o
+	hud_messaging.o player_effects.o hud_unit.o hud_weapon.o
 export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o wii_game_stubs.o wii_player_spawn.o wii_tag_cache.o wii_collision.o wii_effects.o wii_play.o wii_mesh.o wii_link_stubs.o $(OPENCE_OBJS)
 export WII_ROOT := $(CURDIR)
 export WII_HS_CFLAGS := -std=c99 -fno-strict-aliasing -DHALO_RELEASE \

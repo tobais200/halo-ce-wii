@@ -7,7 +7,7 @@
 	<short_description>Engine stub. Not playable.</short_description>
 	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
 
-This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map allocates a 23 MiB tag arena and keeps a 20 MiB pixel slab in it. Two portals join three clusters, and a point outside a portal quad is rejected. Four wheels settle on the floor over many ticks, and entering a vehicle starts the seat-enter animation. The Xbox cache address is not mapped. No game data is included.
+This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map allocates a 23 MiB tag arena and keeps a 22 MiB pixel slab in it. Four portals join five clusters, and a point outside a portal quad is rejected. Four wheels settle on the floor over many ticks while the tire friction drives the jeep, and entering a vehicle starts the seat-enter animation. The Xbox cache address is not mapped. No game data is included.
 
 Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
 

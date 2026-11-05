@@ -191,3 +191,11 @@
 		fill_campaign(390, _hs_type_void, 1, _hs_type_boolean, "pause_hud_timer");
 		fill_campaign(392, _hs_type_void, 1, _hs_type_boolean, "time_code_show");
 		fill_campaign(393, _hs_type_void, 1, _hs_type_boolean, "time_code_start");
+		fill_campaign2(45, _hs_type_object, _hs_type_object_list, _hs_type_short_integer, "list_get");
+		fill_campaign(55, _hs_type_real, 1, _hs_type_string, "sound_get_gain");
+		fill_campaign3(75, _hs_type_void, _hs_type_object, _hs_type_real, _hs_type_short_integer, "object_set_scale");
+		fill_campaign3(112, _hs_type_void, _hs_type_unit, _hs_type_real, _hs_type_real, "unit_set_maximum_vitality");
+		fill_campaign3(113, _hs_type_void, _hs_type_object_list, _hs_type_real, _hs_type_real, "units_set_maximum_vitality");
+		fill_campaign3(115, _hs_type_void, _hs_type_object_list, _hs_type_real, _hs_type_real, "units_set_current_vitality");
+		fill_campaign2(143, _hs_type_boolean, _hs_type_device_group, _hs_type_real, "device_group_set");
+		fill_campaign3(354, _hs_type_void, _hs_type_unit, _hs_type_starting_profile, _hs_type_boolean, "player_add_equipment");

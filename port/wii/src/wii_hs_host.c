@@ -454,8 +454,26 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 	case 300:
 		wii_hud_show(0, arguments[0], *(float *)&arguments[1]);
 		break;
-	case 376: case 377: case 378: case 379: case 380: case 381: case 382:
-		wii_hud_show(3, arguments[0], (float)(function_index - 376));
+	case 376:
+		scripted_hud_show_health((boolean)arguments[0]);
+		break;
+	case 377:
+		scripted_hud_blink_health((boolean)arguments[0]);
+		break;
+	case 378:
+		scripted_hud_show_shield((boolean)arguments[0]);
+		break;
+	case 379:
+		scripted_hud_blink_shield((boolean)arguments[0]);
+		break;
+	case 380:
+		scripted_hud_show_motion_sensor((boolean)arguments[0]);
+		break;
+	case 381:
+		scripted_hud_blink_motion_sensor((boolean)arguments[0]);
+		break;
+	case 382:
+		scripted_hud_show_crosshair((boolean)arguments[0]);
 		break;
 	case 156: case 161: case 162: case 163: case 164: case 166: case 168:
 	case 173: case 175: case 176: case 177: case 178: case 179: case 196:

@@ -675,3 +675,27 @@
 	case 394:
 		scripted_hud_time_code_reset();
 		break;
+	case 45:
+		result = hs_object_list_get_element(arguments[0], (short)arguments[1]);
+		break;
+	case 55:
+		*(float *)&result = hs_sound_get_gain(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "");
+		break;
+	case 75:
+		objects_scripting_set_scale(arguments[0], *(float *)&arguments[1], (short)arguments[2]);
+		break;
+	case 112:
+		unit_scripting_set_maximum_vitality(arguments[0], *(float *)&arguments[1], *(float *)&arguments[2]);
+		break;
+	case 113:
+		units_scripting_set_maximum_vitality(arguments[0], *(float *)&arguments[1], *(float *)&arguments[2]);
+		break;
+	case 115:
+		units_scripting_set_current_vitality(arguments[0], *(float *)&arguments[1], *(float *)&arguments[2]);
+		break;
+	case 143:
+		result = campaign_bool(device_group_set_desired_value((short)arguments[0], *(float *)&arguments[1]));
+		break;
+	case 354:
+		player_add_equipment(arguments[0], (short)arguments[1], (boolean)arguments[2]);
+		break;
