@@ -2,6 +2,7 @@
 
 #include "wii_collision.h"
 #include "wii_effects.h"
+#include "wii_mesh.h"
 #include "wii_mem.h"
 
 #include <malloc.h>
@@ -197,6 +198,29 @@ static void draw_overlay(struct gx_mesh_view const *view)
 		}
 	}
 	GX_End();
+	}
+	if (wii_mesh_triangles() > 0) {
+		int mesh_index;
+		int mesh_count = wii_mesh_triangles();
+
+		GX_SetNumTexGens(0);
+		GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+		GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+		if (mesh_count > 32)
+			mesh_count = 32;
+		GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (uint16_t)(mesh_count * 3));
+		for (mesh_index = 0; mesh_index < mesh_count; mesh_index++) {
+			float xyz[9];
+			int corner;
+
+			if (!wii_mesh_triangle(mesh_index, xyz))
+				continue;
+			for (corner = 0; corner < 3; corner++)
+				overlay_vertex(xyz[corner * 3], xyz[corner * 3 + 1], xyz[corner * 3 + 2], 90, 140, 90, 0, 0, 0);
+		}
+		GX_End();
 	}
 	if (wii_pose_segments() > 0) {
 		int bone;

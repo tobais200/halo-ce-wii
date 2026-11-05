@@ -621,6 +621,19 @@ int wii_damage_hurts(long object_index, long damage_definition)
 	return object->object.body_vitality + object->object.shield_vitality < before;
 }
 
+void wii_unit_set_shield(long object_index, float shield)
+{
+	struct object_datum *object = object_get(object_index);
+
+	if (!object)
+		return;
+	if (shield < 0.f)
+		shield = 0.f;
+	if (shield > 1.f)
+		shield = 1.f;
+	object->object.shield_vitality = shield;
+}
+
 float wii_unit_throttle(long unit_index)
 {
 	struct unit_datum *unit = unit_get(unit_index);

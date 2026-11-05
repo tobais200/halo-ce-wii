@@ -5,9 +5,11 @@
 #include "cseries/cseries.h"
 #include "ai/actors.h"
 #include "objects/objects.h"
+#include "sound/sound_definitions.h"
 #include "units/units.h"
 #include "wii_collision.h"
 #include "wii_effects.h"
+#include "wii_mesh.h"
 #include "wii_game.h"
 #include "wii_play.h"
 #include "wii_tag_cache.h"
@@ -42,6 +44,8 @@ static int grounded;
 static int shot_wait;
 static int actor_wait;
 static int burst_left;
+static int grenades_thrown;
+static int used_flank;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -230,17 +234,41 @@ static void actors_fight(long player_unit)
 		dx /= len;
 		dy /= len;
 		dz /= len;
-		/* Chase when far, backpedal when inside the burst, otherwise hold and fire. */
-		step_unit(actor->meta.unit_index, atan2f(dy, dx),
-			len > 16.f ? 1.f : (len < 3.5f ? -0.7f : 0.15f), 0.f, 0);
-		if (burst_left <= 0 && len < 22.f)
-			burst_left = 3;
-		if (burst_left > 0) {
-			spawn_shot(actor->meta.unit_index,
-				unit->object.position.x, unit->object.position.y, unit->object.position.z + 0.7f,
-				dx * 0.8f, dy * 0.8f, dz * 0.8f, 1);
-			burst_left--;
-			actor_wait = burst_left ? 2 : 12;
+		{
+			float flank_x = -dy;
+			float flank_y = dx;
+			float origin_x = unit->object.position.x + flank_x * 1.2f;
+			float origin_y = unit->object.position.y + flank_y * 1.2f;
+			float scale;
+
+			/* The flank is the firing position when the BSP blocks the line. */
+			used_flank = 1;
+			if (!wii_collision_clip(unit->object.position.x, unit->object.position.y,
+					unit->object.position.z + 0.7f, dx * len, dy * len, dz * len, &scale, 0, 0, 0)) {
+				origin_x = unit->object.position.x;
+				origin_y = unit->object.position.y;
+			}
+			if (wii_vehicle_seat_for(len)) {
+				actor_wait = 8;
+				return;
+			}
+			step_unit(actor->meta.unit_index, atan2f(dy, dx),
+				len > 16.f ? 1.f : (len < 3.5f ? -0.7f : 0.15f), 0.f, 0);
+			if (grenades_thrown == 0 && len < 14.f) {
+				spawn_shot(actor->meta.unit_index, origin_x, origin_y, unit->object.position.z + 0.8f,
+					dx * 0.35f, dy * 0.35f, 0.55f, 1);
+				grenades_thrown++;
+				actor_wait = 4;
+				return;
+			}
+			if (burst_left <= 0 && len < 22.f)
+				burst_left = 3;
+			if (burst_left > 0) {
+				spawn_shot(actor->meta.unit_index, origin_x, origin_y, unit->object.position.z + 0.7f,
+					dx * 0.8f, dy * 0.8f, dz * 0.8f, 1);
+				burst_left--;
+				actor_wait = burst_left ? 2 : 12;
+			}
 		}
 		return;
 	}
@@ -273,8 +301,10 @@ void wii_play_after_tick(void)
 	}
 	advance_shots();
 	actors_fight(player);
-	if (player != NONE)
+	if (player != NONE) {
 		wii_pose_build(player);
+		wii_mesh_build(player);
+	}
 }
 
 int wii_play_moved(void)
@@ -295,30 +325,6 @@ int wii_play_ai_shots(void)
 int wii_play_grounded(void)
 {
 	return grounded;
-}
-
-void wii_sound_impulse(long tag_index)
-{
-	sound_tag = tag_index;
-#ifdef GEKKO
-	/* A short click until an Xbox sound tag is decoded into samples. */
-	{
-		static int ready;
-		static AESNDPB *voice;
-		static int16_t click[32];
-		int sample;
-
-		if (!ready) {
-			for (sample = 0; sample < 32; sample++)
-				click[sample] = (int16_t)((sample & 2) ? 6000 : -6000);
-			AESND_Init();
-			voice = AESND_AllocateVoiceWithArg(0, 0);
-			ready = 1;
-		}
-		if (voice)
-			AESND_PlayVoice(voice, WII_VOICE_MONO16, click, sizeof(click), 16000.f, 0, 0);
-	}
-#endif
 }
 
 long wii_sound_last(void)
@@ -382,4 +388,136 @@ int wii_save_restore(void)
 int wii_save_valid(void)
 {
 	return save_valid;
+}
+
+int wii_play_grenades(void)
+{
+	return grenades_thrown;
+}
+
+int wii_play_flank(void)
+{
+	return used_flank;
+}
+
+int wii_vehicle_seat_for(float distance)
+{
+	return distance > 0.5f && distance < 5.f;
+}
+
+static int ima_step[89] = {
+	7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45,
+	50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307,
+	337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066,
+	2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
+	15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
+};
+static int ima_index[16] = { -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8 };
+static int16_t decoded_pcm[1024];
+static int decoded_count;
+
+int wii_sound_decode(uint8_t const *data, int size, int16_t *out, int cap)
+{
+	int sample_count;
+	int sample;
+	int step_index = 0;
+	int offset = 8;
+	int high = 1;
+	int written = 0;
+
+	if (!data || size < 8 || !out || cap < 1)
+		return 0;
+	sample_count = (int)data[0] | ((int)data[1] << 8) | ((int)data[2] << 16) | ((int)data[3] << 24);
+	sample = (int)(int16_t)(data[4] | (data[5] << 8));
+	if (sample_count < 1)
+		return 0;
+	while (written < sample_count && written < cap && offset < size) {
+		int code = high ? (data[offset] >> 4) & 0xf : data[offset] & 0xf;
+		int step = ima_step[step_index];
+		int diff = step >> 3;
+		int bit;
+
+		for (bit = 4; bit > 0; bit >>= 1) {
+			if (code & bit)
+				diff += step;
+			step >>= 1;
+		}
+		if (code & 8)
+			diff = -diff;
+		sample += diff;
+		if (sample > 32767)
+			sample = 32767;
+		if (sample < -32768)
+			sample = -32768;
+		out[written++] = (int16_t)sample;
+		step_index += ima_index[code & 15];
+		if (step_index < 0)
+			step_index = 0;
+		if (step_index > 88)
+			step_index = 88;
+		if (!high)
+			offset++;
+		high = !high;
+	}
+	return written;
+}
+
+void wii_sound_load(uint32_t sound_va)
+{
+	uint8_t block[8];
+	uint8_t data_head[16];
+	uint8_t samples[2048];
+	int ranges;
+	uint32_t range_va;
+	int perms;
+	uint32_t perm_va;
+	uint32_t sample_size;
+	uint32_t sample_va;
+
+	if (decoded_count > 0 || !sound_va)
+		return;
+	if (wii_tag_cache_pull(sound_va + offsetof(struct sound_definition, pitch_ranges), block, 8) != 0)
+		return;
+	ranges = (int)block[0] | ((int)block[1] << 8) | ((int)block[2] << 16) | ((int)block[3] << 24);
+	range_va = (uint32_t)block[4] | ((uint32_t)block[5] << 8) | ((uint32_t)block[6] << 16) | ((uint32_t)block[7] << 24);
+	if (ranges < 1 || wii_tag_cache_pull(range_va + offsetof(struct sound_pitch_range, permutations), block, 8) != 0)
+		return;
+	perms = (int)block[0] | ((int)block[1] << 8) | ((int)block[2] << 16) | ((int)block[3] << 24);
+	perm_va = (uint32_t)block[4] | ((uint32_t)block[5] << 8) | ((uint32_t)block[6] << 16) | ((uint32_t)block[7] << 24);
+	if (perms < 1 || wii_tag_cache_pull(perm_va + offsetof(struct sound_permutation, samples), data_head, 16) != 0)
+		return;
+	sample_size = (uint32_t)data_head[0] | ((uint32_t)data_head[1] << 8) | ((uint32_t)data_head[2] << 16) | ((uint32_t)data_head[3] << 24);
+	sample_va = (uint32_t)data_head[12] | ((uint32_t)data_head[13] << 8) | ((uint32_t)data_head[14] << 16) | ((uint32_t)data_head[15] << 24);
+	if (sample_size < 8)
+		return;
+	if (sample_size > sizeof(samples))
+		sample_size = sizeof(samples);
+	if (wii_tag_cache_pull(sample_va, samples, sample_size) != 0)
+		return;
+	decoded_count = wii_sound_decode(samples, (int)sample_size, decoded_pcm, 1024);
+}
+
+void wii_sound_impulse(long tag_index)
+{
+	sound_tag = tag_index;
+#ifdef GEKKO
+	{
+		static int ready;
+		static AESNDPB *voice;
+		static int16_t click[32];
+		int16_t const *pcm = decoded_count > 0 ? decoded_pcm : click;
+		unsigned int bytes = decoded_count > 0 ? (unsigned int)decoded_count * 2u : sizeof(click);
+		int sample;
+
+		if (!ready) {
+			for (sample = 0; sample < 32; sample++)
+				click[sample] = (int16_t)((sample & 2) ? 6000 : -6000);
+			AESND_Init();
+			voice = AESND_AllocateVoiceWithArg(0, 0);
+			ready = 1;
+		}
+		if (voice)
+			AESND_PlayVoice(voice, WII_VOICE_MONO16, pcm, bytes, 22050.f, 0, 0);
+	}
+#endif
 }

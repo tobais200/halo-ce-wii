@@ -27,6 +27,7 @@
 #include "game/game.h"
 #include "wii_hs.h"
 #include "wii_play.h"
+#include "wii_collision.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -215,6 +216,10 @@ static int wii_cinematic;
 static int wii_camera_scripted;
 static int wii_letterbox;
 static int wii_hud_shown = 1;
+static long wii_device_index = NONE;
+static float wii_device_position;
+static float wii_device_power;
+static long wii_camera_point = NONE;
 
 struct wii_checkpoint {
 	int valid;
@@ -225,6 +230,7 @@ static struct wii_checkpoint wii_checkpoint;
 
 void object_delete(long object_index);
 long object_new_by_name(short name_index);
+void ai_scripting_set_team(long ai_reference, short team_index);
 void ai_scripting_place(long ai_reference);
 void ai_scripting_kill(long ai_reference);
 void ai_scripting_kill_silent(long ai_reference);
@@ -302,6 +308,12 @@ static void fill_campaign(int index, short return_type, short count, short type0
 	wii_campaign_count++;
 }
 
+static void fill_campaign2(int index, short return_type, short type0, short type1, char const *name)
+{
+	fill_campaign(index, return_type, 2, type0, name);
+	wii_slots[index].more_types[0] = type1;
+}
+
 static long campaign_bool(int value)
 {
 	long result = 0;
@@ -374,7 +386,32 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		if (arguments[0] != NONE)
 			object_delete(arguments[0]);
 		break;
+	case 31:
+		result = campaign_bool(0);
+		break;
+	case 36:
+		wii_unit_set_shield(arguments[0], *(float *)&arguments[1]);
+		break;
 	case 44:
+		break;
+	case 138:
+		wii_device_index = arguments[0];
+		wii_device_power = *(float *)&arguments[1];
+		break;
+	case 139:
+		wii_device_index = arguments[0];
+		wii_device_position = *(float *)&arguments[1];
+		result = campaign_bool(1);
+		break;
+	case 140:
+		*(float *)&result = wii_device_index == arguments[0] ? wii_device_position : 0.f;
+		break;
+	case 241:
+		if (actor_data)
+			ai_scripting_set_team(arguments[0], (short)arguments[1]);
+		break;
+	case 246:
+		wii_camera_point = arguments[0];
 		break;
 	case 156: case 161: case 162: case 163: case 164: case 166: case 168:
 	case 173: case 175: case 176: case 177: case 178: case 179: case 196:
@@ -497,6 +534,13 @@ static void wii_hs_table_init(void)
 		fill_campaign(245, _hs_type_void, 1, _hs_type_boolean, "camera_control");
 		fill_campaign(298, _hs_type_void, 1, _hs_type_boolean, "cinematic_show_letterbox");
 		fill_campaign(356, _hs_type_boolean, 1, _hs_type_boolean, "show_hud");
+		fill_campaign2(31, _hs_type_boolean, _hs_type_trigger_volume, _hs_type_object, "volume_test_object");
+		fill_campaign2(36, _hs_type_void, _hs_type_object, _hs_type_real, "object_set_shield");
+		fill_campaign2(138, _hs_type_void, _hs_type_device, _hs_type_real, "device_set_power");
+		fill_campaign2(139, _hs_type_boolean, _hs_type_device, _hs_type_real, "device_set_position");
+		fill_campaign(140, _hs_type_real, 1, _hs_type_device, "device_get_position");
+		fill_campaign2(241, _hs_type_void, _hs_type_ai, _hs_type_enum_team, "ai_set_team");
+		fill_campaign2(246, _hs_type_void, _hs_type_cutscene_camera_point, _hs_type_short_integer, "camera_set");
 	}
 	wii_table_ready = 1;
 }

@@ -15,5 +15,10 @@ long wii_sound_last(void);
 int wii_save_checkpoint(void);
 int wii_save_restore(void);
 int wii_save_valid(void);
+int wii_play_grenades(void);
+int wii_play_flank(void);
+int wii_vehicle_seat_for(float distance);
+int wii_sound_decode(uint8_t const *data, int size, int16_t *out, int cap);
+void wii_sound_load(uint32_t sound_va);
 
 #endif

@@ -15,6 +15,7 @@ unsigned char game_map_loaded(void);
 #include "wii_collision.h"
 #include "wii_effects.h"
 #include "wii_play.h"
+#include "wii_mesh.h"
 #include "wii_game.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
@@ -497,6 +498,19 @@ int main(void)
 				return fail("biped pose");
 			if (wii_sound_last() == 0)
 				return fail("sound impulse");
+			if (wii_mesh_triangles() < 1 || !wii_mesh_skinned())
+				return fail("skinned mesh");
+			if (wii_play_grenades() < 1 || !wii_play_flank())
+				return fail("actor grenade");
+			if (!wii_vehicle_seat_for(2.f) || wii_vehicle_seat_for(20.f))
+				return fail("vehicle seat");
+			{
+				uint8_t ima[12] = { 4, 0, 0, 0, 0xe8, 0x03, 0, 0, 0x10, 0, 0, 0 };
+				int16_t pcm[8];
+
+				if (wii_sound_decode(ima, 12, pcm, 8) < 1 || pcm[0] == 0)
+					return fail("ima adpcm");
+			}
 		}
 		if (wii_tag_cache_idle_rotation_w() < 0.9f)
 			return fail("biped idle animation");

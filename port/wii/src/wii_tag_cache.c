@@ -24,6 +24,7 @@
 #include "wii_tag_cache.h"
 #include "wii_collision.h"
 #include "wii_effects.h"
+#include "wii_play.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -249,6 +250,13 @@ static int load_model(int slot)
 			nodes[index].default_translation.x = read_lef(node_raw + offsetof(struct model_node, default_translation));
 			nodes[index].default_translation.y = read_lef(node_raw + offsetof(struct model_node, default_translation) + 4);
 			nodes[index].default_translation.z = read_lef(node_raw + offsetof(struct model_node, default_translation) + 8);
+			nodes[index].default_rotation.v.i = read_lef(node_raw + offsetof(struct model_node, default_rotation));
+			nodes[index].default_rotation.v.j = read_lef(node_raw + offsetof(struct model_node, default_rotation) + 4);
+			nodes[index].default_rotation.v.k = read_lef(node_raw + offsetof(struct model_node, default_rotation) + 8);
+			nodes[index].default_rotation.w = read_lef(node_raw + offsetof(struct model_node, default_rotation) + 12);
+			if (nodes[index].default_rotation.v.i == 0.f && nodes[index].default_rotation.v.j == 0.f
+				&& nodes[index].default_rotation.v.k == 0.f && nodes[index].default_rotation.w == 0.f)
+				nodes[index].default_rotation.w = 1.f;
 		}
 	}
 	slots[slot].base = model;
@@ -1494,6 +1502,8 @@ int wii_tag_cache_mount(
 	for (index = 0; index < slot_count; index++) {
 		if (slots[index].group == FCC('s', 'b', 's', 'p'))
 			wii_collision_load(slots[index].base_va);
+		if (slots[index].group == FCC('s', 'n', 'd', '!'))
+			wii_sound_load(slots[index].base_va);
 	}
 	cache_ready = native_biped != NULL;
 	if (!cache_ready)
@@ -1723,6 +1733,10 @@ int wii_tag_cache_self_test(void)
 	uint32_t biped_at;
 	uint32_t model_at;
 	uint32_t node_at;
+	uint32_t geom_at;
+	uint32_t mesh_part_at;
+	uint32_t mesh_vert_at;
+	uint32_t mesh_tri_at;
 	uint32_t graph_at;
 	uint32_t seat_at;
 	uint32_t class_at;
@@ -1793,6 +1807,14 @@ int wii_tag_cache_self_test(void)
 	cursor += sizeof(struct model);
 	node_at = cursor;
 	cursor += sizeof(struct model_node);
+	geom_at = cursor;
+	cursor += 0x2cu;
+	mesh_part_at = cursor;
+	cursor += 0x68u;
+	mesh_vert_at = cursor;
+	cursor += 0x20u * 3u;
+	mesh_tri_at = cursor;
+	cursor += 6u;
 	graph_at = cursor;
 	cursor += sizeof(struct animation_graph);
 	seat_at = cursor;
@@ -2061,6 +2083,28 @@ int wii_tag_cache_self_test(void)
 	put_u16(file + node_at + offsetof(struct model_node, next_sibling_node_index), 0xffffu);
 	put_u16(file + node_at + offsetof(struct model_node, first_child_node_index), 0xffffu);
 	put_u16(file + node_at + offsetof(struct model_node, parent_node_index), 0xffffu);
+	put_f32(file + node_at + offsetof(struct model_node, default_translation) + 8, 0.5f);
+	put_u32(file + model_at + offsetof(struct model, geometries), 1);
+	put_u32(file + model_at + offsetof(struct model, geometries) + 4, TAG_BASE + geom_at);
+	put_u32(file + geom_at + 0x24, 1);
+	put_u32(file + geom_at + 0x28, TAG_BASE + mesh_part_at);
+	put_u32(file + mesh_part_at + 0x28, 3);
+	put_u32(file + mesh_part_at + 0x2c, TAG_BASE + mesh_vert_at);
+	put_u32(file + mesh_part_at + 0x30, 3);
+	put_u32(file + mesh_part_at + 0x34, TAG_BASE + mesh_tri_at);
+	put_f32(file + mesh_vert_at, 0.4f);
+	put_f32(file + mesh_vert_at + 0x20, 0.f);
+	put_f32(file + mesh_vert_at + 0x20 + 4, 0.4f);
+	put_f32(file + mesh_vert_at + 0x40 + 8, 0.4f);
+	file[mesh_vert_at + 0x1e] = 0xff;
+	file[mesh_vert_at + 0x1f] = 0x7f;
+	file[mesh_vert_at + 0x20 + 0x1e] = 0xff;
+	file[mesh_vert_at + 0x20 + 0x1f] = 0x7f;
+	file[mesh_vert_at + 0x40 + 0x1e] = 0xff;
+	file[mesh_vert_at + 0x40 + 0x1f] = 0x7f;
+	file[mesh_tri_at] = 0;
+	file[mesh_tri_at + 2] = 1;
+	file[mesh_tri_at + 4] = 2;
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats), 1);
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats) + 4, TAG_BASE + seat_at);
 	memcpy(file + seat_at, "stand", 5);
