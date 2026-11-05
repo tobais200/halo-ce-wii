@@ -96,7 +96,9 @@ static void step_unit(long unit_index, float yaw, float forward_throttle, float 
 	}
 }
 
-static void spawn_shot(long owner, float x, float y, float z, float dx, float dy, float dz, int from_actor)
+static long grenade_definition = -1;
+
+static void spawn_shot(long owner, float x, float y, float z, float dx, float dy, float dz, int from_actor, long definition_override)
 {
 	struct object_placement_data placement;
 	long definition;
@@ -104,7 +106,7 @@ static void spawn_shot(long owner, float x, float y, float z, float dx, float dy
 	struct object_datum *object;
 	int slot;
 
-	definition = wii_tag_cache_projectile_index();
+	definition = definition_override != NONE ? definition_override : wii_tag_cache_projectile_index();
 	if (definition == NONE || definition == -1)
 		return;
 	for (slot = 0; slot < WII_SHOTS; slot++) {
@@ -139,6 +141,8 @@ static void spawn_shot(long owner, float x, float y, float z, float dx, float dy
 	shots[slot].from_actor = from_actor;
 	wii_effect_emit(x, y, z);
 	wii_sound_impulse(from_actor ? 2 : 1);
+	if (from_actor && definition_override != NONE)
+		grenade_definition = definition_override;
 	if (from_actor)
 		actor_shots++;
 	else
@@ -238,7 +242,7 @@ static void actors_fight(long player_unit)
 			struct unit_datum *soldier = unit_get(actor->meta.unit_index);
 			float flank_x = -dy;
 			float flank_y = dx;
-			float spots[3][2];
+			float spots[5][2];
 			float origin_x;
 			float origin_y;
 			float scale;
@@ -252,7 +256,11 @@ static void actors_fight(long player_unit)
 			spots[1][1] = unit->object.position.y + flank_y * 1.2f;
 			spots[2][0] = unit->object.position.x - flank_x * 1.2f;
 			spots[2][1] = unit->object.position.y - flank_y * 1.2f;
-			for (spot = 0; spot < 3; spot++) {
+			spots[3][0] = unit->object.position.x + flank_x * 2.4f;
+			spots[3][1] = unit->object.position.y + flank_y * 2.4f;
+			spots[4][0] = unit->object.position.x - flank_x * 2.4f;
+			spots[4][1] = unit->object.position.y - flank_y * 2.4f;
+			for (spot = 0; spot < 5; spot++) {
 				float sx = player->object.position.x - spots[spot][0];
 				float sy = player->object.position.y - spots[spot][1];
 
@@ -295,7 +303,7 @@ static void actors_fight(long player_unit)
 			if (stock > 0 && len < 14.f && grenades_thrown == 0) {
 				soldier->unit.grenade_counts[0] = (char)(stock - 1);
 				spawn_shot(actor->meta.unit_index, origin_x, origin_y, unit->object.position.z + 0.8f,
-					dx * 0.35f, dy * 0.35f, 0.55f, 1);
+					dx * 0.35f, dy * 0.35f, 0.55f, 1, wii_tag_cache_grenade_projectile());
 				grenades_thrown++;
 				actor_wait = 4;
 				return;
@@ -304,7 +312,7 @@ static void actors_fight(long player_unit)
 				burst_left = 3;
 			if (burst_left > 0) {
 				spawn_shot(actor->meta.unit_index, origin_x, origin_y, unit->object.position.z + 0.7f,
-					dx * 0.8f, dy * 0.8f, dz * 0.8f, 1);
+					dx * 0.8f, dy * 0.8f, dz * 0.8f, 1, NONE);
 				burst_left--;
 				actor_wait = burst_left ? 2 : 12;
 			}
@@ -335,7 +343,7 @@ void wii_play_after_tick(void)
 		sp = sinf(pitch);
 		cy = cosf(yaw);
 		sy = sinf(yaw);
-		spawn_shot(player, eye_x, eye_y, eye_z, cp * cy * 1.2f, cp * sy * 1.2f, sp * 1.2f, 0);
+		spawn_shot(player, eye_x, eye_y, eye_z, cp * cy * 1.2f, cp * sy * 1.2f, sp * 1.2f, 0, NONE);
 		shot_wait = 6;
 	}
 	advance_shots();
@@ -434,6 +442,11 @@ int wii_play_grenades(void)
 	return grenades_thrown;
 }
 
+long wii_play_grenade_definition(void)
+{
+	return grenade_definition;
+}
+
 int wii_play_flank(void)
 {
 	return used_flank;
@@ -452,7 +465,7 @@ static int ima_step[89] = {
 	15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
 };
 static int ima_index[16] = { -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8 };
-static int16_t decoded_pcm[8192];
+static int16_t decoded_pcm[12288];
 static int decoded_count;
 static int decoded_tags;
 
@@ -519,7 +532,7 @@ void wii_sound_load(uint32_t sound_va)
 	uint32_t sample_size;
 	uint32_t sample_va;
 
-	if (decoded_tags >= 8 || decoded_count >= 8192 || !sound_va)
+	if (decoded_tags >= 12 || decoded_count >= 12288 || !sound_va)
 		return;
 	if (wii_tag_cache_pull(sound_va + offsetof(struct sound_definition, pitch_ranges), block, 8) != 0)
 		return;
@@ -539,7 +552,7 @@ void wii_sound_load(uint32_t sound_va)
 		sample_size = sizeof(samples);
 	if (wii_tag_cache_pull(sample_va, samples, sample_size) != 0)
 		return;
-	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 8192 - decoded_count);
+	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 12288 - decoded_count);
 	if (decoded_count > 0)
 		decoded_tags++;
 }

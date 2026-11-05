@@ -1,6 +1,6 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (at most 3 MiB, inside the
+ * stays on the card. This copies a working set (at most 4 MiB, inside the
  * 8 MiB resident cap) and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
@@ -24,6 +24,7 @@
 #include "wii_tag_cache.h"
 #include "wii_collision.h"
 #include "wii_effects.h"
+#include "wii_hud.h"
 #include "wii_play.h"
 
 #include <stdlib.h>
@@ -40,7 +41,7 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = 3u << 20,
+	WII_TAG_ARENA = 4u << 20,
 	WII_TAG_CAP_PLAYERS = 16,
 	WII_TAG_CAP_WEAPONS = 8,
 	WII_TAG_CAP_ENCOUNTERS = 16,
@@ -85,6 +86,9 @@ static int encounter_published;
 static int location_published;
 static int magazine_rounds;
 static int grenade_count;
+static long grenade_projectile = -1;
+static char chapter_names[8][32];
+static int chapter_count;
 static long projectile_index = -1;
 static long damage_index = -1;
 struct projectile_material_response_definition default_projectile_material_response = {
@@ -1110,6 +1114,15 @@ static int load_globals(int slot)
 				ref_clear(&grenades[grenade_index].hud_interface);
 				ref_clear(&grenades[grenade_index].item);
 				ref_clear(&grenades[grenade_index].projectile);
+				{
+					uint8_t projectile_ref[16];
+
+					if (pull_va(grenade_va + (uint32_t)grenade_index * sizeof(*grenades) + offsetof(struct game_globals_grenade, projectile), projectile_ref, 16) == 0) {
+						read_ref(projectile_ref, &grenades[grenade_index].projectile);
+						if (grenade_index == 0)
+							grenade_projectile = grenades[grenade_index].projectile.index;
+					}
+				}
 			}
 			globals->grenades.count = count;
 			globals->grenades.address = grenades;
@@ -1424,6 +1437,23 @@ static int load_scenario(int slot)
 		scenario->object_names.count = name_count;
 		scenario->object_names.address = names;
 	}
+	if (pull_va(slots[slot].base_va + offsetof(struct scenario, cutscene_chapter_titles), block, 8) == 0) {
+		int titles = read_les32(block);
+		uint32_t title_va = read_le32(block + 4);
+		int title_index;
+
+		chapter_count = 0;
+		if (titles < 0)
+			titles = 0;
+		if (titles > 8)
+			titles = 8;
+		for (title_index = 0; title_index < titles; title_index++) {
+			if (pull_va(title_va + (uint32_t)title_index * 0x60u, chapter_names[title_index], 31) != 0)
+				break;
+			chapter_names[title_index][31] = 0;
+			chapter_count++;
+		}
+	}
 	slots[slot].base = scenario;
 	native_scenario = scenario;
 	return 0;
@@ -1528,6 +1558,8 @@ void wii_tag_cache_unmount(void)
 	location_published = 0;
 	magazine_rounds = 0;
 	grenade_count = 0;
+	grenade_projectile = -1;
+	chapter_count = 0;
 	projectile_index = -1;
 	damage_index = -1;
 	wii_collision_reset();
@@ -1569,6 +1601,19 @@ int wii_tag_cache_location_count(void)
 int wii_tag_cache_magazine_rounds(void)
 {
 	return magazine_rounds;
+}
+
+long wii_tag_cache_grenade_projectile(void)
+{
+	return grenade_projectile;
+}
+
+int wii_tag_cache_chapter(int index, char *name, int cap)
+{
+	if (!name || cap < 2 || index < 0 || index >= chapter_count || !chapter_names[index][0])
+		return -1;
+	snprintf(name, (size_t)cap, "%s", chapter_names[index]);
+	return 0;
 }
 
 int wii_tag_cache_grenade_count(void)
@@ -1745,6 +1790,15 @@ int wii_tag_cache_self_test(void)
 	uint32_t type_at;
 	uint32_t anim_at;
 	uint32_t overlay_at;
+	uint32_t replace_at;
+	uint32_t chapter_at;
+	uint32_t font_at;
+	uint32_t font_table_at;
+	uint32_t font_index_at;
+	uint32_t font_char_at;
+	uint32_t font_pix_at;
+	uint32_t marker_at;
+	uint32_t marker_inst_at;
 	uint32_t default_at;
 	uint32_t weapon_def_at;
 	uint32_t variant_at;
@@ -1819,6 +1873,22 @@ int wii_tag_cache_self_test(void)
 	cursor += 6u;
 	shader_at = cursor;
 	cursor += 16u;
+	chapter_at = cursor;
+	cursor += 0x60u;
+	marker_at = cursor;
+	cursor += 64u;
+	marker_inst_at = cursor;
+	cursor += 32u;
+	font_at = cursor;
+	cursor += 0xa0u;
+	font_table_at = cursor;
+	cursor += 12u;
+	font_index_at = cursor;
+	cursor += 512u;
+	font_char_at = cursor;
+	cursor += 0x14u;
+	font_pix_at = cursor;
+	cursor += 4u;
 	graph_at = cursor;
 	cursor += sizeof(struct animation_graph);
 	seat_at = cursor;
@@ -1832,6 +1902,8 @@ int wii_tag_cache_self_test(void)
 	anim_at = cursor;
 	cursor += sizeof(struct animation);
 	overlay_at = cursor;
+	cursor += sizeof(struct animation);
+	replace_at = cursor;
 	cursor += sizeof(struct animation);
 	default_at = cursor;
 	cursor += 24u;
@@ -1943,6 +2015,9 @@ int wii_tag_cache_self_test(void)
 			put_u32(instance + 0x14, TAG_BASE + rows[index].at);
 		}
 	}
+	put_u32(file + scenario_at + offsetof(struct scenario, cutscene_chapter_titles), 1);
+	put_u32(file + scenario_at + offsetof(struct scenario, cutscene_chapter_titles) + 4, TAG_BASE + chapter_at);
+	memcpy(file + chapter_at, "PILLAR", 6);
 	put_u32(file + scenario_at + offsetof(struct scenario, players), 1);
 	put_u32(file + scenario_at + offsetof(struct scenario, players) + 4, TAG_BASE + player_at);
 	put_f32(file + player_at, 9.f);
@@ -2032,6 +2107,11 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + globals_at + offsetof(struct game_globals, grenades), 1);
 	put_u32(file + globals_at + offsetof(struct game_globals, grenades) + 4, TAG_BASE + grenade_at);
 	put_u16(file + grenade_at, 4);
+	file[grenade_at + offsetof(struct game_globals_grenade, projectile)] = 'p';
+	file[grenade_at + offsetof(struct game_globals_grenade, projectile) + 1] = 'r';
+	file[grenade_at + offsetof(struct game_globals_grenade, projectile) + 2] = 'o';
+	file[grenade_at + offsetof(struct game_globals_grenade, projectile) + 3] = 'j';
+	put_u32(file + grenade_at + offsetof(struct game_globals_grenade, projectile) + 12, datum[9]);
 	wii_collision_write_floor(file, sbsp_at, collide_at, plane_at, node3d_at, leaf_at, ref2d_at, surface_at);
 	put_u16(file + globals_at + offsetof(struct game_globals, player_information), 1);
 	put_u32(file + globals_at + offsetof(struct game_globals, player_information) + 4, TAG_BASE + info_at);
@@ -2133,7 +2213,7 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, animations), 1);
 	put_u32(file + class_at + offsetof(struct animation_graph_weapon_class, animations) + 4, TAG_BASE + class_anim_at);
 	put_u16(file + class_anim_at, 0);
-	put_u32(file + graph_at + offsetof(struct animation_graph, animations), 2);
+	put_u32(file + graph_at + offsetof(struct animation_graph, animations), 3);
 	put_u32(file + graph_at + offsetof(struct animation_graph, animations) + 4, TAG_BASE + anim_at);
 	put_u16(file + anim_at + offsetof(struct animation, frame_count), 1);
 	put_u16(file + anim_at + offsetof(struct animation, node_count), 1);
@@ -2141,6 +2221,8 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + anim_at + offsetof(struct animation, default_data) + 12, TAG_BASE + default_at);
 	memcpy(file + overlay_at, file + anim_at, sizeof(struct animation));
 	put_u16(file + overlay_at + offsetof(struct animation, type), 1);
+	memcpy(file + replace_at, file + anim_at, sizeof(struct animation));
+	put_u16(file + replace_at + offsetof(struct animation, type), 2);
 	put_u16(file + default_at + 6, 32767);
 	put_u16(file + weapon_def_at, (uint16_t)_object_type_weapon);
 	put_f32(file + weapon_def_at + offsetof(struct weapon_definition, object.bounding_radius), 0.2f);
@@ -2213,6 +2295,25 @@ int wii_tag_cache_self_test(void)
 	put_u32(file + bitm_data_at + 0x1c, 16);
 	memset(file + pixels_at, 0xff, 16);
 	put_u16(file + eqip_at + offsetof(struct equipment_definition, equipment.powerup_type), 1);
+	put_u32(file + model_at + offsetof(struct model, markers), 1);
+	put_u32(file + model_at + offsetof(struct model, markers) + 4, TAG_BASE + marker_at);
+	memcpy(file + marker_at, "weapon", 6);
+	put_u32(file + marker_at + 52, 1);
+	put_u32(file + marker_at + 56, TAG_BASE + marker_inst_at);
+	put_f32(file + marker_inst_at + 4, 0.25f);
+	put_f32(file + marker_inst_at + 12, 0.35f);
+	put_u32(file + font_at + 0x30, 1);
+	put_u32(file + font_at + 0x34, TAG_BASE + font_table_at);
+	put_u32(file + font_table_at, 256);
+	put_u32(file + font_table_at + 4, TAG_BASE + font_index_at);
+	memset(file + font_index_at, 0xff, 512);
+	put_u16(file + font_index_at + 0x50u * 2u, 0);
+	put_u32(file + font_at + 0x7c, 1);
+	put_u32(file + font_at + 0x80, TAG_BASE + font_char_at);
+	put_u16(file + font_char_at + 4, 2);
+	put_u16(file + font_char_at + 6, 2);
+	put_u32(file + font_at + 0x88 + 12, TAG_BASE + font_pix_at);
+	memset(file + font_pix_at, 0xff, 4);
 	if (wii_tag_cache_mount(memory_read, file, sizeof(file), 0, sizeof(file)) != 0)
 		return -1;
 	wii_tag_cache_player(&x, &y, &z);
@@ -2234,6 +2335,7 @@ int wii_tag_cache_self_test(void)
 		return -1;
 	if (!wii_collision_model_hits(wii_tag_cache_get((long)FCC('c', 'o', 'l', 'l'), (long)datum[12])))
 		return -1;
+	wii_hud_bind(0x803A6000u + font_at);
 	if (!wii_effect_bitmap_ok() || effect_new_from_object((long)datum[14], NONE, NONE, NONE, 1.f, 1.f, NULL, NULL) == NONE)
 		return -1;
 	if (!wii_tag_cache_get((long)FCC('b', 'i', 'p', 'd'), (long)datum[2]))

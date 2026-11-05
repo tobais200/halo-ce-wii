@@ -27,6 +27,7 @@
 #include "game/game.h"
 #include "wii_hs.h"
 #include "wii_play.h"
+#include "wii_tag_cache.h"
 #include "wii_collision.h"
 
 #include <stdarg.h>
@@ -1175,14 +1176,24 @@ int wii_hs_campaign_count(void)
 
 void wii_hud_show(int kind, long index, float delay)
 {
+	char scenario_text[32];
+
 	wii_chapter = index;
 	wii_chapter_delay = delay;
-	if (kind == 0 && delay > 0.f)
+	scenario_text[0] = 0;
+	wii_tag_cache_chapter((int)index, scenario_text, (int)sizeof(scenario_text));
+	if (kind == 0 && scenario_text[0])
+		snprintf(wii_chapter_text, sizeof(wii_chapter_text), "%s", scenario_text);
+	else if (kind == 0 && delay > 0.f)
 		snprintf(wii_chapter_text, sizeof(wii_chapter_text), "chapter %ld +%.1fs", (long)index, delay);
 	else if (kind == 0)
 		snprintf(wii_chapter_text, sizeof(wii_chapter_text), "chapter %ld", (long)index);
+	else if (kind == 1 && scenario_text[0])
+		snprintf(wii_help_text, sizeof(wii_help_text), "%s", scenario_text);
 	else if (kind == 1)
 		snprintf(wii_help_text, sizeof(wii_help_text), "help %ld", (long)index);
+	else if (kind == 2 && scenario_text[0])
+		snprintf(wii_objective_text, sizeof(wii_objective_text), "%s", scenario_text);
 	else if (kind == 2)
 		snprintf(wii_objective_text, sizeof(wii_objective_text), "objective %ld", (long)index);
 	else

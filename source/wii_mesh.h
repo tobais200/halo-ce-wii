@@ -15,6 +15,8 @@ int wii_mesh_animated(void);
 int wii_mesh_weapon(void);
 int wii_mesh_shader(void);
 int wii_mesh_overlay(void);
+int wii_mesh_replacement(void);
+int wii_mesh_marker(void);
 int wii_mesh_hand(void);
 const uint8_t *wii_mesh_shader_pixels(uint16_t *width, uint16_t *height);
 int wii_mesh_is_weapon(int index);

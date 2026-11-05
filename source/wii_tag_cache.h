@@ -29,6 +29,8 @@ int wii_tag_cache_encounter_count(void);
 int wii_tag_cache_location_count(void);
 int wii_tag_cache_magazine_rounds(void);
 int wii_tag_cache_grenade_count(void);
+long wii_tag_cache_grenade_projectile(void);
+int wii_tag_cache_chapter(int index, char *name, int cap);
 long wii_tag_cache_projectile_index(void);
 long wii_tag_cache_damage_index(void);
 int wii_tag_cache_pull(uint32_t va, void *destination, uint32_t size);

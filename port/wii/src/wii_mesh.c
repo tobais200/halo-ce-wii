@@ -30,7 +30,9 @@ static int weapon_from = -1;
 static int skinned;
 static int animated;
 static int overlay_used;
+static int replacement_used;
 static int hand_placed;
+static int marker_used;
 static int shader_sampled;
 static uint8_t shader_pixels[32 * 32 * 4];
 static uint16_t shader_w;
@@ -273,6 +275,14 @@ static int apply_animation(struct model *model, struct biped_definition *biped, 
 			overlay_used = 1;
 		}
 	}
+	if (graph->animations.count > 2) {
+		struct animation *replacement = anim + 2;
+
+		if (replacement->type == _animation_replacement) {
+			replacement_animation_apply(replacement, 0, orients);
+			replacement_used = 1;
+		}
+	}
 	return animated;
 }
 
@@ -355,8 +365,27 @@ static void skin_weapon(struct wii_mat const *nodes, int node_count, float yaw, 
 		return;
 	if (read_s32(block) < 1)
 		return;
-	before = tri_count;
-	skin_part(read_u32(block + 4), nodes, node_count, yaw, ox + nodes[0].x, oy + nodes[0].y, oz + nodes[0].z);
+	{
+		uint8_t marker_head[8];
+		float mx = nodes[0].x;
+		float my = nodes[0].y;
+		float mz = nodes[0].z;
+
+		if (wii_tag_cache_pull(model_va + offsetof(struct model, markers), marker_head, 8) == 0 && read_s32(marker_head) >= 1) {
+			uint8_t instances[8];
+			uint8_t point[12];
+
+			if (wii_tag_cache_pull(read_u32(marker_head + 4) + 52, instances, 8) == 0 && read_s32(instances) >= 1
+				&& wii_tag_cache_pull(read_u32(instances + 4) + 4, point, 12) == 0) {
+				mx = read_f32(point);
+				my = read_f32(point + 4);
+				mz = read_f32(point + 8);
+				marker_used = 1;
+			}
+		}
+		before = tri_count;
+		skin_part(read_u32(block + 4), nodes, node_count, yaw, ox + mx, oy + my, oz + mz);
+	}
 	if (tri_count > before)
 		hand_placed = 1;
 	before = tri_count;
@@ -386,7 +415,9 @@ int wii_mesh_build(long unit_index)
 	skinned = 0;
 	animated = 0;
 	overlay_used = 0;
+	replacement_used = 0;
 	hand_placed = 0;
+	marker_used = 0;
 	shader_sampled = 0;
 	shader_w = 0;
 	shader_h = 0;
@@ -456,6 +487,16 @@ int wii_mesh_shader(void)
 int wii_mesh_overlay(void)
 {
 	return overlay_used;
+}
+
+int wii_mesh_replacement(void)
+{
+	return replacement_used;
+}
+
+int wii_mesh_marker(void)
+{
+	return marker_used;
 }
 
 int wii_mesh_hand(void)

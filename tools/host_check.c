@@ -16,6 +16,7 @@ unsigned char game_map_loaded(void);
 #include "wii_effects.h"
 #include "wii_play.h"
 #include "wii_mesh.h"
+#include "wii_hud.h"
 #include "wii_game.h"
 #include "wii_hs.h"
 #include "wii_sim.h"
@@ -515,11 +516,21 @@ int main(void)
 			}
 			if (!wii_mesh_overlay() || !wii_mesh_hand())
 				return fail("overlay or hand weapon");
-			wii_hud_show(0, 2, 0.f);
-			wii_hud_show(1, 4, 0.f);
-			wii_hud_show(2, 5, 1.5f);
-			if (!wii_hud_chapter()[0] || !wii_hud_help()[0] || !wii_hud_objective()[0])
+			wii_hud_show(0, 0, 0.f);
+			wii_hud_show(1, 0, 0.f);
+			wii_hud_show(2, 0, 0.f);
+			if (strcmp(wii_hud_chapter(), "PILLAR") != 0 || strcmp(wii_hud_help(), "PILLAR") != 0)
 				return fail("hud text");
+			{
+				uint8_t glyphs[64 * 8];
+
+				if (wii_hud_raster(wii_hud_chapter(), glyphs, 64, 8) < 1 || glyphs[0] == 0 && glyphs[65] == 0)
+					return fail("hud glyphs");
+			}
+			if (!wii_mesh_overlay() || !wii_mesh_replacement() || !wii_mesh_marker() || !wii_mesh_hand())
+				return fail("overlay or marker weapon");
+			if (wii_play_grenade_definition() == -1 || wii_play_grenade_definition() != wii_tag_cache_grenade_projectile())
+				return fail("grenade projectile");
 			if (wii_play_grenades() < 1 || !wii_play_flank())
 				return fail("actor grenade");
 			if (!wii_vehicle_seat_for(2.f) || wii_vehicle_seat_for(20.f))

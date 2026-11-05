@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Chapter titles and HUD help/objective text are formatted and printed on the BSP view. HUD show/blink calls for health, shield, motion sensor, and crosshair set that line too. Most other script functions are still unlinked.
-- Up to eight `snd!` tags are decoded from Xbox IMA ADPCM into one 8192-sample buffer. The tag working set is 3 MiB.
-- After the base animation, an overlay animation is applied with `overlay_animation_apply`. The weapon mesh is drawn on the first node and again in front of the eye. The shader's bitmap is decoded with `wii_tex` and tints the triangles.
-- The firing check, grenade count, and vehicle parent/seat write are unchanged in kind. Seat entry also sets the unit animation index to 0. It is still not `actor_combat.c`.
+- Chapter titles are the scenario name (`PILLAR` in the synthetic map) and are rasterized with a font tag's glyphs, the same layout DeLa uses. Help and objective lines use that name when the index matches a loaded title. Most other script functions are still unlinked.
+- Up to twelve `snd!` tags decode into one 12288-sample buffer. The tag working set is 4 MiB.
+- Base, overlay, and replacement animations are applied before skinning. The weapon mesh is placed on the model's `weapon` marker and again in front of the eye. One shader bitmap is decoded.
+- Firing search checks five positions. The grenade uses the projectile reference on the globals grenade tag. Seat entry still parents the unit and sets animation index 0. It is not the full `actor_combat.c` search.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled.
 
 ### Later, each one blocked until the previous exists
