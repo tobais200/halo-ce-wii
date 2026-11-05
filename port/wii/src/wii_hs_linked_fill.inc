@@ -199,3 +199,8 @@
 		fill_campaign3(115, _hs_type_void, _hs_type_object_list, _hs_type_real, _hs_type_real, "units_set_current_vitality");
 		fill_campaign2(143, _hs_type_boolean, _hs_type_device_group, _hs_type_real, "device_group_set");
 		fill_campaign3(354, _hs_type_void, _hs_type_unit, _hs_type_starting_profile, _hs_type_boolean, "player_add_equipment");
+		fill_campaign(46, _hs_type_short_integer, 1, _hs_type_object_list, "list_count");
+		fill_campaign(65, _hs_type_void, 1, _hs_type_boolean, "breakable_surfaces_enable");
+		fill_campaign(254, _hs_type_void, 1, _hs_type_real, "game_speed");
+		fill_campaign(334, _hs_type_void, 1, _hs_type_boolean, "sound_enable");
+		fill_campaign(357, _hs_type_boolean, 1, _hs_type_boolean, "show_hud_help_text");

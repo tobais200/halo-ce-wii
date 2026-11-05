@@ -36,6 +36,7 @@ int wii_play_portal_inside(void);
 int wii_play_vehicle_moved(void);
 int wii_play_vehicle_settled(void);
 int wii_play_tire_ran(void);
+int wii_play_tire_slip(void);
 int wii_play_portal_hops(void);
 int wii_play_pursuit_ran(void);
 float wii_play_firing_score(void);

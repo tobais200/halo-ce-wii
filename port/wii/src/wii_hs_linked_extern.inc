@@ -331,3 +331,9 @@ void units_scripting_set_maximum_vitality( long object_list_index, real body_vit
 void units_scripting_set_current_vitality( long object_list_index, real body_vitality, real shield_vitality);
 boolean device_group_set_desired_value( short group_index, real desired_value);
 void player_add_equipment( long unit_index, short starting_profile_index, boolean reset_equipment);
+short object_list_count( long object_list_index);
+void breakable_surfaces_enable( boolean state);
+void game_time_set_speed( real speed);
+void sound_enable( boolean enabled);
+boolean scripted_show_hud( boolean show);
+boolean scripted_show_hud_help_text( boolean show);

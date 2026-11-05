@@ -56,6 +56,11 @@ SOURCES = {
     "player_effects.o": "effects/player_effects.c",
     "hud_unit.o": "interface/hud_unit.c",
     "hud_weapon.o": "interface/hud_weapon.c",
+    "object_lists.o": "hs/object_lists.c",
+    "game_time.o": "game/game_time.c",
+    "sound_manager.o": "sound/sound_manager.c",
+    "hud.o": "interface/hud.c",
+    "breakable_surfaces.o": "physics/breakable_surfaces.c",
 }
 
 PORT = {

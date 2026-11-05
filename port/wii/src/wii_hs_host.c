@@ -512,7 +512,7 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		break;
 	case 356:
 		wii_hud_shown = arguments[0] ? 1 : 0;
-		result = campaign_bool(wii_hud_shown);
+		result = campaign_bool(scripted_show_hud((boolean)arguments[0]));
 		break;
 #include "wii_hs_linked_case.inc"
 	default:
@@ -720,16 +720,6 @@ struct memory_pool *game_state_memory_pool_new(char const *name, long size)
 	return memory_pool_new(name, size);
 }
 
-long game_time_get(void)
-{
-	return wii_time;
-}
-
-boolean game_in_progress(void)
-{
-	return TRUE;
-}
-
 boolean terminal_shows(short kind)
 {
 	(void)kind;
@@ -915,31 +905,6 @@ short seed_random_range(unsigned long *seed, short lower_bound, short upper_boun
 	return (short)(lower_bound + (short)(seed_random(seed) % (unsigned short)span));
 }
 
-
-long object_list_new(void)
-{
-	return NONE;
-}
-
-void object_list_add(long object_list_index, long object_index)
-{
-	(void)object_list_index;
-	(void)object_index;
-}
-
-void object_list_add_reference(long object_list_index)
-{
-	(void)object_list_index;
-}
-
-void object_list_remove_reference(long object_list_index)
-{
-	(void)object_list_index;
-}
-
-void object_list_gc(void)
-{
-}
 
 struct object_datum *wii_object_get(long index)
 {
@@ -1134,6 +1099,13 @@ static void load_globals(uint8_t const *source, int count)
 	wii_scenario.hs_globals.address = wii_globals;
 }
 
+boolean game_time_initialized(void);
+void game_time_initialize(void);
+void game_time_initialize_for_new_map(void);
+void game_time_start(void);
+void object_lists_initialize(void);
+void object_lists_initialize_for_new_map(void);
+
 int wii_hs_mount(
 	uint8_t const *syntax_le,
 	uint32_t syntax_bytes,
@@ -1185,6 +1157,13 @@ int wii_hs_mount(
 	hs_runtime_initialize_for_new_map();
 	wii_mounted = 1;
 	apply_player_start();
+	if (!game_time_initialized()) {
+		game_time_initialize();
+		game_time_initialize_for_new_map();
+		game_time_start();
+	}
+	object_lists_initialize();
+	object_lists_initialize_for_new_map();
 	hs_runtime_update();
 	return 0;
 }
@@ -1202,9 +1181,17 @@ int wii_hs_ready(void)
 	return wii_mounted;
 }
 
+boolean game_time_initialized(void);
+void game_time_initialize(void);
+void game_time_initialize_for_new_map(void);
+void game_time_start(void);
+void game_time_set_distributed(long time);
+
 void wii_hs_set_time(uint32_t ticks)
 {
 	wii_time = (long)ticks;
+	if (game_time_initialized())
+		game_time_set_distributed((long)ticks);
 }
 
 void wii_hs_update(void)

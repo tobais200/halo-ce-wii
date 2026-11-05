@@ -287,10 +287,6 @@ int bit_vector_or(void) { return 0; }
 int bots_dispose_from_old_map(void) { return 0; }
 int bots_initialize_for_new_map(void) { return 0; }
 int bots_update_actions(void) { return 0; }
-int breakable_surface_damage(void) { return 0; }
-int breakable_surface_damage_area_of_effect(void) { return 0; }
-static unsigned char wii_breakable_surface_flags[256];
-void *breakable_surface_flags_get(void) { return wii_breakable_surface_flags; }
 void *cheat;
 int cluster_partition_delete(void) { return 0; }
 int cluster_partition_disconnect(void) { return 0; }
@@ -310,7 +306,24 @@ void *collision_debug_vector;
 void *collision_debug_width;
 int collision_test_line(void) { return 0; }
 int component_vectors_from_direction3d(void) { return 0; }
-int component_vectors_from_normal3d(void) { return 0; }
+void component_vectors_from_normal3d(float const *vector, float const *normal, float *parallel, float *perpendicular)
+{
+	float along = vector[0] * normal[0] + vector[1] * normal[1] + vector[2] * normal[2];
+	float px = normal[0] * along;
+	float py = normal[1] * along;
+	float pz = normal[2] * along;
+
+	if (parallel) {
+		parallel[0] = px;
+		parallel[1] = py;
+		parallel[2] = pz;
+	}
+	if (perpendicular) {
+		perpendicular[0] = vector[0] - px;
+		perpendicular[1] = vector[1] - py;
+		perpendicular[2] = vector[2] - pz;
+	}
+}
 int config_boolean(void) { return 0; }
 int config_changes(void) { return 0; }
 int coop_enemies_extra_count(void) { return 0; }
@@ -363,8 +376,6 @@ int game_modes_headshot_kills(void) { return 0; }
 int game_modes_kill_by_melee(void) { return 0; }
 int game_statistics_record_damage(void) { return 0; }
 int game_statistics_record_kill(void) { return 0; }
-int game_time_menu_scene(void) { return 0; }
-int game_time_reset_speed(void) { return 0; }
 int get_global_local_random_seed_address(void) { return 0; }
 /* One collision surface and no edges. Cluster count stays 0, so the object
 cluster walk does not run. path_state_find can start on surface 0 and finish.
@@ -452,10 +463,6 @@ int global_structure_bsp_index_get(void) { return 0; }
 int halo_interpolation_enabled(void) { return 0; }
 int halo_model_detail_scale(void) { return 0; }
 int hs_compile_and_evaluate(void) { return 0; }
-int hud_picked_up_ammunition(void) { return 0; }
-int hud_picked_up_grenade(void) { return 0; }
-int hud_picked_up_powerup(void) { return 0; }
-int hud_picked_up_weapon(void) { return 0; }
 int infection_allow_weapon_drop(void) { return 0; }
 int infection_can_delete_skull(void) { return 0; }
 int infection_melee_multiplier(void) { return 0; }
@@ -692,8 +699,6 @@ int object_bounds_cache_update(void) { return 0; }
 int object_deleted_procs_call(void) { return 0; }
 int object_get_cached_render_lighting(void) { return 0; }
 int object_get_self_illumination(void) { return 0; }
-int object_list_get_first(void) { return 0; }
-int object_list_get_next(void) { return 0; }
 void *observer_get_camera(void)
 {
 	static unsigned char camera[256];
@@ -814,8 +819,6 @@ int shield_color_colors(void) { return 0; }
 int signed_angle_between_vectors2d(void) { return 0; }
 int signed_angular_difference(void) { return 0; }
 int sound_definition_get_maximum_distance(void) { return 0; }
-int sound_scripted_dialog_is_playing(void) { return 0; }
-int sound_stop_impulse(void) { return 0; }
 int strlwr(void) { return 0; }
 int structure_bsp_get_cluster_encoded_sound_distance(void) { return 0; }
 int structure_bsp_get_cluster_pvs(void) { return 0; }
@@ -955,7 +958,6 @@ unsigned char game_engine_globals[0x24];
 unsigned char global_stage[192];
 long timeout_for_endgame_sound;
 void *game_engines[32];
-void *hud_globals;
 int autoaim_compute_target(void) { return 0; }
 int bitmap_group_try_and_get_bitmap(void) { return 0; }
 int collision_log_end_time(void) { return 0; }
@@ -994,7 +996,6 @@ int global_network_game_client_get(void) { return 0; }
 int global_network_game_server_get(void) { return 0; }
 int halo_scoreboard_pointer_update(void) { return 0; }
 int halo_server_mode(void) { return 0; }
-int hud_player_name_color(void) { return 0; }
 int infection_enabled(void) { return 0; }
 int infection_read_network_state(void) { return 0; }
 int infection_remaining_ticks(void) { return 0; }
@@ -1173,9 +1174,6 @@ int dead_camera_update(void) { return 0; }
 int director_update(void) { return 0; }
 int display_errors_deferred_until_cinematic_stop(void) { return 0; }
 int first_person_camera_fake(void) { return 0; }
-int game_time_get_elapsed(void) { return 0; }
-int game_time_get_paused(void) { return 0; }
-float game_time_get_speed(void) { return 1.f; }
 float global_rasterizer_model_ambient_reflection_tint;
 int halo_screen_width(void) { return 640; }
 int network_coop_note_scenery_animation(void) { return 0; }
@@ -1204,9 +1202,6 @@ void scenario_get_sound_environment(long *background, void const **environment, 
 	if (crossed)
 		*crossed = 0;
 }
-int sound_new_impulse(void) { return -1; }
-int sound_manager_set_sound_environment(void) { return 0; }
-int sound_refresh_looping(void) { return 0; }
 int _sound_cache_sound_request(void) { return 0; }
 int network_coop_note_effect(void) { return 0; }
 int network_coop_note_nav_point(void) { return 0; }
@@ -1218,7 +1213,6 @@ int coop_scripts_empty_player_list(void) { return 0; }
 int coop_scripts_gather_in_volume(void) { return 0; }
 int coop_scripts_teleport_followers(void) { return 0; }
 int coop_scripts_unit_near(void) { return 0; }
-int object_list_mark_players(void) { return 0; }
 int hud_draw_bitmap_direct(void) { return 0; }
 int hud_draw_numbers(void) { return 0; }
 int hud_retrieve_bitmap_and_bounding_rect(void) { return 0; }
@@ -1284,7 +1278,7 @@ int structure_render_set_fog_offset(void) { return 0; }
 /* Five clusters in a line. Portal n joins cluster n and n+1 at x = n + 1.5. */
 short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
 
-enum { WII_PORTAL_CLUSTERS = 5, WII_PORTAL_QUADS = 4 };
+enum { WII_PORTAL_CLUSTERS = 8, WII_PORTAL_QUADS = 7 };
 
 static int portal_from(short start, float x, float y, float radius, short *first, short *second)
 {
@@ -1416,12 +1410,8 @@ void controller_remap_prompt(short port, void *preferences) { (void)port; (void)
 void draw_string_set_indents(int a, int b) { (void)a; (void)b; }
 unsigned get_flash_color(void) { return 0xffffffffu; }
 void hud_calculate_point(void) {}
-wchar_t const *hud_get_item_string(long string_index) { (void)string_index; return L""; }
 void hud_hires_button_draw(void) {}
 void hud_hires_sprite_bitmap(void) {}
-struct hud_scripted_globals_definition { int show_hud; int show_hud_help_text; };
-struct hud_scripted_globals_definition wii_hud_scripted;
-struct hud_scripted_globals_definition *hud_scripted_globals = &wii_hud_scripted;
 void input_abstraction_get_local_player_preferences(short player, void *preferences)
 {
 	(void)player;
@@ -1478,3 +1468,57 @@ void passenger_camera_reticle_end(void) {}
 short unit_definition_get_active_hud_index(void) { return -1; }
 short unit_definition_get_seat_active_hud_index(void) { return -1; }
 int verify_tag_reference(void) { return 0; }
+
+struct scenario;
+struct scenario *global_scenario;
+unsigned char platform_sound_dsound[64];
+unsigned char default_sound_environment[0x48];
+
+int bitmap_group_get_bitmap_from_sequence(void) { return 0; }
+float config_real(void) { return 0.f; }
+int convex_hull2d_test_point(void) { return 1; }
+void coop_skip_vote_draw(void) {}
+void coop_spectate_draw(void) {}
+int coop_spectating(void) { return 0; }
+void dsound_port_set_channel_stereo_position(void) {}
+float halo_fixed_step(float x) { (void)x; return 0.f; }
+void interface_draw_bitmap(void) {}
+void motion_sensor_dispose(void) {}
+void motion_sensor_dispose_from_old_map(void) {}
+void motion_sensor_initialize(void) {}
+void motion_sensor_initialize_for_new_map(void) {}
+void motion_sensor_tick(void) {}
+void network_chat_draw(void) {}
+void network_coop_note_surface_broken(void) {}
+void network_distributed_tick(void) {}
+int network_game_client_server_has_started_game(void) { return 0; }
+void network_game_server_update_ticks(void) {}
+void network_votekick_draw(void) {}
+int particle_new(void) { return 0; }
+void rasterizer_hud_begin(void) {}
+void rasterizer_hud_end(void) {}
+void read_sound_preferences(void *out) { (void)out; }
+int reference_list_port_full(void) { return 0; }
+void reference_list_port_report(void *list) { (void)list; }
+void render_interpolation_frame_begin(void) {}
+void render_interpolation_frame_end(void) {}
+void render_interpolation_tick(void) {}
+void sincos(float a, float *s, float *c) { (void)a; if (s) *s = 0.f; if (c) *c = 1.f; }
+void sound_cache_delete(void) {}
+void sound_cache_idle(void) {}
+void sound_cache_new(void) {}
+void sound_cache_sound_finished(void) {}
+int sound_channel_type_flags(void) { return 0; }
+void sound_classes_update(void) {}
+void *sound_class_get(void) { return 0; }
+float sound_class_get_gain(void) { return 1.f; }
+int sound_definition_find_pitch_range_by_pitch(void) { return -1; }
+float sound_definition_get_minimum_distance(void) { return 0.f; }
+int sound_definition_next_permutation(void) { return -1; }
+float sound_permutation_get_real_mouth_aperture(void) { return 0.f; }
+double tan(double);
+double halo_tan(double x) { return tan(x); }
+int update_client_get_maximum_possible_server_time(void) { return 0; }
+int update_client_local_ticks(void) { return 0; }
+void update_client_start(void) {}
+void update_server_start(void) {}

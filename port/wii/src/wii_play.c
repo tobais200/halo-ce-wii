@@ -75,6 +75,7 @@ static int portal_outside;
 static int vehicle_moved;
 static int vehicle_settled;
 static int tire_ran;
+static int tire_slip;
 static int portal_hops;
 static long prop_actor = NONE;
 static int pursuit_ran;
@@ -444,6 +445,7 @@ static void spawn_vehicle(void)
 			int wheel_seen = 0;
 
 			vehicle_updated = 0;
+			object->object.translational_velocity.j = 2.f;
 			for (tick = 0; tick < 64; tick++) {
 				float z;
 
@@ -467,9 +469,8 @@ static void spawn_vehicle(void)
 			vehicle_settled = stable >= 8;
 			wheel_ran = wheel_seen;
 			tire_ran = object && (object->object.position.x > before_x + 0.02f
-				|| before_x > object->object.position.x + 0.02f
-				|| object->object.position.y > 6.f + 0.02f
-				|| 6.f > object->object.position.y + 0.02f);
+				|| before_x > object->object.position.x + 0.02f);
+			tire_slip = object && object->object.position.y < 7.f && object->object.position.y > 5.f;
 		}
 		vehicle = vehicle_datum_get(created);
 		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
@@ -779,6 +780,11 @@ int wii_play_vehicle_settled(void)
 int wii_play_tire_ran(void)
 {
 	return tire_ran;
+}
+
+int wii_play_tire_slip(void)
+{
+	return tire_slip;
 }
 
 int wii_play_portal_hops(void)

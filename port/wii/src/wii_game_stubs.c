@@ -77,8 +77,12 @@ int scenario_load(char const *name)
 }
 
 void hud_messaging_initialize(void);
-void hud_initialize_unit_interface(void);
-void hud_initialize_weapon_interface(void);
+void hud_initialize(void);
+void object_lists_initialize(void);
+void object_lists_initialize_for_new_map(void);
+void game_time_start(void);
+boolean game_time_initialized(void);
+void game_time_set_distributed(long time);
 
 void wii_game_boot(void)
 {
@@ -88,11 +92,13 @@ void wii_game_boot(void)
 		return;
 	hud_messaging_initialize();
 	game_initialize();
-	hud_initialize_unit_interface();
-	hud_initialize_weapon_interface();
+	hud_initialize();
 	game_options_new(&options);
+	object_lists_initialize();
 	if (game_load(&options)) {
 		game_initialize_for_new_map();
+		object_lists_initialize_for_new_map();
+		game_time_start();
 		wii_game_spawn_local_player();
 	}
 	booted = 1;
@@ -109,18 +115,10 @@ void real_math_reset_precision(void) {}
 void random_seed_debug_log(boolean log) { (void)log; }
 void lock_global_random_seed(void) {}
 void unlock_global_random_seed(void) {}
-void game_time_initialize(void) {}
-void game_time_initialize_for_new_map(void) {}
-void game_time_dispose_from_old_map(void) {}
-void game_time_dispose(void) {}
 void game_statistics_start(void) {}
 int antennas_update(void) { return 0; }
 int bink_playback_dispose(void) { return 0; }
 int bink_playback_initialize(void) { return 0; }
-int breakable_surfaces_dispose(void) { return 0; }
-int breakable_surfaces_dispose_from_old_map(void) { return 0; }
-int breakable_surfaces_initialize(void) { return 0; }
-int breakable_surfaces_initialize_for_new_map(void) { return 0; }
 int cache_files_precache_in_progress(void) { return 0; }
 int cache_files_precache_is_copying_map(void) { return 0; }
 int cache_files_precache_map_begin(void) { return 0; }
@@ -169,7 +167,6 @@ int game_state_check_data_arrays(void) { return 0; }
 int game_state_dispose(void) { return 0; }
 int game_state_dispose_from_old_map(void) { return 0; }
 int game_state_initialize_for_new_map(void) { return 0; }
-int hud_update(void) { return 0; }
 int initialize_network_game_packets(void) { return 0; }
 int input_abstraction_dispose(void) { return 0; }
 int input_abstraction_initialize(void) { return 0; }
@@ -238,8 +235,6 @@ int sound_classes_dispose(void) { return 0; }
 int sound_classes_dispose_from_old_map(void) { return 0; }
 int sound_classes_initialize(void) { return 0; }
 int sound_classes_initialize_for_new_map(void) { return 0; }
-int sound_dispose_from_old_map(void) { return 0; }
-int sound_initialize_for_new_map(void) { return 0; }
 int telnet_console_dispose(void) { return 0; }
 int telnet_console_initialize(void) { return 0; }
 int transport_dispose(void) { return 0; }

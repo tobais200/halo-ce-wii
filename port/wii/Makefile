@@ -44,7 +44,7 @@ opence:
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
 	@echo "  effect_new decodes a contrail bitmap; GX draws particles and the contrail"
 	@echo "  animation-graph skinning applies base, replacement, and overlay keys"
-	@echo "  four portal quads cross five clusters; jeep tires drive while the body stays settled; a 22 MiB pixel slab stays in the 23 MiB arena"
+	@echo "  seven portal quads cross eight clusters; tire slip friction holds the jeep while it drives; the pixel slab fills the 23 MiB arena"
 	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:

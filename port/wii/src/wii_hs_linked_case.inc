@@ -699,3 +699,18 @@
 	case 354:
 		player_add_equipment(arguments[0], (short)arguments[1], (boolean)arguments[2]);
 		break;
+	case 46:
+		result = object_list_count(arguments[0]);
+		break;
+	case 65:
+		breakable_surfaces_enable((boolean)arguments[0]);
+		break;
+	case 254:
+		game_time_set_speed(*(float *)&arguments[0]);
+		break;
+	case 334:
+		sound_enable((boolean)arguments[0]);
+		break;
+	case 357:
+		result = campaign_bool(scripted_show_hud_help_text((boolean)arguments[0]));
+		break;

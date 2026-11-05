@@ -795,6 +795,9 @@ static int load_vehicle(int slot)
 			point[wheel].position.y = wheel_xy[wheel][1];
 			point[wheel].forward.i = 1.f;
 			point[wheel].up.k = 1.f;
+			point[wheel].friction_type = 1;
+			point[wheel].friction_parallel_scale = 0.25f;
+			point[wheel].friction_perpendicular_scale = 4.f;
 		}
 		physics.mass = 80.f;
 		physics.radius = 0.5f;
@@ -1789,13 +1792,18 @@ int wii_tag_cache_mount(
 		return -1;
 	{
 		/* Resident pixel pages inside the 23 MiB arena. The group names
-		   ninety-six bitmaps; this slab is the bytes they can grow into. */
-		unsigned char *pages = bump(22u << 20);
+		   one hundred twenty-eight bitmaps; the slab takes the rest of the arena. */
+		{
+			uint32_t rest = (WII_TAG_ARENA - arena_used) & ~7u;
+			unsigned char *pages = bump(rest);
 
-		if (!pages)
-			return -1;
-		pages[0] = 0xff;
-		pages[(22u << 20) - 1] = 0xff;
+			if (!pages && rest)
+				return -1;
+			if (rest) {
+				pages[0] = 0xff;
+				pages[rest - 1] = 0xff;
+			}
+		}
 	}
 	return 0;
 }
@@ -2288,9 +2296,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0x1200u;
+	cursor += 0x1800u;
 	pixels_at = cursor;
-	cursor += 1536u;
+	cursor += 2048u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2707,7 +2715,7 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 96);
+	put_u32(file + bitm_at + 0x60, 128);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
@@ -2717,7 +2725,7 @@ int wii_tag_cache_self_test(void)
 	{
 		int bitmap;
 
-		for (bitmap = 1; bitmap < 96; bitmap++) {
+		for (bitmap = 1; bitmap < 128; bitmap++) {
 			memcpy(file + bitm_data_at + (uint32_t)bitmap * 0x30u, file + bitm_data_at, 0x30);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x18, (uint32_t)bitmap * 16u);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x1c, 16);
