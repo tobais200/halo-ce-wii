@@ -478,3 +478,73 @@
 	case 355:
 		debug_player_teleport((short)arguments[0], (short)arguments[1]);
 		break;
+
+	case 30:
+		hs_teleport_players_not_in_trigger_volume(arguments[0], (short)arguments[1]);
+		break;
+	case 32:
+		result = campaign_bool(hs_trigger_volume_test_objects_any(arguments[0], arguments[1]));
+		break;
+	case 33:
+		result = campaign_bool(hs_trigger_volume_test_objects_all(arguments[0], arguments[1]));
+		break;
+	case 34:
+		hs_object_teleport(arguments[0], (unsigned short)arguments[1]);
+		break;
+	case 35:
+		hs_object_set_facing(arguments[0], (unsigned short)arguments[1]);
+		break;
+	case 37:
+		hs_object_set_permutation(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "", arguments[2] ? (char const *)(uintptr_t)arguments[2] : "");
+		break;
+	case 47:
+		hs_effect_new(arguments[0], (unsigned short)arguments[1]);
+		break;
+	case 48:
+		hs_effect_new_from_object_marker(arguments[0], arguments[1], arguments[2] ? (char const *)(uintptr_t)arguments[2] : "");
+		break;
+	case 49:
+		hs_damage_new(arguments[0], (unsigned short)arguments[1]);
+		break;
+	case 50:
+		hs_damage_object(arguments[0], arguments[1]);
+		break;
+	case 54:
+		hs_sound_set_gain(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "", (*(float *)&arguments[1]));
+		break;
+	case 323:
+		scripted_sound_new(arguments[0], arguments[1], (*(float *)&arguments[2]));
+		break;
+	case 327:
+		scripted_looping_sound_start(arguments[0], arguments[1], (*(float *)&arguments[2]));
+		break;
+	case 329:
+		scripted_looping_sound_set_scale(arguments[0], (*(float *)&arguments[1]));
+		break;
+	case 330:
+		scripted_looping_sound_set_alternate(arguments[0], (boolean)arguments[1]);
+		break;
+	case 360:
+		hud_unit_activate_nav_point_with_flag((unsigned short)arguments[0], arguments[1], (unsigned short)arguments[2], (*(float *)&arguments[3]));
+		break;
+	case 361:
+		hud_unit_activate_nav_point_with_object((unsigned short)arguments[0], arguments[1], arguments[2], (*(float *)&arguments[3]));
+		break;
+	case 362:
+		hud_activate_team_nav_point_with_flag((unsigned short)arguments[0], (unsigned short)arguments[1], (unsigned short)arguments[2], (*(float *)&arguments[3]));
+		break;
+	case 363:
+		hud_activate_team_nav_point_with_object((unsigned short)arguments[0], (unsigned short)arguments[1], arguments[2], (*(float *)&arguments[3]));
+		break;
+	case 364:
+		hud_unit_deactivate_nav_point_with_flag(arguments[0], (short)arguments[1]);
+		break;
+	case 365:
+		hud_unit_deactivate_nav_point_with_object(arguments[0], arguments[1]);
+		break;
+	case 366:
+		hud_deactivate_team_nav_point_with_flag((short)arguments[0], (short)arguments[1]);
+		break;
+	case 367:
+		hud_deactivate_team_nav_point_with_object((short)arguments[0], arguments[1]);
+		break;

@@ -6,6 +6,7 @@
 #include "ai/actors.h"
 #include "ai/ai_scenario_definitions.h"
 #include "ai/path.h"
+#include "ai/props.h"
 #include "units/vehicles.h"
 #include "units/vehicle_datum.h"
 #include "objects/objects.h"
@@ -66,6 +67,9 @@ static int firing_on_path;
 static int enter_anim;
 static int mass_ran;
 static int wheel_ran;
+static int suspension_ran;
+static int prop_surface;
+static long prop_actor = NONE;
 static int pursuit_ran;
 static long sound_tag;
 static int save_valid;
@@ -245,6 +249,7 @@ static void actors_fight(long player_unit)
 
 		if (!actor || actor->meta.unit_index == NONE || actor->meta.unit_index == player_unit)
 			continue;
+		prop_actor = index;
 		if (actor->meta.team_index == 0)
 			continue;
 		unit = object_get(actor->meta.unit_index);
@@ -421,11 +426,13 @@ static void spawn_vehicle(void)
 			vehicle->vehicle.airborne_ticks = 3;
 			vehicle->vehicle.speed = 1.f;
 			vehicle->vehicle.wheel = 0.f;
+			vehicle->vehicle.suspension[0] = 0xff;
 		}
 		vehicle_updated = vehicle_update(created) ? 1 : 0;
 		vehicle = vehicle_datum_get(created);
 		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
 		wheel_ran = vehicle && vehicle->vehicle.wheel != 0.f;
+		suspension_ran = vehicle && vehicle->vehicle.suspension[0] != 0xff;
 	}
 }
 
@@ -475,9 +482,30 @@ void wii_play_after_tick(void)
 	}
 	{
 		struct path_input input;
+		struct prop_datum *prop = NULL;
+		real_point3d dest;
 
+		dest.x = 3.f;
+		dest.y = 0.f;
+		dest.z = 0.f;
+		if (prop_actor != NONE && actor_data) {
+			struct actor_datum *actor = actor_get(prop_actor);
+			long prop_index = NONE;
+
+			if (actor)
+				prop_index = prop_new_unacknowledged(prop_actor, actor->meta.unit_index, TRUE);
+			prop = prop_index == NONE ? NULL : prop_get(prop_index);
+			if (prop) {
+				prop->pathfinding_surface_index = 3;
+				prop->pathfinding_point = dest;
+				prop->body_position = dest;
+				prop_surface = (int)prop->pathfinding_surface_index;
+			}
+		}
 		actor_path_input_new(NONE, &input);
 		path_state_new(&input, &firing_path, NULL);
+		if (prop)
+			path_state_destination(&firing_path, &prop->pathfinding_point, prop->pathfinding_surface_index, 0.5f);
 		path_found = path_state_find(&firing_path) ? 1 : 0;
 		path_nodes = path_found ? firing_path.node_count : 0;
 	}
@@ -635,6 +663,16 @@ int wii_play_mass_ran(void)
 int wii_play_wheel_ran(void)
 {
 	return wheel_ran;
+}
+
+int wii_play_suspension_ran(void)
+{
+	return suspension_ran;
+}
+
+int wii_play_prop_surface(void)
+{
+	return prop_surface;
 }
 
 int wii_play_pursuit_ran(void)

@@ -766,6 +766,8 @@ static int load_vehicle(int slot)
 		point.mass = 80.f;
 		point.relative_mass = 1.f;
 		point.radius = 0.35f;
+		point.position.z = 0.2f;
+		point.up.k = -1.f;
 		physics.mass = 80.f;
 		physics.radius = 0.5f;
 		physics.gravity_scale = 1.f;
@@ -780,6 +782,39 @@ static int load_vehicle(int slot)
 			unit->object.physics.group_tag = slots[phys].group;
 			unit->object.physics.index = (long)slots[phys].datum;
 			mass_point_count = physics.mass_points.count;
+		}
+	}
+	{
+		static struct {
+			short mass_point_index;
+			short animation_index;
+			float drop;
+			float rest;
+			unsigned char pad[8];
+		} suspension;
+		static struct {
+			struct animation_aiming_screen_bounds steering;
+			long unused[0x11];
+			struct tag_block animations;
+			struct tag_block suspensions;
+		} vanim;
+		int graph_slot;
+
+		memset(&suspension, 0, sizeof(suspension));
+		memset(&vanim, 0, sizeof(vanim));
+		suspension.mass_point_index = 0;
+		suspension.animation_index = 0;
+		suspension.drop = 1.f;
+		vanim.suspensions.count = 1;
+		vanim.suspensions.address = &suspension;
+		for (graph_slot = 0; graph_slot < slot_count; graph_slot++) {
+			if (slots[graph_slot].base && slots[graph_slot].datum == (uint32_t)unit->object.animation_graph.index) {
+				struct animation_graph *graph = slots[graph_slot].base;
+
+				graph->vehicle_animations.count = 1;
+				graph->vehicle_animations.address = &vanim;
+				break;
+			}
 		}
 	}
 	slots[slot].base = unit;
@@ -1707,6 +1742,16 @@ int wii_tag_cache_mount(
 	cache_ready = native_biped != NULL;
 	if (!cache_ready)
 		return -1;
+	{
+		/* Resident pixel pages inside the 23 MiB arena. The group above
+		   names sixteen bitmaps; this slab is the bytes they can grow into. */
+		unsigned char *pages = bump(1u << 20);
+
+		if (!pages)
+			return -1;
+		pages[0] = 0xff;
+		pages[(1u << 20) - 1] = 0xff;
+	}
 	return 0;
 }
 
@@ -2187,9 +2232,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0x180u;
+	cursor += 0x300u;
 	pixels_at = cursor;
-	cursor += 128u;
+	cursor += 256u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2606,7 +2651,7 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 8);
+	put_u32(file + bitm_at + 0x60, 16);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
@@ -2616,7 +2661,7 @@ int wii_tag_cache_self_test(void)
 	{
 		int bitmap;
 
-		for (bitmap = 1; bitmap < 8; bitmap++) {
+		for (bitmap = 1; bitmap < 16; bitmap++) {
 			memcpy(file + bitm_data_at + (uint32_t)bitmap * 0x30u, file + bitm_data_at, 0x30);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x18, (uint32_t)bitmap * 16u);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x1c, 16);

@@ -158,11 +158,6 @@ int event_manager_dispose(void) { return 0; }
 int event_manager_initialize(void) { return 0; }
 int game_in_editor(void) { return 0; }
 int game_modes_options_sanitize(void) { return 0; }
-int game_sound_dispose(void) { return 0; }
-int game_sound_dispose_from_old_map(void) { return 0; }
-int game_sound_initialize(void) { return 0; }
-int game_sound_initialize_for_new_map(void) { return 0; }
-int game_sound_update(void) { return 0; }
 int game_state_check_data_arrays(void) { return 0; }
 int game_state_dispose(void) { return 0; }
 int game_state_dispose_from_old_map(void) { return 0; }

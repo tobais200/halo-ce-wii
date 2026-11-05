@@ -47,7 +47,9 @@ SOURCES = {
     "recorded_animations.o": "cutscene/recorded_animations.c",
     "camera_scripting.o": "camera/camera_scripting.c",
     "cinematics.o": "cutscene/cinematics.c",
-    "hud_messaging.o": "interface/hud_messaging.c",
+    "hud_nav_points.o": "interface/hud_nav_points.c",
+    "game_sound.o": "sound/game_sound.c",
+    "hs_library_external.o": "hs/hs_library_external.c",
 }
 
 PORT = {

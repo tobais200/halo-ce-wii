@@ -131,3 +131,27 @@
 		fill_campaign3(247, _hs_type_void, _hs_type_cutscene_camera_point, _hs_type_short_integer, _hs_type_object, "camera_set_relative");
 		fill_campaign2(248, _hs_type_void, _hs_type_animation_graph, _hs_type_string, "camera_set_animation");
 		fill_campaign2(355, _hs_type_void, _hs_type_short_integer, _hs_type_short_integer, "debug_teleport_player");
+
+		fill_campaign2(30, _hs_type_void, _hs_type_trigger_volume, _hs_type_cutscene_flag, "volume_teleport_players_not_inside");
+		fill_campaign2(32, _hs_type_boolean, _hs_type_trigger_volume, _hs_type_object_list, "volume_test_objects");
+		fill_campaign2(33, _hs_type_boolean, _hs_type_trigger_volume, _hs_type_object_list, "volume_test_objects_all");
+		fill_campaign2(34, _hs_type_void, _hs_type_object, _hs_type_cutscene_flag, "object_teleport");
+		fill_campaign2(35, _hs_type_void, _hs_type_object, _hs_type_cutscene_flag, "object_set_facing");
+		fill_campaign3(37, _hs_type_void, _hs_type_object, _hs_type_string, _hs_type_string, "object_set_permutation");
+		fill_campaign2(47, _hs_type_void, _hs_type_effect, _hs_type_cutscene_flag, "effect_new");
+		fill_campaign3(48, _hs_type_void, _hs_type_effect, _hs_type_object, _hs_type_string, "effect_new_on_object_marker");
+		fill_campaign2(49, _hs_type_void, _hs_type_damage, _hs_type_cutscene_flag, "damage_new");
+		fill_campaign2(50, _hs_type_void, _hs_type_damage, _hs_type_object, "damage_object");
+		fill_campaign2(54, _hs_type_void, _hs_type_string, _hs_type_real, "sound_set_gain");
+		fill_campaign3(323, _hs_type_void, _hs_type_sound, _hs_type_object, _hs_type_real, "sound_impulse_start");
+		fill_campaign3(327, _hs_type_void, _hs_type_looping_sound, _hs_type_object, _hs_type_real, "sound_looping_start");
+		fill_campaign2(329, _hs_type_void, _hs_type_looping_sound, _hs_type_real, "sound_looping_set_scale");
+		fill_campaign2(330, _hs_type_void, _hs_type_looping_sound, _hs_type_boolean, "sound_looping_set_alternate");
+		fill_campaign4(360, _hs_type_void, _hs_type_navpoint, _hs_type_unit, _hs_type_cutscene_flag, _hs_type_real, "activate_nav_point_flag");
+		fill_campaign4(361, _hs_type_void, _hs_type_navpoint, _hs_type_unit, _hs_type_object, _hs_type_real, "activate_nav_point_object");
+		fill_campaign4(362, _hs_type_void, _hs_type_navpoint, _hs_type_enum_team, _hs_type_cutscene_flag, _hs_type_real, "activate_team_nav_point_flag");
+		fill_campaign4(363, _hs_type_void, _hs_type_navpoint, _hs_type_enum_team, _hs_type_object, _hs_type_real, "activate_team_nav_point_object");
+		fill_campaign2(364, _hs_type_void, _hs_type_unit, _hs_type_cutscene_flag, "deactivate_nav_point_flag");
+		fill_campaign2(365, _hs_type_void, _hs_type_unit, _hs_type_object, "deactivate_nav_point_object");
+		fill_campaign2(366, _hs_type_void, _hs_type_enum_team, _hs_type_cutscene_flag, "deactivate_team_nav_point_flag");
+		fill_campaign2(367, _hs_type_void, _hs_type_enum_team, _hs_type_object, "deactivate_team_nav_point_object");

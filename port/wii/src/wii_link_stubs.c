@@ -361,8 +361,6 @@ float game_difficulty_get_value(short value_type)
 	(void)value_type;
 	return 1.f;
 }
-int game_looping_sound_delete(void) { return 0; }
-int game_looping_sound_new(void) { return 0; }
 int game_modes_headshot_kills(void) { return 0; }
 int game_modes_kill_by_melee(void) { return 0; }
 int game_statistics_record_damage(void) { return 0; }
@@ -383,11 +381,12 @@ struct wii_path_edge {
 	long surfaces[2];
 };
 struct wii_path_vertex { float x, y, z; long first_edge; };
-static struct wii_path_surface wii_path_surfaces[3];
-static struct wii_path_edge wii_path_edges[2];
-static struct wii_path_vertex wii_path_vertices[3];
-static unsigned char wii_path_flags[3];
+static struct wii_path_surface wii_path_surfaces[4];
+static struct wii_path_edge wii_path_edges[3];
+static struct wii_path_vertex wii_path_vertices[4];
+static unsigned char wii_path_flags[4];
 static struct wii_path_bsp wii_path_bsp;
+static float wii_path_plane[4];
 static unsigned char wii_structure_bsp[0x400];
 static int wii_path_bsp_ready;
 
@@ -402,10 +401,11 @@ void *global_structure_bsp_get(void)
 		memset(wii_path_surfaces, 0, sizeof(wii_path_surfaces));
 		memset(wii_path_edges, 0, sizeof(wii_path_edges));
 		memset(wii_path_vertices, 0, sizeof(wii_path_vertices));
-		/* Surface 0 links to 1, and 1 links on to 2. Bit 6 is walkable. */
+		/* Surfaces 0-1-2-3. Surface 3 is the prop's pathfinding surface. Bit 6 is walkable. */
 		wii_path_surfaces[0].first_edge = 0;
 		wii_path_surfaces[1].first_edge = 0;
 		wii_path_surfaces[2].first_edge = 1;
+		wii_path_surfaces[3].first_edge = 2;
 		wii_path_edges[0].vertices[0] = 0;
 		wii_path_edges[0].vertices[1] = 1;
 		wii_path_edges[0].next_edge[0] = 0;
@@ -415,23 +415,35 @@ void *global_structure_bsp_get(void)
 		wii_path_edges[1].vertices[0] = 1;
 		wii_path_edges[1].vertices[1] = 2;
 		wii_path_edges[1].next_edge[0] = 0;
-		wii_path_edges[1].next_edge[1] = 1;
+		wii_path_edges[1].next_edge[1] = 2;
 		wii_path_edges[1].surfaces[0] = 1;
 		wii_path_edges[1].surfaces[1] = 2;
+		wii_path_edges[2].vertices[0] = 2;
+		wii_path_edges[2].vertices[1] = 3;
+		wii_path_edges[2].next_edge[0] = 1;
+		wii_path_edges[2].next_edge[1] = 2;
+		wii_path_edges[2].surfaces[0] = 2;
+		wii_path_edges[2].surfaces[1] = 3;
 		wii_path_vertices[1].x = 1.f;
 		wii_path_vertices[2].x = 2.f;
+		wii_path_vertices[3].x = 3.f;
 		wii_path_flags[0] = 1u << 6;
 		wii_path_flags[1] = 1u << 6;
 		wii_path_flags[2] = 1u << 6;
-		wii_path_bsp.surfaces.count = 3;
+		wii_path_flags[3] = 1u << 6;
+		/* Plane 0 is z = 0, so a destination on surface 3 can be projected. */
+		wii_path_plane[2] = 1.f;
+		((struct wii_tag_block *)((unsigned char *)&wii_path_bsp + 12))->count = 1;
+		((struct wii_tag_block *)((unsigned char *)&wii_path_bsp + 12))->address = wii_path_plane;
+		wii_path_bsp.surfaces.count = 4;
 		wii_path_bsp.surfaces.address = wii_path_surfaces;
-		wii_path_bsp.edges.count = 2;
+		wii_path_bsp.edges.count = 3;
 		wii_path_bsp.edges.address = wii_path_edges;
-		wii_path_bsp.vertices.count = 3;
+		wii_path_bsp.vertices.count = 4;
 		wii_path_bsp.vertices.address = wii_path_vertices;
 		collision->count = 1;
 		collision->address = &wii_path_bsp;
-		paths->count = 3;
+		paths->count = 4;
 		paths->address = wii_path_flags;
 		wii_path_bsp_ready = 1;
 	}
@@ -600,10 +612,14 @@ int object_bounds_cache_update(void) { return 0; }
 int object_deleted_procs_call(void) { return 0; }
 int object_get_cached_render_lighting(void) { return 0; }
 int object_get_self_illumination(void) { return 0; }
-int object_impulse_sound_new(void) { return 0; }
 int object_list_get_first(void) { return 0; }
 int object_list_get_next(void) { return 0; }
-int observer_get_camera(void) { return 0; }
+void *observer_get_camera(void)
+{
+	static unsigned char camera[256];
+
+	return camera;
+}
 int observer_obsolete_position(void) { return 0; }
 int orientations_interpolate(void) { return 0; }
 int overshield_effect_active(void) { return 0; }
@@ -702,8 +718,6 @@ int scenario_material_definition_get(void) { return 0; }
 int scenario_test_pvs(void) { return 0; }
 int scenario_trigger_volume_test_object(void) { return 0; }
 int scenario_trigger_volume_test_point(void) { return 0; }
-int scripted_sound_new(void) { return 0; }
-int scripted_sound_time(void) { return 0; }
 int seed_random_direction3d(void) { return 0; }
 int seed_random_vector_in_cone3d(void) { return 0; }
 int shader_get_and_verify_type(void) { return 0; }
@@ -731,7 +745,6 @@ int tag_name_strip_path(void) { return 0; }
 int terminal_printf(void) { return 0; }
 int _texture_cache_bitmap_get_hardware_format(void) { return 0; }
 int transition_function_evaluate(void) { return 0; }
-int unattached_impulse_sound_new(void) { return 0; }
 int unicode_string_list_get_string(void) { return 0; }
 int unit_describe_speech(void) { return 0; }
 int unit_dialogue_determine_variant(void) { return 0; }
@@ -742,7 +755,6 @@ int unit_make_damage_sound(void) { return 0; }
 int unit_scream(void) { return 0; }
 int unit_speak(void) { return 0; }
 int unit_test_speech(void) { return 0; }
-int unspatialized_impulse_sound_new(void) { return 0; }
 int ustrncpy(void) { return 0; }
 int valid_real_normal2d(void) { return 0; }
 float cosf(float);
@@ -868,14 +880,12 @@ int config_string(void) { return 0; }
 int convex_polygon3d_clip_to_plane(void) { return 0; }
 int custom_edition_cache_tags_loaded(void) { return 0; }
 int custom_edition_vehicles_by_placement(void) { return 0; }
-int custom_render_nav_point(void) { return 0; }
 int draw_bitmap_in_rect(void) { return 0; }
 int draw_quad(void) { return 0; }
 int draw_string_and_hack_in_icons(void) { return 0; }
 int draw_string_set_draw_mode(void) { return 0; }
 int draw_unicode_string_capital_middle(void) { return 0; }
 int draw_unicode_string_compute_bounds(void) { return 0; }
-int find_nav_point(void) { return 0; }
 int game_engine_ctf_read_network_state(void) { return 0; }
 int game_engine_ctf_write_network_state(void) { return 0; }
 int game_engine_intialize_queued_sounds(void) { return 0; }
@@ -900,7 +910,6 @@ int global_network_game_server_get(void) { return 0; }
 int halo_scoreboard_pointer_update(void) { return 0; }
 int halo_server_mode(void) { return 0; }
 int hud_get_font_index(void) { return 0; }
-int hud_get_nav_point_render_type(void) { return 0; }
 int hud_get_text_color(void) { return 0; }
 int hud_player_name_color(void) { return 0; }
 int infection_enabled(void) { return 0; }
@@ -1092,7 +1101,6 @@ int game_time_get_paused(void) { return 0; }
 float game_time_get_speed(void) { return 1.f; }
 float global_rasterizer_model_ambient_reflection_tint;
 int halo_screen_width(void) { return 640; }
-int hs_object_destroy(void) { return 0; }
 int network_coop_note_scenery_animation(void) { return 0; }
 int network_coop_note_title(void) { return 0; }
 int network_coop_set_players_vitality(void) { return 0; }
@@ -1109,3 +1117,37 @@ int recorded_animation_initialize_event_stream(void) { return 0; }
 int recorded_animation_initialize_event_stream_v1(void) { return 0; }
 int ui_widgets_active(void) { return 0; }
 int valid_real_vector3d(void) { return 1; }
+
+void scenario_get_sound_environment(long *background, void const **environment, unsigned char *crossed)
+{
+	if (background)
+		*background = -1;
+	if (environment)
+		*environment = 0;
+	if (crossed)
+		*crossed = 0;
+}
+int sound_new_impulse(void) { return -1; }
+int sound_manager_set_sound_environment(void) { return 0; }
+int sound_refresh_looping(void) { return 0; }
+int _sound_cache_sound_request(void) { return 0; }
+int network_coop_note_effect(void) { return 0; }
+int network_coop_note_nav_point(void) { return 0; }
+int network_coop_note_object_effect(void) { return 0; }
+int network_coop_note_sound(void) { return 0; }
+int coop_scripts_any_player_will_do(void) { return 0; }
+int coop_scripts_arrive_at(void) { return 0; }
+int coop_scripts_empty_player_list(void) { return 0; }
+int coop_scripts_gather_in_volume(void) { return 0; }
+int coop_scripts_teleport_followers(void) { return 0; }
+int coop_scripts_unit_near(void) { return 0; }
+int object_list_mark_players(void) { return 0; }
+int hud_draw_bitmap_direct(void) { return 0; }
+int hud_draw_numbers(void) { return 0; }
+int hud_retrieve_bitmap_and_bounding_rect(void) { return 0; }
+int pixel32_to_real_rgb_color(void) { return 0; }
+int real_rgb_color_to_pixel32(void) { return 0; }
+int render_camera_view_to_screen(void) { return 0; }
+int render_interpolation_object_point(void) { return 0; }
+int get_return_eip(void) { return 0; }
+int fast_ftol_C(void) { return 0; }

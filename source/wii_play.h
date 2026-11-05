@@ -29,6 +29,8 @@ int wii_play_firing_on_path(void);
 int wii_play_enter_anim(void);
 int wii_play_mass_ran(void);
 int wii_play_wheel_ran(void);
+int wii_play_suspension_ran(void);
+int wii_play_prop_surface(void);
 int wii_play_pursuit_ran(void);
 float wii_play_firing_score(void);
 void wii_play_set_seat(long unit_index);
