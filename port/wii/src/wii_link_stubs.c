@@ -491,7 +491,14 @@ int main_lost_map(void) { return 0; }
 int main_menu_is_active(void) { return 0; }
 int main_respawn(void) { return 0; }
 int main_switch_structure_bsp(void) { return 0; }
-int material_effect_new(void) { return 0; }
+static int wii_slip_effect_count;
+int material_effect_new(long index, short type, short material, void *position, void *normal, void *location, float scale)
+{
+	(void)index; (void)type; (void)material; (void)position; (void)normal; (void)location; (void)scale;
+	wii_slip_effect_count++;
+	return 0;
+}
+int wii_slip_effects(void) { return wii_slip_effect_count; }
 int material_effect_new_from_point(void) { return 0; }
 int material_effect_visible(void) { return 0; }
 int material_get_name(void) { return 0; }
@@ -725,17 +732,6 @@ int physics_variable_speed_update_seek(void) { return 0; }
 int pitch_vectors(void) { return 0; }
 int player_aim_projectile(void) { return 0; }
 int player_aim_projectile_preview(void) { return 0; }
-void *player_autoaim_flag;
-int player_control_dispose(void) { return 0; }
-int player_control_get_autoaim_level(void) { return 0; }
-int player_control_get_unit_index(void) { return 0; }
-int player_control_get_zoom_level(void) { return 0; }
-int player_control_initialize(void) { return 0; }
-int player_control_new_unit(void) { return 0; }
-int player_control_set_desired_weapon(void) { return 0; }
-int player_control_set_facing(void) { return 0; }
-int player_control_unzoom(void) { return 0; }
-void *player_magnetism_flag;
 int player_ui_get_single_player_local_player_controller(void) { return 0; }
 int point_from_line3d(void) { return 0; }
 int points_interpolate(void) { return 0; }
@@ -812,9 +808,6 @@ int scenario_trigger_volume_test_point(void) { return 0; }
 int seed_random_direction3d(void) { return 0; }
 int seed_random_vector_in_cone3d(void) { return 0; }
 int shader_get_and_verify_type(void) { return 0; }
-int shader_type_is_transparent(void) { return 0; }
-int shader_type_is_valid_for_model(void) { return 0; }
-int shader_type_is_valid_for_modifier(void) { return 0; }
 int shield_color_colors(void) { return 0; }
 int signed_angle_between_vectors2d(void) { return 0; }
 int signed_angular_difference(void) { return 0; }
@@ -837,7 +830,6 @@ int unicode_string_list_get_string(void) { return 0; }
 int unit_describe_speech(void) { return 0; }
 int unit_dialogue_determine_variant(void) { return 0; }
 int unit_dialogue_update(void) { return 0; }
-int unit_get_local_player_index(void) { return 0; }
 int unit_get_speech_priority_name(void) { return 0; }
 int unit_make_damage_sound(void) { return 0; }
 int unit_scream(void) { return 0; }
@@ -1043,8 +1035,6 @@ int object_bounds_cache_out_of_reach(void) { return 0; }
 int offset_rectangle2d(void) { return 0; }
 int perpendicular2d(void) { return 0; }
 int platform_scoreboard_scroll(void) { return 0; }
-int player_control_get_facing_direction(void) { return 0; }
-int player_control_get_target_object_index(void) { return 0; }
 struct wii_rgb { float r, g, b; };
 struct wii_rgb player_profile_get_rgb_color(long index)
 {
@@ -1062,7 +1052,6 @@ int render_ui_widgets_postgame(void) { return 0; }
 int rumble_clear_all_now(void) { return 0; }
 int rumble_player_clear(void) { return 0; }
 int server_director_first_level(void) { return 0; }
-int sound_class_set_gain(void) { return 0; }
 int system_milliseconds(void) { return 0; }
 int touch_postgame_draw(void) { return 0; }
 int touch_postgame_pressed(void) { return 0; }
@@ -1278,7 +1267,7 @@ int structure_render_set_fog_offset(void) { return 0; }
 /* Five clusters in a line. Portal n joins cluster n and n+1 at x = n + 1.5. */
 short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
 
-enum { WII_PORTAL_CLUSTERS = 8, WII_PORTAL_QUADS = 7 };
+enum { WII_PORTAL_CLUSTERS = 12, WII_PORTAL_QUADS = 11 };
 
 static int portal_from(short start, float x, float y, float radius, short *first, short *second)
 {
@@ -1297,7 +1286,7 @@ static int portal_from(short start, float x, float y, float radius, short *first
 	} portal[WII_PORTAL_QUADS];
 	static float vertices[WII_PORTAL_QUADS][4][3];
 	float point[3];
-	short found[8];
+	short found[16];
 	short count;
 	int index;
 
@@ -1333,12 +1322,14 @@ static int portal_from(short start, float x, float y, float radius, short *first
 	((struct wii_tag_block *)(cluster_bytes[WII_PORTAL_CLUSTERS - 1] + 0x5C))->address = &portal_list[WII_PORTAL_CLUSTERS - 1][0];
 	clusters->count = WII_PORTAL_CLUSTERS;
 	clusters->address = cluster_bytes;
+	clusters->definition = 0;
 	portals->count = WII_PORTAL_QUADS;
 	portals->address = portal;
+	portals->definition = 0;
 	point[0] = x;
 	point[1] = y;
 	point[2] = 0.f;
-	count = structure_clusters_in_sphere(start, point, radius, 8, found);
+	count = structure_clusters_in_sphere(start, point, radius, 16, found);
 	clusters->count = 0;
 	portals->count = 0;
 	if (first)
@@ -1423,13 +1414,6 @@ void network_coop_note_player_effect(short kind, float a, float b, float c)
 {
 	(void)kind; (void)a; (void)b; (void)c;
 }
-void const *player_control_get_facing_angles(short player)
-{
-	static float angles[2];
-	(void)player;
-	return angles;
-}
-void player_control_permanent_impulse(void) {}
 unsigned real_argb_color_to_pixel32(void) { return 0xffffffffu; }
 short remap_sticks_for_local_player(short port) { return port; }
 void rumble_player_continuous(short player, float a, float b) { (void)player; (void)a; (void)b; }
@@ -1509,9 +1493,6 @@ void sound_cache_idle(void) {}
 void sound_cache_new(void) {}
 void sound_cache_sound_finished(void) {}
 int sound_channel_type_flags(void) { return 0; }
-void sound_classes_update(void) {}
-void *sound_class_get(void) { return 0; }
-float sound_class_get_gain(void) { return 1.f; }
 int sound_definition_find_pitch_range_by_pitch(void) { return -1; }
 float sound_definition_get_minimum_distance(void) { return 0.f; }
 int sound_definition_next_permutation(void) { return -1; }
@@ -1522,3 +1503,43 @@ int update_client_get_maximum_possible_server_time(void) { return 0; }
 int update_client_local_ticks(void) { return 0; }
 void update_client_start(void) {}
 void update_server_start(void) {}
+void director_inhibited_facing(void) {}
+void director_inhibited_input(void) {}
+void halo_linux_mouse_aiming(void) {}
+void halo_linux_mouse_look(void) {}
+void halo_linux_touch_aiming(void) {}
+void halo_linux_touch_look(void) {}
+void *input_abstraction_get_input_state(short player) { (void)player; return 0; }
+int input_abstraction_port_accept(void) { return 0; }
+int input_abstraction_port_action_only(void) { return 0; }
+int input_abstraction_port_look_inverted(void) { return 0; }
+float input_abstraction_port_primary_trigger(void) { return 0.f; }
+int input_abstraction_port_reload(void) { return 0; }
+void *input_get_mouse_state(void) { return 0; }
+void local_player_aim_assist(void) {}
+void main_skip_cinematic(void) {}
+int network_coop_skip_offered(void) { return 0; }
+void network_coop_vote_skip(void) {}
+void passenger_camera_clamp_facing(void) {}
+int passenger_camera_enabled(void) { return 0; }
+int player_ui_autolevel_enabled(void) { return 0; }
+int ui_widgets_active_for_local_player(void) { return 0; }
+void *update_client_queue(void) { return 0; }
+void update_client_queue_push(void) {}
+
+struct wii_face_vec { float i, j, k; };
+struct wii_face_vec *__real_player_control_get_facing_direction(short player, struct wii_face_vec *out);
+struct wii_face_vec *__wrap_player_control_get_facing_direction(short player, struct wii_face_vec *out)
+{
+	extern long local_player_get_player_index(short local_player_index);
+
+	if (!out || player < 0 || local_player_get_player_index(player) == -1) {
+		if (out) {
+			out->i = 1.f;
+			out->j = 0.f;
+			out->k = 0.f;
+		}
+		return out;
+	}
+	return __real_player_control_get_facing_direction(player, out);
+}

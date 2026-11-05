@@ -61,6 +61,9 @@ SOURCES = {
     "sound_manager.o": "sound/sound_manager.c",
     "hud.o": "interface/hud.c",
     "breakable_surfaces.o": "physics/breakable_surfaces.c",
+    "shaders.o": "shaders/shaders.c",
+    "sound_classes.o": "sound/sound_classes.c",
+    "player_control.o": "game/player_control.c",
 }
 
 PORT = {

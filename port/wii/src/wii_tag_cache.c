@@ -758,7 +758,8 @@ static int load_vehicle(int slot)
 		*(float *)((char *)unit + 0x310) = 2.f;
 		*(long *)((char *)unit + 956) = NONE;
 		*(long *)((char *)unit + 972) = NONE;
-		*(long *)((char *)unit + 988) = NONE;
+		/* A real material-effects index lets create_slipping_effects build the contact point. */
+		*(long *)((char *)unit + 988) = 1;
 		*(long *)((char *)unit + 1004) = NONE;
 	}
 	{
@@ -1265,6 +1266,15 @@ static int load_globals(int slot)
 	}
 	globals->falling_damage.count = 1;
 	globals->falling_damage.address = falling;
+	{
+		static struct game_globals_player_control control;
+
+		memset(&control, 0, sizeof(control));
+		control.look_default_pitch_rate = 1.f;
+		control.look_default_yaw_rate = 1.f;
+		globals->player_control.count = 1;
+		globals->player_control.address = &control;
+	}
 	slots[slot].base = globals;
 	native_globals = globals;
 	if (pull_va(slots[slot].base_va + offsetof(struct game_globals, grenades), block, 8) == 0) {

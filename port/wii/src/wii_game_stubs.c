@@ -80,6 +80,7 @@ void hud_messaging_initialize(void);
 void hud_initialize(void);
 void object_lists_initialize(void);
 void object_lists_initialize_for_new_map(void);
+void player_control_initialize(void);
 void game_time_start(void);
 boolean game_time_initialized(void);
 void game_time_set_distributed(long time);
@@ -95,6 +96,7 @@ void wii_game_boot(void)
 	hud_initialize();
 	game_options_new(&options);
 	object_lists_initialize();
+	player_control_initialize();
 	if (game_load(&options)) {
 		game_initialize_for_new_map();
 		object_lists_initialize_for_new_map();
@@ -185,7 +187,6 @@ int network_coop_active(void) { return 0; }
 int network_distributed_new_game(void) { return 0; }
 int network_game_distributed_client(void) { return 0; }
 int network_objects_placed(void) { return 0; }
-int numeric_countdown_timer_update(void) { return 0; }
 int observer_dispose_from_old_map(void) { return 0; }
 int observer_initialize(void) { return 0; }
 int observer_initialize_for_new_map(void) { return 0; }
@@ -199,7 +200,6 @@ int particle_systems_dispose_from_old_map(void) { return 0; }
 int particle_systems_initialize(void) { return 0; }
 int particle_systems_initialize_for_new_map(void) { return 0; }
 int particle_systems_update(void) { return 0; }
-int player_control_initialize_for_new_map(void) { return 0; }
 int player_ui_dispose(void) { return 0; }
 int player_ui_initialize(void) { return 0; }
 int player_ui_remember_player1_profile(void) { return 0; }
@@ -231,10 +231,6 @@ int scenario_frame_update(void) { return 0; }
 int scenario_initialize(void) { return 0; }
 int scenario_initialize_for_new_map(void) { return 0; }
 int scenario_unload(void) { return 0; }
-int sound_classes_dispose(void) { return 0; }
-int sound_classes_dispose_from_old_map(void) { return 0; }
-int sound_classes_initialize(void) { return 0; }
-int sound_classes_initialize_for_new_map(void) { return 0; }
 int telnet_console_dispose(void) { return 0; }
 int telnet_console_initialize(void) { return 0; }
 int transport_dispose(void) { return 0; }

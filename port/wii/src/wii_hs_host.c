@@ -1105,6 +1105,8 @@ void game_time_initialize_for_new_map(void);
 void game_time_start(void);
 void object_lists_initialize(void);
 void object_lists_initialize_for_new_map(void);
+void player_control_initialize(void);
+void sound_classes_initialize(void);
 
 int wii_hs_mount(
 	uint8_t const *syntax_le,
@@ -1164,6 +1166,8 @@ int wii_hs_mount(
 	}
 	object_lists_initialize();
 	object_lists_initialize_for_new_map();
+	player_control_initialize();
+	sound_classes_initialize();
 	hs_runtime_update();
 	return 0;
 }

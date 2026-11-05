@@ -24,7 +24,7 @@ OPENCE_GEN	:=	$(CURDIR)/build/cache_file_formats.c
 CFLAGS		=	-g -O2 -Wall -Wextra $(MACHDEP) $(INCLUDE)
 CXXFLAGS	=	$(CFLAGS)
 
-LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--wrap=player_control_get_facing_direction
 
 # fat before wiiuse before bte before ogc: each library depends on the next.
 LIBS		:=	-lfat -laesnd -lwiiuse -lbte -logc -lm
@@ -64,7 +64,8 @@ export OPENCE_OBJS := game.o players.o cheats.o game_allegiance.o weapons.o proj
 	unit_scripting_commands.o scenery.o recorded_animations.o camera_scripting.o cinematics.o \
 	hud_nav_points.o game_sound.o hs_library_external.o physics.o structures.o \
 	hud_messaging.o player_effects.o hud_unit.o hud_weapon.o \
-	object_lists.o game_time.o sound_manager.o hud.o breakable_surfaces.o
+	object_lists.o game_time.o sound_manager.o hud.o breakable_surfaces.o \
+	shaders.o sound_classes.o player_control.o
 export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) cache_file_formats.o hs_runtime.o data.o wii_hs_host.o wii_game_stubs.o wii_player_spawn.o wii_tag_cache.o wii_collision.o wii_effects.o wii_play.o wii_mesh.o wii_link_stubs.o $(OPENCE_OBJS)
 export WII_ROOT := $(CURDIR)
 export WII_HS_CFLAGS := -std=c99 -fno-strict-aliasing -DHALO_RELEASE \
@@ -183,7 +184,7 @@ host-check: $(OPENCE_GEN)
 		$(CURDIR)/build/hs_runtime_host.o $(CURDIR)/build/data_host.o $(CURDIR)/build/wii_hs_host_host.o \
 		$(CURDIR)/build/wii_game_stubs_host.o $(CURDIR)/build/wii_player_spawn_host.o $(CURDIR)/build/wii_tag_cache_host.o $(CURDIR)/build/wii_collision_host.o $(CURDIR)/build/wii_effects_host.o $(CURDIR)/build/wii_play_host.o $(CURDIR)/build/wii_mesh_host.o $(CURDIR)/build/wii_link_stubs_host.o \
 		$(addprefix $(CURDIR)/build/,$(OPENCE_OBJS)) \
-		-lm -o $(CURDIR)/build/host_check
+		-lm -Wl,--wrap=player_control_get_facing_direction -o $(CURDIR)/build/host_check
 	$(CURDIR)/build/host_check
 
 #---------------------------------------------------------------------------------

@@ -714,3 +714,63 @@
 	case 357:
 		result = campaign_bool(scripted_show_hud_help_text((boolean)arguments[0]));
 		break;
+	case 61:
+		numeric_countdown_timer_set(arguments[0], (boolean)arguments[1]);
+		break;
+	case 62:
+		result = numeric_countdown_timer_get((short)arguments[0]);
+		break;
+	case 63:
+		numeric_countdown_timer_stop();
+		break;
+	case 64:
+		numeric_countdown_timer_restart();
+		break;
+	case 335:
+		sound_class_set_gain(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "", *(float *)&arguments[1], (short)arguments[2]);
+		break;
+	case 339:
+		result = campaign_bool(scripted_player_control_set_camera_control((boolean)arguments[0]));
+		break;
+	case 340:
+		player_control_action_test_reset();
+		break;
+	case 341:
+		result = campaign_bool(player_control_action_test_jump());
+		break;
+	case 342:
+		result = campaign_bool(player_control_action_test_primary_trigger());
+		break;
+	case 343:
+		result = campaign_bool(player_control_action_test_grenade_trigger());
+		break;
+	case 344:
+		result = campaign_bool(player_control_action_test_zoom());
+		break;
+	case 345:
+		result = campaign_bool(player_control_action_test_action());
+		break;
+	case 346:
+		result = campaign_bool(player_control_action_test_accept());
+		break;
+	case 347:
+		result = campaign_bool(player_control_action_test_back());
+		break;
+	case 348:
+		result = campaign_bool(player_control_action_test_look_relative_up());
+		break;
+	case 349:
+		result = campaign_bool(player_control_action_test_look_relative_down());
+		break;
+	case 350:
+		result = campaign_bool(player_control_action_test_look_relative_left());
+		break;
+	case 351:
+		result = campaign_bool(player_control_action_test_look_relative_right());
+		break;
+	case 352:
+		result = campaign_bool(player_control_action_test_look_relative_all_directions());
+		break;
+	case 353:
+		result = campaign_bool(player_control_action_test_move_relative_all_directions());
+		break;

@@ -76,6 +76,7 @@ static int vehicle_moved;
 static int vehicle_settled;
 static int tire_ran;
 static int tire_slip;
+static int contact_ran;
 static int portal_hops;
 static long prop_actor = NONE;
 static int pursuit_ran;
@@ -471,6 +472,11 @@ static void spawn_vehicle(void)
 			tire_ran = object && (object->object.position.x > before_x + 0.02f
 				|| before_x > object->object.position.x + 0.02f);
 			tire_slip = object && object->object.position.y < 7.f && object->object.position.y > 5.f;
+			{
+				extern int wii_slip_effects(void);
+
+				contact_ran = object && (object->object.flags & 2) && wii_slip_effects() > 0;
+			}
 		}
 		vehicle = vehicle_datum_get(created);
 		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
@@ -785,6 +791,11 @@ int wii_play_tire_ran(void)
 int wii_play_tire_slip(void)
 {
 	return tire_slip;
+}
+
+int wii_play_contact(void)
+{
+	return contact_ran;
 }
 
 int wii_play_portal_hops(void)

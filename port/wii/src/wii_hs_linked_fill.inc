@@ -204,3 +204,7 @@
 		fill_campaign(254, _hs_type_void, 1, _hs_type_real, "game_speed");
 		fill_campaign(334, _hs_type_void, 1, _hs_type_boolean, "sound_enable");
 		fill_campaign(357, _hs_type_boolean, 1, _hs_type_boolean, "show_hud_help_text");
+		fill_campaign2(61, _hs_type_void, _hs_type_long_integer, _hs_type_boolean, "numeric_countdown_timer_set");
+		fill_campaign(62, _hs_type_short_integer, 1, _hs_type_short_integer, "numeric_countdown_timer_get");
+		fill_campaign3(335, _hs_type_void, _hs_type_string, _hs_type_real, _hs_type_short_integer, "sound_class_set_gain");
+		fill_campaign(339, _hs_type_boolean, 1, _hs_type_boolean, "player_camera_control");
