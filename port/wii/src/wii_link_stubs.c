@@ -193,19 +193,9 @@ int action_wait_control(void) { return 0; }
 int action_wait_perform(void) { return 0; }
 int action_wait_setup(void) { return 0; }
 int action_wait_update(void) { return 0; }
-int actor_aim_grenade(void) { return 0; }
 int actor_aim_jump(void) { return 0; }
-int actor_aim_projectile(void) { return 0; }
 int actor_audibility_at_point(void) { return 0; }
 int actor_berserk(void) { return 0; }
-int actor_clear_discarded_firing_positions(void) { return 0; }
-int actor_combat_check_collateral_damage(void) { return 0; }
-int actor_combat_disable_bursts(void) { return 0; }
-int actor_combat_find_grenade_target(void) { return 0; }
-int actor_combat_fire_wildly(void) { return 0; }
-int actor_combat_get_firing_variant_definition(void) { return 0; }
-int actor_combat_plan_grenade_trajectory(void) { return 0; }
-int actor_combat_update(void) { return 0; }
 int actor_compute_prop_target_weight(void) { return 0; }
 int actor_compute_prop_unopposable(void) { return 0; }
 int actor_conversation_control(void) { return 0; }
@@ -213,11 +203,8 @@ int actor_conversation_control(void) { return 0; }
 static unsigned char wii_actor_debug[4 * 0x657c];
 void *actor_debug_array = wii_actor_debug;
 int actor_destination_update(void) { return 0; }
-int actor_discard_firing_position(void) { return 0; }
 int actor_emotion_update(void) { return 0; }
 int actor_expected_acknowledgement(void) { return 0; }
-int actor_firing_blindly(void) { return 0; }
-int actor_get_firing_position_group(void) { return 0; }
 int actor_get_perception_knowledge(void) { return 0; }
 int actor_look_affect_movement(void) { return 0; }
 int actor_look_secondary(void) { return 0; }
@@ -230,7 +217,6 @@ int actor_move_initialize(void) { return 0; }
 int actor_move_try_evasion_direction(void) { return 0; }
 int actor_move_try_evasion_vector(void) { return 0; }
 int actor_move_update(void) { return 0; }
-int actor_nearby_firing_positions(void) { return 0; }
 int actor_path_at_destination(void) { return 0; }
 int actor_path_has_path(void) { return 0; }
 int actor_perception_abandoned_search(void) { return 0; }
@@ -244,7 +230,6 @@ int actor_perception_find_sense_position(void) { return 0; }
 int actor_perception_tried_to_search(void) { return 0; }
 int actor_perception_tried_to_uncover(void) { return 0; }
 int actor_perception_update(void) { return 0; }
-int actor_select_firing_position(void) { return 0; }
 int actor_situation_try_new_target(void) { return 0; }
 int actor_situation_update(void) { return 0; }
 int actor_stimulus_bumped(void) { return 0; }
@@ -955,3 +940,93 @@ int touch_postgame_pressed(void) { return 0; }
 int usnprintf(void) { return 0; }
 int usprintf(void) { return 0; }
 int ustring_format_checked(void) { return 0; }
+
+struct wii_vec3 { float i, j, k; };
+
+float magnitude_squared3d(struct wii_vec3 const *v)
+{
+	return v->i * v->i + v->j * v->j + v->k * v->k;
+}
+
+struct wii_vec3 *vector_from_points3d(struct wii_point3 const *a, struct wii_point3 const *b, struct wii_vec3 *result)
+{
+	result->i = b->x - a->x;
+	result->j = b->y - a->y;
+	result->k = b->z - a->z;
+	return result;
+}
+
+float distance_squared3d(struct wii_point3 const *a, struct wii_point3 const *b)
+{
+	struct wii_vec3 v;
+
+	vector_from_points3d(a, b, &v);
+	return magnitude_squared3d(&v);
+}
+
+float distance3d(struct wii_point3 const *a, struct wii_point3 const *b)
+{
+	return sqrtf(distance_squared3d(a, b));
+}
+
+float real_random(void)
+{
+	return 0.5f;
+}
+
+float weapon_definition_get_damage_potential(long weapon_definition_index, float *rate_of_fire)
+{
+	(void)weapon_definition_index;
+	if (rate_of_fire)
+		*rate_of_fire = 1.f;
+	return 1.f;
+}
+
+void actor_path_input_new(long actor_index, void *input)
+{
+	(void)actor_index;
+	if (input) {
+		memset(input, 0, 72);
+		/* start_surface_index. NONE keeps path_state_begin off a missing BSP. */
+		*(long *)((char *)input + 32) = -1;
+	}
+}
+
+int actor_path_3d_available(long actor_index, void *point, float *avoidance)
+{
+	(void)actor_index;
+	(void)point;
+	if (avoidance)
+		*avoidance = 0.f;
+	return 0;
+}
+
+int actor_perception_aiming_vector_test_blockage(long actor_index, void *from, void *to)
+{
+	(void)actor_index;
+	(void)from;
+	(void)to;
+	return 0;
+}
+
+int actor_perception_friend_prop_is_attacking(long actor_index, long prop_index, void *vector)
+{
+	(void)actor_index;
+	(void)prop_index;
+	(void)vector;
+	return 0;
+}
+
+void *ai_debug_get_path_storage(long actor_index)
+{
+	(void)actor_index;
+	return 0;
+}
+
+int actor_move_to_firing_position(long actor_index, short firing_position_index, void *position)
+{
+	(void)actor_index;
+	(void)firing_position_index;
+	(void)position;
+	return 0;
+}

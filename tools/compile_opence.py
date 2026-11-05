@@ -23,6 +23,8 @@ SOURCES = {
     "props.o": "ai/props.c",
     "ai_communication.o": "ai/ai_communication.c",
     "ai_script.o": "ai/ai_script.c",
+    "actor_firing_position.o": "ai/actor_firing_position.c",
+    "actor_combat.o": "ai/actor_combat.c",
     "objects.o": "objects/objects.c",
     "object_types.o": "objects/object_types.c",
     "damage.o": "objects/damage.c",
@@ -38,6 +40,7 @@ SOURCES = {
     "bsp2d.o": "physics/bsp2d.c",
     "bsp3d.o": "physics/bsp3d.c",
     "game_engine.o": "game/game_engine.c",
+    "sort.o": "cseries/sort.c",
 }
 
 PORT = {

@@ -1,6 +1,6 @@
 /*
  * Fix up the tags a tick needs from the map file. The 23 MiB Xbox cache
- * stays on the card. This copies a working set (at most 20 MiB, the
+ * stays on the card. This copies a working set (22 MiB minus one page, the
  * resident cap) and byte-swaps it. Structure BSPs are not copied.
  */
 #include "cseries/cseries.h"
@@ -41,7 +41,7 @@
 
 enum {
 	WII_TAG_SLOTS = 512,
-	WII_TAG_ARENA = 20u << 20,
+	WII_TAG_ARENA = (22u << 20) - 4096u,
 	WII_TAG_CAP_PLAYERS = 16,
 	WII_TAG_CAP_WEAPONS = 8,
 	WII_TAG_CAP_ENCOUNTERS = 16,
@@ -691,6 +691,33 @@ static int load_animation(int slot)
 		}
 	}
 	slots[slot].base = graph;
+	return 0;
+}
+
+static int load_vehicle(int slot)
+{
+	uint8_t raw[0x400];
+	struct unit_definition *unit;
+
+	if (slot < 0)
+		return -1;
+	if (slots[slot].base)
+		return 0;
+	if (pull_va(slots[slot].base_va, raw, sizeof(raw)) != 0)
+		return -1;
+	unit = bump(0x400);
+	if (!unit)
+		return -1;
+	memset(unit, 0, 0x400);
+	unit->object.type = read_les16(raw + offsetof(struct biped_definition, object.type));
+	unit->object.bounding_radius = read_lef(raw + offsetof(struct biped_definition, object.bounding_radius));
+	unit->object.acceleration_scale = read_lef(raw + offsetof(struct biped_definition, object.acceleration_scale));
+	if (unit->object.acceleration_scale == 0.f)
+		unit->object.acceleration_scale = 1.f;
+	read_ref(raw + offsetof(struct biped_definition, object.model), &unit->object.model);
+	read_ref(raw + offsetof(struct biped_definition, object.animation_graph), &unit->object.animation_graph);
+	read_ref(raw + offsetof(struct biped_definition, object.physics), &unit->object.physics);
+	slots[slot].base = unit;
 	return 0;
 }
 
@@ -1609,6 +1636,8 @@ int wii_tag_cache_mount(
 			wii_collision_load(slots[index].base_va);
 		if (slots[index].group == FCC('s', 'n', 'd', '!'))
 			wii_sound_load(slots[index].base_va);
+		if (slots[index].group == FCC('v', 'e', 'h', 'i') && load_vehicle((int)index) != 0)
+			return -1;
 	}
 	cache_ready = native_biped != NULL;
 	if (!cache_ready)
@@ -1683,6 +1712,19 @@ int wii_tag_cache_scenery_count(void)
 int wii_tag_cache_vehicle_count(void)
 {
 	return vehicle_published;
+}
+
+long wii_tag_cache_vehicle_definition(void)
+{
+	int index;
+
+	if (!cache_ready)
+		return NONE;
+	for (index = 0; index < slot_count; index++) {
+		if (slots[index].group == FCC('v', 'e', 'h', 'i'))
+			return (long)slots[index].datum;
+	}
+	return NONE;
 }
 
 int wii_tag_cache_magazine_rounds(void)
@@ -1894,6 +1936,7 @@ int wii_tag_cache_self_test(void)
 	uint32_t scenery_pal_at;
 	uint32_t vehicle_at;
 	uint32_t vehicle_pal_at;
+	uint32_t vehicle_def_at;
 	uint32_t weapon_def_at;
 	uint32_t variant_at;
 	uint32_t actor_at;
@@ -1920,14 +1963,14 @@ int wii_tag_cache_self_test(void)
 	uint32_t bitm_at;
 	uint32_t bitm_data_at;
 	uint32_t pixels_at;
-	uint32_t datum[17];
+	uint32_t datum[18];
 	float x;
 	float y;
 	float z;
 	int index;
 
 	memset(file, 0, sizeof(file));
-	cursor = 0x40 + 17u * 0x20u;
+	cursor = 0x40 + 18u * 0x20u;
 	instances = 0x40;
 	scenario_at = cursor;
 	cursor += 0x800;
@@ -2015,6 +2058,8 @@ int wii_tag_cache_self_test(void)
 	cursor += 0x4cu;
 	vehicle_pal_at = cursor;
 	cursor += 16u;
+	vehicle_def_at = cursor;
+	cursor += 0x400u;
 	weapon_def_at = cursor;
 	cursor += sizeof(struct weapon_definition);
 	variant_at = cursor;
@@ -2069,11 +2114,11 @@ int wii_tag_cache_self_test(void)
 	cursor += 16u;
 	if (cursor > sizeof(file))
 		return -1;
-	for (index = 0; index < 17; index++)
+	for (index = 0; index < 18; index++)
 		datum[index] = 0x12340000u | (uint32_t)index;
 	put_u32(file, TAG_BASE + instances);
 	put_u32(file + 4, datum[0]);
-	put_u32(file + 0x0c, 17);
+	put_u32(file + 0x0c, 18);
 	file[0x20] = 't';
 	file[0x21] = 'a';
 	file[0x22] = 'g';
@@ -2084,7 +2129,7 @@ int wii_tag_cache_self_test(void)
 			char a, b, c, d;
 			char p0a, p0b, p0c, p0d;
 			char p1a, p1b, p1c, p1d;
-		} rows[17] = {
+		} rows[18] = {
 			{ scenario_at, 's', 'c', 'n', 'r', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ globals_at, 'm', 'a', 't', 'g', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ biped_at, 'b', 'i', 'p', 'd', 'u', 'n', 'i', 't', 'o', 'b', 'j', 'e' },
@@ -2101,10 +2146,11 @@ int wii_tag_cache_self_test(void)
 			{ damage_at, 'j', 'p', 't', '!', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ effect_at, 'e', 'f', 'f', 'e', 0, 0, 0, 0, 0, 0, 0, 0 },
 			{ cont_at, 'c', 'o', 'n', 't', 0, 0, 0, 0, 0, 0, 0, 0 },
-			{ bitm_at, 'b', 'i', 't', 'm', 0, 0, 0, 0, 0, 0, 0, 0 }
+			{ bitm_at, 'b', 'i', 't', 'm', 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ vehicle_def_at, 'v', 'e', 'h', 'i', 'u', 'n', 'i', 't', 'o', 'b', 'j', 'e' }
 		};
 
-		for (index = 0; index < 17; index++) {
+		for (index = 0; index < 18; index++) {
 			uint8_t *instance = file + instances + (uint32_t)index * 0x20u;
 
 			instance[0] = (uint8_t)rows[index].a;
@@ -2158,12 +2204,15 @@ int wii_tag_cache_self_test(void)
 	put_f32(file + firing_at, 7.5f);
 	put_f32(file + firing_at + 4, 2.5f);
 	put_f32(file + firing_at + 8, 3.5f);
+	put_u32(file + firing_at + 20, 0);
 	put_f32(file + firing_at + 24, 1.5f);
 	put_f32(file + firing_at + 28, 8.5f);
 	put_f32(file + firing_at + 32, 3.5f);
+	put_u32(file + firing_at + 44, 0);
 	put_f32(file + firing_at + 48, 1.9f);
 	put_f32(file + firing_at + 52, 2.7f);
 	put_f32(file + firing_at + 56, 3.5f);
+	put_u32(file + firing_at + 68, 0);
 	put_u32(file + scenario_at + offsetof(struct scenario, scenery), 1);
 	put_u32(file + scenario_at + offsetof(struct scenario, scenery) + 4, TAG_BASE + scenery_at);
 	put_u16(file + scenery_at, 0);
@@ -2185,11 +2234,25 @@ int wii_tag_cache_self_test(void)
 	put_f32(file + vehicle_at + 16, 3.5f);
 	put_u32(file + scenario_at + offsetof(struct scenario, vehicle_palette), 1);
 	put_u32(file + scenario_at + offsetof(struct scenario, vehicle_palette) + 4, TAG_BASE + vehicle_pal_at);
-	file[vehicle_pal_at] = 'b';
-	file[vehicle_pal_at + 1] = 'i';
-	file[vehicle_pal_at + 2] = 'p';
-	file[vehicle_pal_at + 3] = 'd';
-	put_u32(file + vehicle_pal_at + 12, datum[2]);
+	file[vehicle_pal_at] = 'v';
+	file[vehicle_pal_at + 1] = 'e';
+	file[vehicle_pal_at + 2] = 'h';
+	file[vehicle_pal_at + 3] = 'i';
+	put_u32(file + vehicle_pal_at + 12, datum[17]);
+	put_u16(file + vehicle_def_at + offsetof(struct biped_definition, object.type), 1);
+	put_f32(file + vehicle_def_at + offsetof(struct biped_definition, object.bounding_radius), 1.2f);
+	put_f32(file + vehicle_def_at + offsetof(struct biped_definition, object.acceleration_scale), 1.f);
+	file[vehicle_def_at + offsetof(struct biped_definition, object.model)] = 'm';
+	file[vehicle_def_at + offsetof(struct biped_definition, object.model) + 1] = 'o';
+	file[vehicle_def_at + offsetof(struct biped_definition, object.model) + 2] = 'd';
+	file[vehicle_def_at + offsetof(struct biped_definition, object.model) + 3] = 'e';
+	put_u32(file + vehicle_def_at + offsetof(struct biped_definition, object.model) + 12, datum[3]);
+	file[vehicle_def_at + offsetof(struct biped_definition, object.animation_graph)] = 'a';
+	file[vehicle_def_at + offsetof(struct biped_definition, object.animation_graph) + 1] = 'n';
+	file[vehicle_def_at + offsetof(struct biped_definition, object.animation_graph) + 2] = 't';
+	file[vehicle_def_at + offsetof(struct biped_definition, object.animation_graph) + 3] = 'r';
+	put_u32(file + vehicle_def_at + offsetof(struct biped_definition, object.animation_graph) + 12, datum[4]);
+	put_u32(file + vehicle_def_at + offsetof(struct biped_definition, object.physics) + 12, 0xffffffffu);
 	memcpy(file + squad_at, "squad", 5);
 	put_u32(file + squad_at + offsetof(struct squad_definition, flags), 0);
 	put_u16(file + squad_at + offsetof(struct squad_definition, actor_palette_index), 0);

@@ -544,8 +544,10 @@ int main(void)
 				if (wii_mesh_weapon_z() == weapon_z)
 					return fail("weapon marker");
 			}
-			if (wii_play_firing_tested() < 3 || wii_play_firing_index() != 2 || wii_play_firing_score() < 10.f)
+			if (wii_play_firing_tested() < 3 || wii_play_firing_real() < 0 || wii_play_firing_index() != wii_play_firing_real())
 				return fail("firing position");
+			if (!wii_play_vehicle_ready())
+				return fail("vehicle update");
 			if (wii_seat_anim_frame(1, 5) != 5 || wii_seat_anim_frame(0, 5) != 0)
 				return fail("seat animation");
 			wii_play_set_seat(wii_game_player_unit());

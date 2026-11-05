@@ -5,6 +5,8 @@
 #include "cseries/cseries.h"
 #include "ai/actors.h"
 #include "ai/ai_scenario_definitions.h"
+#include "ai/path.h"
+#include "units/vehicles.h"
 #include "objects/objects.h"
 #include "scenario/scenario_definitions.h"
 #include "sound/sound_definitions.h"
@@ -50,7 +52,12 @@ static int grenades_thrown;
 static int used_flank;
 static int firing_tested;
 static int firing_index = -1;
+static int firing_real = -1;
 static float firing_score;
+static struct path_state firing_path;
+static struct firing_position_evaluation_context firing_context;
+static long vehicle_object = NONE;
+static int vehicle_updated;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -293,6 +300,32 @@ static void actors_fight(long player_unit)
 			firing_index = best;
 			firing_score = best_score;
 			used_flank = best + 1;
+			memset(&firing_context, 0, sizeof(firing_context));
+			firing_context.specific_target_enable = TRUE;
+			firing_context.specific_target_point = player->object.position;
+			firing_context.specific_target_surface_index = NONE;
+			firing_context.evaluation_mode = _firing_point_evaluation_mode_fight;
+			firing_context.allow_outside_range = TRUE;
+			firing_context.allow_rejected_positions = TRUE;
+			firing_context.allowed_position_mask = ~0u;
+			firing_context.target_line_of_sight_optional = TRUE;
+			{
+				struct firing_position chosen;
+				long owner = NONE;
+				boolean path_valid = FALSE;
+				short picked;
+
+				memset(&chosen, 0, sizeof(chosen));
+				picked = actor_select_firing_position(index, &firing_context, &chosen, &owner, &firing_path, &path_valid);
+				firing_real = picked;
+				if (picked >= 0) {
+					firing_index = picked;
+					if (chosen.evaluation > 0.f)
+						firing_score = chosen.evaluation;
+					origin_x = chosen.definition ? chosen.definition->position.x : origin_x;
+					origin_y = chosen.definition ? chosen.definition->position.y : origin_y;
+				}
+			}
 			if (wii_vehicle_seat_for(len)) {
 				long seat = NONE;
 				long other = NONE;
@@ -344,6 +377,32 @@ static void actors_fight(long player_unit)
 	}
 }
 
+static void spawn_vehicle(void)
+{
+	struct object_placement_data placement;
+	long definition;
+	long created;
+	struct object_datum *object;
+
+	if (vehicle_object != NONE)
+		return;
+	definition = wii_tag_cache_vehicle_definition();
+	if (definition == NONE)
+		return;
+	memset(&placement, 0, sizeof(placement));
+	object_placement_data_new(&placement, definition, NONE);
+	placement.position.x = 6.f;
+	placement.position.y = 6.f;
+	placement.position.z = 3.5f;
+	created = object_new(&placement);
+	if (created == NONE)
+		return;
+	vehicle_object = created;
+	object = object_get(created);
+	if (object && object->object.type == _object_type_vehicle)
+		vehicle_updated = vehicle_update(created) ? 1 : 0;
+}
+
 void wii_play_after_tick(void)
 {
 	long player;
@@ -351,6 +410,7 @@ void wii_play_after_tick(void)
 	float yaw, pitch, cp, sp, cy, sy;
 
 	moved = 0;
+	spawn_vehicle();
 	wii_effect_begin_frame();
 	player = wii_game_player_unit();
 	if (player != NONE)
@@ -483,6 +543,16 @@ int wii_play_firing_tested(void)
 int wii_play_firing_index(void)
 {
 	return firing_index;
+}
+
+int wii_play_firing_real(void)
+{
+	return firing_real;
+}
+
+int wii_play_vehicle_ready(void)
+{
+	return vehicle_object != NONE && vehicle_updated;
 }
 
 float wii_play_firing_score(void)

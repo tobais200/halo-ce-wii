@@ -20,6 +20,8 @@ long wii_play_grenade_definition(void);
 int wii_play_flank(void);
 int wii_play_firing_tested(void);
 int wii_play_firing_index(void);
+int wii_play_firing_real(void);
+int wii_play_vehicle_ready(void);
 float wii_play_firing_score(void);
 void wii_play_set_seat(long unit_index);
 int wii_play_magic_seat(void);

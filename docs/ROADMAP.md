@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Sixty-seven more campaign calls now run the OpenCE functions already in the link (`ai_scripting_*`, `unit_scripting_*`, `object_scripting_set_collideable`), including `unit_set_seat` and `unit_enter_vehicle`. Chapter titles, devices, HUD, and the earlier AI calls stay. The rest of the 425-function table is still the unlinked evaluator. `actor_firing_position.c` is not linked.
-- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 20 MiB. Scenery and vehicle placements are copied (16 and 8). Two shader references are read, and a weapon triangle uses the bitmap's second pixel when the bitmap is wider than one pixel.
+- Sixty-seven campaign calls run the OpenCE functions already in the link, including `unit_set_seat` and `unit_enter_vehicle`. The rest of the 425-function table is still the unlinked evaluator.
+- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 22 MiB minus one page. The host check requires that cap to stay under the 22 MiB Xbox cache figure (`0x1600000`). Scenery and vehicle placements are copied. A `vehi` tag is resident.
 - Base, replacement, and overlay are applied in that order before the node matrices are built. The synthetic overlay and replacement each have four frames of translation keys, so the clock moves the node. The weapon mesh is parented to the `weapon` marker's node matrix.
-- Firing picks the encounter firing position with the attack-evaluator split: a clear line scores 15, a blocked line is rejected, and a nearer clear spot wins. Grenades still use the grenade projectile tag. `unit_scripting_set_seat` sets the stand seat. It is not `actor_select_firing_position`.
+- `actor_select_firing_position` and `actor_combat.c` are linked. The selector runs on the encounter firing positions. A map with no pathfinding surfaces leaves `path_state_find` unsuccessful, and the selector still returns a position when outside-range picks are allowed. Grenades still use the grenade projectile tag. A `vehi` tag is spawned with `object_new`, and `vehicle_update` runs on it. `unit_scripting_set_seat` still sets the stand label.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled. Both would pull desktop GL, the Bink SDK, and a network stack that do not fit this GX build.
 
 ### Later, each one blocked until the previous exists
