@@ -491,7 +491,7 @@ int main(void)
 				scale += sprites[index].z;
 			if (count < 1 || scale == before)
 				return fail("effect motion");
-			if (wii_hs_campaign_count() < 359)
+			if (wii_hs_campaign_count() < 365)
 				return fail("campaign scripts");
 			if (wii_save_checkpoint() != 0 || !wii_save_valid() || wii_save_restore() != 0)
 				return fail("checkpoint");
@@ -546,7 +546,7 @@ int main(void)
 			}
 			if (wii_play_firing_tested() < 3 || wii_play_firing_real() < 0 || wii_play_firing_index() != wii_play_firing_real() || !wii_play_firing_on_path())
 				return fail("firing position");
-			if (!wii_play_path_found() || wii_play_path_nodes() < 4 || wii_play_prop_surface() != 3 || !wii_play_portal_crossed() || !wii_play_portal_inside() || wii_play_portal_hops() < 11)
+			if (!wii_play_path_found() || wii_play_path_nodes() < 4 || wii_play_prop_surface() != 3 || !wii_play_portal_crossed() || !wii_play_portal_inside() || wii_play_portal_hops() < 15)
 				return fail("path find");
 			if (!wii_play_pursuit_ran())
 				return fail("pursuit");

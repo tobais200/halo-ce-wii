@@ -208,3 +208,9 @@
 		fill_campaign(62, _hs_type_short_integer, 1, _hs_type_short_integer, "numeric_countdown_timer_get");
 		fill_campaign3(335, _hs_type_void, _hs_type_string, _hs_type_real, _hs_type_short_integer, "sound_class_set_gain");
 		fill_campaign(339, _hs_type_boolean, 1, _hs_type_boolean, "player_camera_control");
+		fill_campaign(411, _hs_type_void, 1, _hs_type_boolean, "player0_look_invert_pitch");
+		fill_campaign3(51, _hs_type_boolean, _hs_type_object_list, _hs_type_object, _hs_type_real, "objects_can_see_object");
+		fill_campaign3(52, _hs_type_boolean, _hs_type_object_list, _hs_type_cutscene_flag, _hs_type_real, "objects_can_see_flag");
+		fill_campaign5(100, _hs_type_boolean, _hs_type_unit, _hs_type_animation_graph, _hs_type_string, _hs_type_boolean, _hs_type_short_integer, "unit_custom_animation_at_frame");
+		fill_campaign2(59, _hs_type_short_integer, _hs_type_short_integer, _hs_type_short_integer, "random_range");
+		fill_campaign2(60, _hs_type_real, _hs_type_real, _hs_type_real, "real_random_range");

@@ -774,3 +774,30 @@
 	case 353:
 		result = campaign_bool(player_control_action_test_move_relative_all_directions());
 		break;
+	case 411:
+		player0_look_invert_pitch((boolean)arguments[0]);
+		break;
+	case 412:
+		result = campaign_bool(player0_look_pitch_is_inverted());
+		break;
+	case 413:
+		result = campaign_bool(player0_joystick_set_is_normal());
+		break;
+	case 51:
+		result = campaign_bool(hs_objects_can_see_object(arguments[0], arguments[1], *(float *)&arguments[2]));
+		break;
+	case 52:
+		result = campaign_bool(hs_objects_can_see_flag(arguments[0], (short)arguments[1], *(float *)&arguments[2]));
+		break;
+	case 100:
+		result = campaign_bool(unit_custom_animation_at_frame(
+			arguments[0], arguments[1],
+			arguments[2] ? (char const *)(uintptr_t)arguments[2] : "",
+			(boolean)arguments[3], (short)arguments[4]));
+		break;
+	case 59:
+		result = seed_random_range(get_global_random_seed_address(), (short)arguments[0], (short)arguments[1]);
+		break;
+	case 60:
+		*(float *)&result = real_seed_random_range(get_global_random_seed_address(), *(float *)&arguments[0], *(float *)&arguments[1]);
+		break;

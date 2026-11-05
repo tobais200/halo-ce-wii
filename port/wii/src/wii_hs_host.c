@@ -208,7 +208,7 @@ extern struct data_array *hs_thread_data;
 
 struct wii_hs_slot {
 	struct hs_function_definition definition;
-	short more_types[3];
+	short more_types[4];
 };
 
 static struct wii_hs_slot wii_slots[WII_HS_FUNCTIONS];
@@ -336,6 +336,15 @@ static void fill_campaign4(int index, short return_type, short type0, short type
 	wii_slots[index].more_types[0] = type1;
 	wii_slots[index].more_types[1] = type2;
 	wii_slots[index].more_types[2] = type3;
+}
+
+static void fill_campaign5(int index, short return_type, short type0, short type1, short type2, short type3, short type4, char const *name)
+{
+	fill_campaign(index, return_type, 5, type0, name);
+	wii_slots[index].more_types[0] = type1;
+	wii_slots[index].more_types[1] = type2;
+	wii_slots[index].more_types[2] = type3;
+	wii_slots[index].more_types[3] = type4;
 }
 
 static long campaign_bool(int value)

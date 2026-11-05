@@ -200,9 +200,6 @@ int particle_systems_dispose_from_old_map(void) { return 0; }
 int particle_systems_initialize(void) { return 0; }
 int particle_systems_initialize_for_new_map(void) { return 0; }
 int particle_systems_update(void) { return 0; }
-int player_ui_dispose(void) { return 0; }
-int player_ui_initialize(void) { return 0; }
-int player_ui_remember_player1_profile(void) { return 0; }
 int point_physics_dispose_from_old_map(void) { return 0; }
 int point_physics_initialize_for_new_map(void) { return 0; }
 int profile_tick_end(void) { return 0; }

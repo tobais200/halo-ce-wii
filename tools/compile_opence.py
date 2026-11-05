@@ -64,6 +64,7 @@ SOURCES = {
     "shaders.o": "shaders/shaders.c",
     "sound_classes.o": "sound/sound_classes.c",
     "player_control.o": "game/player_control.c",
+    "player_ui.o": "interface/player_ui.c",
 }
 
 PORT = {

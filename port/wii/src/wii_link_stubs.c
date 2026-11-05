@@ -732,7 +732,6 @@ int physics_variable_speed_update_seek(void) { return 0; }
 int pitch_vectors(void) { return 0; }
 int player_aim_projectile(void) { return 0; }
 int player_aim_projectile_preview(void) { return 0; }
-int player_ui_get_single_player_local_player_controller(void) { return 0; }
 int point_from_line3d(void) { return 0; }
 int points_interpolate(void) { return 0; }
 int point_to_line_distance_squared3d(void) { return 0; }
@@ -1043,7 +1042,6 @@ struct wii_rgb player_profile_get_rgb_color(long index)
 	(void)index;
 	return color;
 }
-int player_ui_game_variant_specified(void) { return 0; }
 int point_from_planes3d(void) { return 0; }
 int rasterizer_draw_unicode_string(void) { return 0; }
 int rasterizer_text_set_scale(void) { return 0; }
@@ -1267,7 +1265,7 @@ int structure_render_set_fog_offset(void) { return 0; }
 /* Five clusters in a line. Portal n joins cluster n and n+1 at x = n + 1.5. */
 short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
 
-enum { WII_PORTAL_CLUSTERS = 12, WII_PORTAL_QUADS = 11 };
+enum { WII_PORTAL_CLUSTERS = 16, WII_PORTAL_QUADS = 15 };
 
 static int portal_from(short start, float x, float y, float radius, short *first, short *second)
 {
@@ -1286,7 +1284,7 @@ static int portal_from(short start, float x, float y, float radius, short *first
 	} portal[WII_PORTAL_QUADS];
 	static float vertices[WII_PORTAL_QUADS][4][3];
 	float point[3];
-	short found[16];
+	short found[32];
 	short count;
 	int index;
 
@@ -1329,7 +1327,7 @@ static int portal_from(short start, float x, float y, float radius, short *first
 	point[0] = x;
 	point[1] = y;
 	point[2] = 0.f;
-	count = structure_clusters_in_sphere(start, point, radius, 16, found);
+	count = structure_clusters_in_sphere(start, point, radius, 32, found);
 	clusters->count = 0;
 	portals->count = 0;
 	if (first)
@@ -1522,10 +1520,39 @@ int network_coop_skip_offered(void) { return 0; }
 void network_coop_vote_skip(void) {}
 void passenger_camera_clamp_facing(void) {}
 int passenger_camera_enabled(void) { return 0; }
-int player_ui_autolevel_enabled(void) { return 0; }
 int ui_widgets_active_for_local_player(void) { return 0; }
 void *update_client_queue(void) { return 0; }
 void update_client_queue_push(void) {}
+int create_global_network_game_client(void) { return 0; }
+int create_global_network_game_server(void) { return 0; }
+void dispose_global_network_game_client(void) {}
+void dispose_global_network_game_server(void) {}
+void game_connection_set(short connection) { (void)connection; }
+void input_abstraction_update_local_player_preferences(short player, void const *preferences)
+{
+	(void)player; (void)preferences;
+}
+void main_goto_main_menu(void) {}
+void network_game_accept_remote_connections(void) {}
+void pc_menus_screen(void) {}
+void *player_profile_get(short index) { (void)index; return 0; }
+char const *player_profile_get_enclosing_directory_path(short index) { (void)index; return ""; }
+void player_profile_save(short index, void const *profile) { (void)index; (void)profile; }
+int player_profiles_enumerate_available_to_local_player_index(void) { return 0; }
+void *playlist_profile_get(short index) { (void)index; return 0; }
+void *playlist_profile_get_options(short index) { (void)index; return 0; }
+int playlist_profile_new(void) { return -1; }
+void playlist_profile_save_with_options(void) {}
+int saved_game_file_find_profile_index_for_directory_path(void) { return -1; }
+char const *saved_game_file_get_path_to_enclosing_directory(void) { return ""; }
+int saved_game_file_get_type(void) { return 0; }
+int saved_game_file_index_after_removal(void) { return -1; }
+void saved_game_file_remember_last_used_multiplayer_variant_directory(void) {}
+void saved_game_file_remember_player1_last_used_profile_directory(void) {}
+void saved_game_file_retrieve_player1_last_used_profile_directory(void) {}
+int ui_widget_load_by_name_or_tag(void) { return 0; }
+int ustrncmp(void) { return 0; }
+void virtual_keyboard_launch(void) {}
 
 struct wii_face_vec { float i, j, k; };
 struct wii_face_vec *__real_player_control_get_facing_direction(short player, struct wii_face_vec *out);
