@@ -217,8 +217,15 @@ static void draw_overlay(struct gx_mesh_view const *view)
 
 			if (!wii_mesh_triangle(mesh_index, xyz))
 				continue;
-			for (corner = 0; corner < 3; corner++)
-				overlay_vertex(xyz[corner * 3], xyz[corner * 3 + 1], xyz[corner * 3 + 2], 90, 140, 90, 0, 0, 0);
+			{
+				int weapon_tri = wii_mesh_is_weapon(mesh_index);
+				uint8_t red = weapon_tri ? 70 : 90;
+				uint8_t green = weapon_tri ? 90 : 140;
+				uint8_t blue = weapon_tri ? 140 : 90;
+
+				for (corner = 0; corner < 3; corner++)
+					overlay_vertex(xyz[corner * 3], xyz[corner * 3 + 1], xyz[corner * 3 + 2], red, green, blue, 0, 0, 0);
+			}
 		}
 		GX_End();
 	}

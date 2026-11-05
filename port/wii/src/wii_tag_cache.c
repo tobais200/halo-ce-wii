@@ -1737,6 +1737,7 @@ int wii_tag_cache_self_test(void)
 	uint32_t mesh_part_at;
 	uint32_t mesh_vert_at;
 	uint32_t mesh_tri_at;
+	uint32_t shader_at;
 	uint32_t graph_at;
 	uint32_t seat_at;
 	uint32_t class_at;
@@ -1815,6 +1816,8 @@ int wii_tag_cache_self_test(void)
 	cursor += 0x20u * 3u;
 	mesh_tri_at = cursor;
 	cursor += 6u;
+	shader_at = cursor;
+	cursor += 16u;
 	graph_at = cursor;
 	cursor += sizeof(struct animation_graph);
 	seat_at = cursor;
@@ -2105,6 +2108,18 @@ int wii_tag_cache_self_test(void)
 	file[mesh_tri_at] = 0;
 	file[mesh_tri_at + 2] = 1;
 	file[mesh_tri_at + 4] = 2;
+	put_u32(file + model_at + offsetof(struct model, shaders), 1);
+	put_u32(file + model_at + offsetof(struct model, shaders) + 4, TAG_BASE + shader_at);
+	file[shader_at] = 'b';
+	file[shader_at + 1] = 'i';
+	file[shader_at + 2] = 't';
+	file[shader_at + 3] = 'm';
+	put_u32(file + shader_at + 12, datum[16]);
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model)] = 'm';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 1] = 'o';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 2] = 'd';
+	file[weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 3] = 'e';
+	put_u32(file + weapon_def_at + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 12, datum[3]);
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats), 1);
 	put_u32(file + graph_at + offsetof(struct animation_graph, unit_seats) + 4, TAG_BASE + seat_at);
 	memcpy(file + seat_at, "stand", 5);

@@ -2,12 +2,12 @@
 <app version="1">
 	<name>Halo CE Wii</name>
 	<coder>halo-ce-wii</coder>
-	<version>0.15.0-skin</version>
+	<version>0.16.0-anim</version>
 	<release_date>20261103000000</release_date>
 	<short_description>Engine stub. Not playable.</short_description>
 	<long_description>Unofficial Homebrew Channel stub for a future Halo: Combat Evolved engine port.
 
-This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map streams a 2 MiB tag set. The biped walks and its skinned vertices are drawn. Campaign scripts, a grenade, and IMA sound tags run. The 23 MiB Xbox cache is not mapped. No game data is included.
+This build lists your cache files, draws the first structure BSP with a lightmap or bitmap from that cache on GX, and runs OpenCE game_tick. Script special forms execute. Opening a map streams a 2 MiB tag set. The biped walks, and its vertices are skinned from the animation graph. The first-person weapon mesh, chapter-title scripts, and IMA sound tags run. The 23 MiB Xbox cache is not mapped. No game data is included.
 
 Not affiliated with Microsoft, Xbox Game Studios, Halo Studios, Activision, or Bungie. JojoXDK's private Wii work in progress is a different project and is not included here.
 

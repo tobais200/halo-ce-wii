@@ -500,6 +500,12 @@ int main(void)
 				return fail("sound impulse");
 			if (wii_mesh_triangles() < 1 || !wii_mesh_skinned())
 				return fail("skinned mesh");
+			if (!wii_mesh_animated())
+				return fail("animation skin");
+			if (!wii_mesh_weapon())
+				return fail("weapon mesh");
+			if (!wii_mesh_shader())
+				return fail("shader sample");
 			if (wii_play_grenades() < 1 || !wii_play_flank())
 				return fail("actor grenade");
 			if (!wii_vehicle_seat_for(2.f) || wii_vehicle_seat_for(20.f))

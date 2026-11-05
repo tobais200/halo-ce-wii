@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- About 130 of the 425 script functions have an evaluator. That includes the earlier object, cinematic, and one-argument AI calls, plus `volume_test_object`, `object_set_shield`, `device_set_power`, `device_set_position`, `device_get_position`, `ai_set_team`, and `camera_set`. Chapter titles and most multi-argument calls are still the unlinked evaluator.
-- The first `snd!` tag's first permutation is decoded from Xbox IMA ADPCM into at most 1024 PCM samples and played on AESND. A shot with no decoded tag still plays a click. Scenery palettes and most bitmaps stay on the card.
-- The biped model's compressed vertices (up to 96) are skinned by node weight onto the node matrices and drawn as up to 32 triangles. The weapon mesh and the animation graph are not sampled.
-- Actors pick a flank when the structure BSP blocks the shot, lob one grenade inside 14 world units, and treat a vehicle inside 5 world units as a seat. That is not the firing-position search in `actor_combat.c`.
+- Chapter titles (`cinematic_set_title`, `cinematic_set_title_delayed`), `hud_set_help_text`, `hud_set_objective_text`, and `object_create_containing` now have evaluators, with the earlier device, volume, shield, camera, and AI calls. Most of the remaining script functions are still unlinked.
+- Up to four `snd!` tags are decoded from Xbox IMA ADPCM into one 4096-sample PCM buffer and played on AESND. A shot with no decoded tag still plays a click.
+- `animation_get_node_orientations` supplies the node pose before the compressed vertices are skinned. The weapon's first-person model is skinned again in front of the eye. The model's first shader reference is read; the triangles stay vertex-colored.
+- An actor tries the muzzle and both flanks and keeps the first line the structure BSP does not block. A grenade comes out of `grenade_counts` (seeded from the variant's lower bound). A vehicle inside 5 world units becomes the unit's parent at seat 0. That is not the full search in `actor_combat.c`.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled.
 
 ### Later, each one blocked until the previous exists

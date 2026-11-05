@@ -235,26 +235,64 @@ static void actors_fight(long player_unit)
 		dy /= len;
 		dz /= len;
 		{
+			struct unit_datum *soldier = unit_get(actor->meta.unit_index);
 			float flank_x = -dy;
 			float flank_y = dx;
-			float origin_x = unit->object.position.x + flank_x * 1.2f;
-			float origin_y = unit->object.position.y + flank_y * 1.2f;
+			float spots[3][2];
+			float origin_x;
+			float origin_y;
 			float scale;
+			int spot;
+			int choice = 2;
+			int stock;
 
-			/* The flank is the firing position when the BSP blocks the line. */
-			used_flank = 1;
-			if (!wii_collision_clip(unit->object.position.x, unit->object.position.y,
-					unit->object.position.z + 0.7f, dx * len, dy * len, dz * len, &scale, 0, 0, 0)) {
-				origin_x = unit->object.position.x;
-				origin_y = unit->object.position.y;
+			spots[0][0] = unit->object.position.x;
+			spots[0][1] = unit->object.position.y;
+			spots[1][0] = unit->object.position.x + flank_x * 1.2f;
+			spots[1][1] = unit->object.position.y + flank_y * 1.2f;
+			spots[2][0] = unit->object.position.x - flank_x * 1.2f;
+			spots[2][1] = unit->object.position.y - flank_y * 1.2f;
+			for (spot = 0; spot < 3; spot++) {
+				float sx = player->object.position.x - spots[spot][0];
+				float sy = player->object.position.y - spots[spot][1];
+
+				choice = spot;
+				if (!wii_collision_clip(spots[spot][0], spots[spot][1], unit->object.position.z + 0.7f,
+						sx, sy, dz * len, &scale, 0, 0, 0))
+					break;
 			}
+			used_flank = choice + 1;
+			origin_x = spots[choice][0];
+			origin_y = spots[choice][1];
 			if (wii_vehicle_seat_for(len)) {
-				actor_wait = 8;
-				return;
+				long seat = NONE;
+				long other = NONE;
+				extern struct data_array *object_header_data;
+
+				if (object_header_data) {
+					while ((other = data_next_index(object_header_data, other)) != NONE) {
+						struct object_datum *candidate = object_get(other);
+
+						if (candidate && candidate->object.type == _object_type_vehicle)
+							seat = other;
+					}
+				}
+				if (seat != NONE && soldier) {
+					unit->object.parent_object_index = seat;
+					soldier->unit.parent_seat_index = 0;
+					actor_wait = 8;
+					return;
+				}
 			}
 			step_unit(actor->meta.unit_index, atan2f(dy, dx),
 				len > 16.f ? 1.f : (len < 3.5f ? -0.7f : 0.15f), 0.f, 0);
-			if (grenades_thrown == 0 && len < 14.f) {
+			stock = soldier ? (unsigned char)soldier->unit.grenade_counts[0] : 0;
+			if (soldier && stock == 0) {
+				soldier->unit.grenade_counts[0] = 1;
+				stock = 1;
+			}
+			if (stock > 0 && len < 14.f && grenades_thrown == 0) {
+				soldier->unit.grenade_counts[0] = (char)(stock - 1);
 				spawn_shot(actor->meta.unit_index, origin_x, origin_y, unit->object.position.z + 0.8f,
 					dx * 0.35f, dy * 0.35f, 0.55f, 1);
 				grenades_thrown++;
@@ -413,8 +451,14 @@ static int ima_step[89] = {
 	15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
 };
 static int ima_index[16] = { -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8 };
-static int16_t decoded_pcm[1024];
+static int16_t decoded_pcm[4096];
 static int decoded_count;
+static int decoded_tags;
+
+int wii_sound_tags(void)
+{
+	return decoded_tags;
+}
 
 int wii_sound_decode(uint8_t const *data, int size, int16_t *out, int cap)
 {
@@ -474,7 +518,7 @@ void wii_sound_load(uint32_t sound_va)
 	uint32_t sample_size;
 	uint32_t sample_va;
 
-	if (decoded_count > 0 || !sound_va)
+	if (decoded_tags >= 4 || decoded_count >= 4096 || !sound_va)
 		return;
 	if (wii_tag_cache_pull(sound_va + offsetof(struct sound_definition, pitch_ranges), block, 8) != 0)
 		return;
@@ -494,7 +538,9 @@ void wii_sound_load(uint32_t sound_va)
 		sample_size = sizeof(samples);
 	if (wii_tag_cache_pull(sample_va, samples, sample_size) != 0)
 		return;
-	decoded_count = wii_sound_decode(samples, (int)sample_size, decoded_pcm, 1024);
+	decoded_count += wii_sound_decode(samples, (int)sample_size, decoded_pcm + decoded_count, 4096 - decoded_count);
+	if (decoded_count > 0)
+		decoded_tags++;
 }
 
 void wii_sound_impulse(long tag_index)

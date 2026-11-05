@@ -4,9 +4,12 @@
  * on the unit. At most 96 vertices and 32 triangles are kept.
  */
 #include "cseries/cseries.h"
+#include "models/model_animation_definitions.h"
 #include "models/model_definitions.h"
 #include "objects/objects.h"
 #include "units/biped_definitions.h"
+#include "items/weapon_definitions.h"
+#include "scenario/scenario_definitions.h"
 #include "wii_mesh.h"
 #include "wii_tag_cache.h"
 
@@ -22,7 +25,10 @@ struct wii_mat {
 
 static float tris[WII_MESH_TRIS][9];
 static int tri_count;
+static int weapon_from = -1;
 static int skinned;
+static int animated;
+static int shader_sampled;
 
 static void quat_axes(float i, float j, float k, float w, float m[3][3])
 {
@@ -210,6 +216,107 @@ static int skin_part(uint32_t part_va, struct wii_mat const *nodes, int node_cou
 	return tri_count;
 }
 
+static int apply_animation(struct model *model, struct biped_definition *biped, struct wii_mat *nodes, int count)
+{
+	struct animation_graph *graph;
+	struct animation *anim;
+	struct real_orientation orients[32];
+	int index;
+	int limit;
+
+	if (!biped || biped->object.animation_graph.index == NONE || count < 1)
+		return 0;
+	graph = tag_get(0x616e7472, biped->object.animation_graph.index);
+	if (!graph || graph->animations.count < 1 || !graph->animations.address)
+		return 0;
+	anim = graph->animations.address;
+	if (!anim || anim->node_count < 1)
+		return 0;
+	memset(orients, 0, sizeof(orients));
+	animation_get_node_orientations(model, anim, 0, orients);
+	limit = count < anim->node_count ? count : anim->node_count;
+	if (limit > 32)
+		limit = 32;
+	for (index = 0; index < limit; index++) {
+		struct wii_mat local;
+		int parent = ((struct model_node *)model->nodes.address)[index].parent_node_index;
+		float w = orients[index].rotation.w;
+		float tx = orients[index].translation.x;
+		float ty = orients[index].translation.y;
+		float tz = orients[index].translation.z;
+
+		if (w == 0.f && tx == 0.f && ty == 0.f && tz == 0.f)
+			continue;
+		memset(&local, 0, sizeof(local));
+		quat_axes(orients[index].rotation.v.i, orients[index].rotation.v.j,
+			orients[index].rotation.v.k, w == 0.f ? 1.f : w, local.m);
+		local.x = ((struct model_node *)model->nodes.address)[index].default_translation.x + tx;
+		local.y = ((struct model_node *)model->nodes.address)[index].default_translation.y + ty;
+		local.z = ((struct model_node *)model->nodes.address)[index].default_translation.z + tz;
+		if (parent >= 0 && parent < index)
+			mul_mat(&nodes[parent], &local, &nodes[index]);
+		else
+			nodes[index] = local;
+		animated = 1;
+	}
+	return animated;
+}
+
+static void sample_shader(uint32_t model_va)
+{
+	uint8_t block[8];
+	uint8_t ref[16];
+	int count;
+	uint32_t address;
+
+	if (wii_tag_cache_pull(model_va + offsetof(struct model, shaders), block, 8) != 0)
+		return;
+	count = read_s32(block);
+	address = read_u32(block + 4);
+	if (count < 1 || wii_tag_cache_pull(address, ref, 16) != 0)
+		return;
+	shader_sampled = ref[0] != 0;
+}
+
+static void skin_weapon(struct wii_mat const *nodes, int node_count, float yaw, float ox, float oy, float oz)
+{
+	struct scenario *scenario = wii_tag_cache_scenario();
+	struct tag_reference *palette;
+	struct weapon_definition *weapon;
+	uint32_t model_va;
+	uint8_t block[8];
+	int before;
+
+	if (!scenario || scenario->weapon_palette.count < 1 || !scenario->weapon_palette.address)
+		return;
+	palette = scenario->weapon_palette.address;
+	weapon = tag_get(0x77656170, palette->index);
+	(void)weapon;
+	{
+		uint8_t model_ref[16];
+		uint32_t weapon_va = wii_tag_cache_slot_va(palette->index);
+		long model_index;
+
+		if (!weapon_va || wii_tag_cache_pull(weapon_va + offsetof(struct weapon_definition, weapon.interface_definition.first_person_model) + 12, model_ref, 4) != 0)
+			return;
+		model_index = (long)read_u32(model_ref);
+		if (model_index == NONE)
+			return;
+		model_va = wii_tag_cache_slot_va(model_index);
+	}
+	if (!model_va || wii_tag_cache_pull(model_va + offsetof(struct model, geometries), block, 8) != 0)
+		return;
+	if (read_s32(block) < 1 || wii_tag_cache_pull(read_u32(block + 4) + 0x24, block, 8) != 0)
+		return;
+	if (read_s32(block) < 1)
+		return;
+	before = tri_count;
+	skin_part(read_u32(block + 4), nodes, node_count, yaw,
+		ox + cosf(yaw) * 0.35f, oy + sinf(yaw) * 0.35f, oz - 0.2f);
+	if (tri_count > before)
+		weapon_from = before;
+}
+
 int wii_mesh_build(long unit_index)
 {
 	struct object_datum *object = object_get(unit_index);
@@ -226,7 +333,10 @@ int wii_mesh_build(long unit_index)
 	float yaw;
 
 	tri_count = 0;
+	weapon_from = -1;
 	skinned = 0;
+	animated = 0;
+	shader_sampled = 0;
 	if (!object)
 		return 0;
 	biped = tag_get(0x62697064, object->definition_index);
@@ -237,6 +347,8 @@ int wii_mesh_build(long unit_index)
 	node_count = node_matrices(model, nodes, 32);
 	if (!model_va || node_count < 1)
 		return 0;
+	apply_animation(model, biped, nodes, node_count);
+	sample_shader(model_va);
 	if (wii_tag_cache_pull(model_va + offsetof(struct model, geometries), block, 8) != 0)
 		return 0;
 	geom_count = read_s32(block);
@@ -248,8 +360,11 @@ int wii_mesh_build(long unit_index)
 	if (part_count < 1)
 		return 0;
 	yaw = atan2f(object->object.forward.j, object->object.forward.i);
-	return skin_part(part_va, nodes, node_count, yaw,
+	skin_part(part_va, nodes, node_count, yaw,
 		object->object.position.x, object->object.position.y, object->object.position.z);
+	skin_weapon(nodes, node_count, yaw,
+		object->object.position.x, object->object.position.y, object->object.position.z);
+	return tri_count;
 }
 
 int wii_mesh_triangles(void)
@@ -268,4 +383,24 @@ int wii_mesh_triangle(int index, float *xyz)
 int wii_mesh_skinned(void)
 {
 	return skinned;
+}
+
+int wii_mesh_animated(void)
+{
+	return animated;
+}
+
+int wii_mesh_weapon(void)
+{
+	return weapon_from >= 0;
+}
+
+int wii_mesh_shader(void)
+{
+	return shader_sampled;
+}
+
+int wii_mesh_is_weapon(int index)
+{
+	return weapon_from >= 0 && index >= weapon_from;
 }

@@ -220,6 +220,8 @@ static long wii_device_index = NONE;
 static float wii_device_position;
 static float wii_device_power;
 static long wii_camera_point = NONE;
+static long wii_chapter = NONE;
+static float wii_chapter_delay;
 
 struct wii_checkpoint {
 	int valid;
@@ -373,6 +375,7 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		break;
 	case 38:
 	case 40:
+	case 41:
 		if (function_index == 40) {
 			long existing = object_index_from_name_index((short)arguments[0]);
 
@@ -412,6 +415,17 @@ static void wii_hs_campaign(short function_index, long thread_index, boolean ini
 		break;
 	case 246:
 		wii_camera_point = arguments[0];
+		break;
+	case 299:
+		wii_chapter = arguments[0];
+		break;
+	case 300:
+		wii_chapter = arguments[0];
+		wii_chapter_delay = *(float *)&arguments[1];
+		break;
+	case 384:
+	case 385:
+		wii_chapter = arguments[0];
 		break;
 	case 156: case 161: case 162: case 163: case 164: case 166: case 168:
 	case 173: case 175: case 176: case 177: case 178: case 179: case 196:
@@ -541,6 +555,11 @@ static void wii_hs_table_init(void)
 		fill_campaign(140, _hs_type_real, 1, _hs_type_device, "device_get_position");
 		fill_campaign2(241, _hs_type_void, _hs_type_ai, _hs_type_enum_team, "ai_set_team");
 		fill_campaign2(246, _hs_type_void, _hs_type_cutscene_camera_point, _hs_type_short_integer, "camera_set");
+		fill_campaign(41, _hs_type_void, 1, _hs_type_object_name, "object_create_containing");
+		fill_campaign(299, _hs_type_void, 1, _hs_type_cutscene_title, "cinematic_set_title");
+		fill_campaign2(300, _hs_type_void, _hs_type_cutscene_title, _hs_type_real, "cinematic_set_title_delayed");
+		fill_campaign(384, _hs_type_void, 1, _hs_type_hud_message, "hud_set_help_text");
+		fill_campaign(385, _hs_type_void, 1, _hs_type_hud_message, "hud_set_objective_text");
 	}
 	wii_table_ready = 1;
 }
