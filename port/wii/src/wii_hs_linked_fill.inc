@@ -155,3 +155,25 @@
 		fill_campaign2(365, _hs_type_void, _hs_type_unit, _hs_type_object, "deactivate_nav_point_object");
 		fill_campaign2(366, _hs_type_void, _hs_type_enum_team, _hs_type_cutscene_flag, "deactivate_team_nav_point_flag");
 		fill_campaign2(367, _hs_type_void, _hs_type_enum_team, _hs_type_object, "deactivate_team_nav_point_object");
+
+		fill_campaign(42, _hs_type_void, 1, _hs_type_string, "object_create_anew_containing");
+		fill_campaign(43, _hs_type_void, 1, _hs_type_string, "object_destroy_containing");
+		fill_campaign(53, _hs_type_void, 1, _hs_type_object_definition, "objects_delete_by_definition");
+		fill_campaign(69, _hs_type_void, 1, _hs_type_unit, "recording_kill");
+		fill_campaign(70, _hs_type_short_integer, 1, _hs_type_unit, "recording_time");
+		fill_campaign(82, _hs_type_void, 1, _hs_type_object_list, "objects_predict");
+		fill_campaign(89, _hs_type_short_integer, 1, _hs_type_scenery, "scenery_get_animation_time");
+		fill_campaign(103, _hs_type_boolean, 1, _hs_type_unit, "unit_is_playing_custom_animation");
+		fill_campaign(124, _hs_type_real, 1, _hs_type_unit, "unit_get_health");
+		fill_campaign(125, _hs_type_real, 1, _hs_type_unit, "unit_get_shield");
+		fill_campaign(126, _hs_type_short_integer, 1, _hs_type_unit, "unit_get_total_grenade_count");
+		fill_campaign(135, _hs_type_boolean, 1, _hs_type_unit, "unit_get_current_flashlight_state");
+		fill_campaign(142, _hs_type_real, 1, _hs_type_device_group, "device_group_get");
+		fill_campaign(234, _hs_type_boolean, 1, _hs_type_conversation, "ai_conversation");
+		fill_campaign(249, _hs_type_void, 1, _hs_type_unit, "camera_set_first_person");
+		fill_campaign(250, _hs_type_void, 1, _hs_type_unit, "camera_set_dead");
+		fill_campaign(301, _hs_type_void, 1, _hs_type_boolean, "cinematic_suppress_bsp_object_creation");
+		fill_campaign(324, _hs_type_long_integer, 1, _hs_type_sound, "sound_impulse_time");
+		fill_campaign(325, _hs_type_void, 1, _hs_type_sound, "sound_impulse_stop");
+		fill_campaign(326, _hs_type_void, 1, _hs_type_looping_sound, "sound_looping_predict");
+		fill_campaign(328, _hs_type_void, 1, _hs_type_looping_sound, "sound_looping_stop");

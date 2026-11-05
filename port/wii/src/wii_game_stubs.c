@@ -238,10 +238,6 @@ int sound_classes_initialize(void) { return 0; }
 int sound_classes_initialize_for_new_map(void) { return 0; }
 int sound_dispose_from_old_map(void) { return 0; }
 int sound_initialize_for_new_map(void) { return 0; }
-int structures_dispose(void) { return 0; }
-int structures_dispose_from_old_map(void) { return 0; }
-int structures_initialize(void) { return 0; }
-int structures_initialize_for_new_map(void) { return 0; }
 int telnet_console_dispose(void) { return 0; }
 int telnet_console_initialize(void) { return 0; }
 int transport_dispose(void) { return 0; }

@@ -50,6 +50,8 @@ SOURCES = {
     "hud_nav_points.o": "interface/hud_nav_points.c",
     "game_sound.o": "sound/game_sound.c",
     "hs_library_external.o": "hs/hs_library_external.c",
+    "physics.o": "physics/physics.c",
+    "structures.o": "structures/structures.c",
 }
 
 PORT = {

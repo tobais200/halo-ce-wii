@@ -44,7 +44,7 @@ opence:
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
 	@echo "  effect_new decodes a contrail bitmap; GX draws particles and the contrail"
 	@echo "  animation-graph skinning applies base, replacement, and overlay keys"
-	@echo "  path_state_find follows a prop onto a fourth surface; the jeep wheel, mass point, and suspension ray run"
+	@echo "  path_state_find crosses the cluster portal onto surface 3; physics_update moves the jeep"
 	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:

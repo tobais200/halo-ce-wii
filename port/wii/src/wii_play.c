@@ -69,6 +69,8 @@ static int mass_ran;
 static int wheel_ran;
 static int suspension_ran;
 static int prop_surface;
+static int portal_crossed;
+static int vehicle_moved;
 static long prop_actor = NONE;
 static int pursuit_ran;
 static long sound_tag;
@@ -428,7 +430,16 @@ static void spawn_vehicle(void)
 			vehicle->vehicle.wheel = 0.f;
 			vehicle->vehicle.suspension[0] = 0xff;
 		}
-		vehicle_updated = vehicle_update(created) ? 1 : 0;
+		{
+			extern float global_gravity;
+			float saved_gravity = global_gravity;
+			float before_z = object->object.position.z;
+
+			global_gravity = 1.f;
+			vehicle_updated = vehicle_update(created) ? 1 : 0;
+			global_gravity = saved_gravity;
+			vehicle_moved = object->object.position.z != before_z;
+		}
 		vehicle = vehicle_datum_get(created);
 		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
 		wheel_ran = vehicle && vehicle->vehicle.wheel != 0.f;
@@ -508,6 +519,27 @@ void wii_play_after_tick(void)
 			path_state_destination(&firing_path, &prop->pathfinding_point, prop->pathfinding_surface_index, 0.5f);
 		path_found = path_state_find(&firing_path) ? 1 : 0;
 		path_nodes = path_found ? firing_path.node_count : 0;
+		{
+			int near_cluster = 0;
+			int far_cluster = 0;
+			int node;
+			short first = -1;
+			short second = -1;
+			int span;
+			extern int wii_structure_portal_span(short *first, short *second);
+
+			for (node = 0; node < firing_path.node_count; node++) {
+				long surface = firing_path.node_list[node].surface_index;
+
+				if (surface >= 0 && surface <= 2)
+					near_cluster = 1;
+				if (surface == 3)
+					far_cluster = 1;
+			}
+			span = wii_structure_portal_span(&first, &second);
+			portal_crossed = path_found && near_cluster && far_cluster && span >= 2
+				&& first == 0 && second == 1;
+		}
 	}
 	enter_vehicle_seat();
 }
@@ -673,6 +705,16 @@ int wii_play_suspension_ran(void)
 int wii_play_prop_surface(void)
 {
 	return prop_surface;
+}
+
+int wii_play_portal_crossed(void)
+{
+	return portal_crossed;
+}
+
+int wii_play_vehicle_moved(void)
+{
+	return vehicle_moved;
 }
 
 int wii_play_pursuit_ran(void)

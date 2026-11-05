@@ -548,3 +548,67 @@
 	case 367:
 		hud_deactivate_team_nav_point_with_object((short)arguments[0], arguments[1]);
 		break;
+
+	case 42:
+		hs_object_create_anew_containing(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "");
+		break;
+	case 43:
+		hs_object_destroy_containing(arguments[0] ? (char const *)(uintptr_t)arguments[0] : "");
+		break;
+	case 53:
+		hs_objects_delete_by_definition(arguments[0]);
+		break;
+	case 69:
+		recorded_animation_kill(arguments[0]);
+		break;
+	case 70:
+		result = recorded_animation_get_time_left(arguments[0]);
+		break;
+	case 82:
+		hs_objects_predict(arguments[0]);
+		break;
+	case 89:
+		result = scenery_get_animation_time(arguments[0]);
+		break;
+	case 103:
+		result = campaign_bool(unit_is_playing_custom_animation(arguments[0]));
+		break;
+	case 124:
+		*(float *)&result = unit_scripting_get_health(arguments[0]);
+		break;
+	case 125:
+		*(float *)&result = unit_scripting_get_shield(arguments[0]);
+		break;
+	case 126:
+		result = unit_scripting_get_grenade_count(arguments[0]);
+		break;
+	case 135:
+		result = campaign_bool(unit_get_current_flashlight_state(arguments[0]));
+		break;
+	case 142:
+		*(float *)&result = device_group_get_value((unsigned short)arguments[0]);
+		break;
+	case 234:
+		if (actor_data) result = campaign_bool(ai_scripting_conversation(arguments[0]));
+		break;
+	case 249:
+		scripted_camera_set_first_person(arguments[0]);
+		break;
+	case 250:
+		scripted_camera_set_dead(arguments[0]);
+		break;
+	case 301:
+		cinematic_suppress_bsp_object_creation((boolean)arguments[0]);
+		break;
+	case 324:
+		result = scripted_sound_time(arguments[0]);
+		break;
+	case 325:
+		scripted_sound_stop(arguments[0]);
+		break;
+	case 326:
+		scripted_foley_predict(arguments[0]);
+		break;
+	case 328:
+		scripted_looping_sound_stop(arguments[0]);
+		break;

@@ -502,7 +502,15 @@ struct collision_bsp *global_collision_bsp_get(void)
 
 struct bsp3d *global_bsp3d_get(void)
 {
-	return &global_collision_bsp_get()->bsp3d;
+	struct bsp3d *bsp = &global_collision_bsp_get()->bsp3d;
+	static struct bsp3d fallback;
+	static float plane[4] = { 0.f, 0.f, 1.f, 0.f };
+
+	if (bsp->planes.count > 0)
+		return bsp;
+	fallback.planes.count = 1;
+	fallback.planes.address = plane;
+	return &fallback;
 }
 
 int wii_collision_hits_floor(void)

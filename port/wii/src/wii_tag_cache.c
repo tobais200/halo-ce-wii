@@ -1745,12 +1745,12 @@ int wii_tag_cache_mount(
 	{
 		/* Resident pixel pages inside the 23 MiB arena. The group above
 		   names sixteen bitmaps; this slab is the bytes they can grow into. */
-		unsigned char *pages = bump(1u << 20);
+		unsigned char *pages = bump(8u << 20);
 
 		if (!pages)
 			return -1;
 		pages[0] = 0xff;
-		pages[(1u << 20) - 1] = 0xff;
+		pages[(8u << 20) - 1] = 0xff;
 	}
 	return 0;
 }
@@ -2232,9 +2232,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0x300u;
+	cursor += 0x600u;
 	pixels_at = cursor;
-	cursor += 256u;
+	cursor += 512u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2651,7 +2651,7 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 16);
+	put_u32(file + bitm_at + 0x60, 32);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
@@ -2661,7 +2661,7 @@ int wii_tag_cache_self_test(void)
 	{
 		int bitmap;
 
-		for (bitmap = 1; bitmap < 16; bitmap++) {
+		for (bitmap = 1; bitmap < 32; bitmap++) {
 			memcpy(file + bitm_data_at + (uint32_t)bitmap * 0x30u, file + bitm_data_at, 0x30);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x18, (uint32_t)bitmap * 16u);
 			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x1c, 16);

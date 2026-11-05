@@ -62,7 +62,6 @@ void quaternions_interpolate_and_normalize(struct wii_quaternion const *q0, stru
 	quaternion_normalize(result);
 }
 short global_structure_bsp_index;
-float global_gravity;
 short global_current_collision_user_depth;
 short global_current_collision_users[32];
 void *conversation_data;
@@ -331,7 +330,6 @@ int csstrtok(void) { return 0; }
 int debug_objects_biped_autoaim_pills(void) { return 0; }
 int debug_objects_biped_physics_pills(void) { return 0; }
 int debug_objects_vehicle_powered_mass_points(void) { return 0; }
-void *depths_of_hell;
 int device_group_unused(void) { return 0; }
 int dialogue_get_vocalization_name(void) { return 0; }
 int director_get_perspective(void) { return 0; }
@@ -635,8 +633,6 @@ int path_avoid_obstacles(void) { return 0; }
 int path_smooth(void) { return 0; }
 int periodic_function_evaluate(void) { return 0; }
 int perpendicular3d(void) { return 0; }
-int physics_instance_new(void) { return 0; }
-int physics_update(void) { return 0; }
 int physics_variable_position_update_seek(void) { return 0; }
 int physics_variable_speed_update_seek(void) { return 0; }
 int pitch_vectors(void) { return 0; }
@@ -689,7 +685,6 @@ int real_rgb_color_brightness(void) { return 0; }
 int reflect_vector3d(void) { return 0; }
 int render_debug_line(void) { return 0; }
 int render_debug_matrix(void) { return 0; }
-int render_debug_physics(void) { return 0; }
 int render_debug_pill(void) { return 0; }
 int render_debug_point(void) { return 0; }
 int render_debug_sphere(void) { return 0; }
@@ -733,7 +728,6 @@ int sound_stop_impulse(void) { return 0; }
 int strlwr(void) { return 0; }
 int structure_bsp_get_cluster_encoded_sound_distance(void) { return 0; }
 int structure_bsp_get_cluster_pvs(void) { return 0; }
-int structure_clusters_in_sphere(void) { return 0; }
 int structure_decals_update(void) { return 0; }
 int structure_test_line2d(void) { return 0; }
 int strupr(void) { return 0; }
@@ -958,9 +952,6 @@ int object_bounds_cache_missed_by_vector(void) { return 0; }
 int object_bounds_cache_out_of_reach(void) { return 0; }
 int offset_rectangle2d(void) { return 0; }
 int perpendicular2d(void) { return 0; }
-int physics_get_features_in_sphere(void) { return 0; }
-int physics_test_point(void) { return 0; }
-int physics_test_vector(void) { return 0; }
 int platform_scoreboard_scroll(void) { return 0; }
 int player_control_get_facing_direction(void) { return 0; }
 int player_control_get_target_object_index(void) { return 0; }
@@ -982,9 +973,6 @@ int rumble_clear_all_now(void) { return 0; }
 int rumble_player_clear(void) { return 0; }
 int server_director_first_level(void) { return 0; }
 int sound_class_set_gain(void) { return 0; }
-int structure_cluster_mark(void) { return 0; }
-int structure_cluster_marker_begin(void) { return 0; }
-int structure_cluster_marker_end(void) { return 0; }
 int system_milliseconds(void) { return 0; }
 int touch_postgame_draw(void) { return 0; }
 int touch_postgame_pressed(void) { return 0; }
@@ -1151,3 +1139,97 @@ int render_camera_view_to_screen(void) { return 0; }
 int render_interpolation_object_point(void) { return 0; }
 int get_return_eip(void) { return 0; }
 int fast_ftol_C(void) { return 0; }
+int convex_hull2d_test_circle(void) { return 1; }
+int environment_vertex_compressed_get_point(void) { return 0; }
+int matrix3x3_transform_vector(void) { return 0; }
+int matrix4x3_rotation_from_quaternion(void) { return 0; }
+int matrix4x3_transpose(void) { return 0; }
+int point_in_triangle3d(void) { return 0; }
+int rasterizer_debug_line(void) { return 0; }
+int rasterizer_debug_line_shaded(void) { return 0; }
+int render_debug_vectors(void) { return 0; }
+int scenario_get_sky(void) { return 0; }
+void scenario_location_from_line(void *location, void const *start, void const *a, void const *b)
+{
+	(void)a;
+	(void)b;
+	if (location && start)
+		memcpy(location, start, 8);
+}
+int sphere_intersects_cone3d(void) { return 0; }
+int sphere_test_vector3d(void) { return 0; }
+int structure_bsp_find_material_for_surface(void) { return 0; }
+int structure_decals_dispose(void) { return 0; }
+int structure_decals_dispose_from_old_map(void) { return 0; }
+int structure_decals_initialize(void) { return 0; }
+int structure_decals_initialize_for_new_map(void) { return 0; }
+int structure_detail_objects_dispose(void) { return 0; }
+int structure_detail_objects_dispose_from_old_map(void) { return 0; }
+int structure_detail_objects_initialize(void) { return 0; }
+int structure_detail_objects_initialize_for_new_map(void) { return 0; }
+int structure_render_set_fog_offset(void) { return 0; }
+
+/* Cluster 0 owns surfaces 0-2. Cluster 1 owns surface 3. The portal between
+   them sits on the z=0 plane over the edge path_state_find walks. */
+short structure_clusters_in_sphere(short cluster_index, void const *position, float radius, short maximum_count, short *out);
+
+int wii_structure_portal_span(short *first, short *second)
+{
+	struct wii_tag_block *clusters = (struct wii_tag_block *)(wii_structure_bsp + 308);
+	struct wii_tag_block *portals = (struct wii_tag_block *)(wii_structure_bsp + 340);
+	static unsigned char cluster_bytes[2][0x68];
+	static short portal_of_cluster[2];
+	static struct {
+		short cluster_indices[2];
+		long plane_index;
+		float centroid[3];
+		float bounding_radius;
+		unsigned long flags;
+		long unused[6];
+		struct wii_tag_block vertices;
+	} portal;
+	static float vertices[4][3];
+	float point[3];
+	short found[4];
+	short count;
+	int index;
+
+	global_structure_bsp_get();
+	memset(cluster_bytes, 0, sizeof(cluster_bytes));
+	memset(&portal, 0, sizeof(portal));
+	portal_of_cluster[0] = 0;
+	portal_of_cluster[1] = 0;
+	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->count = 1;
+	((struct wii_tag_block *)(cluster_bytes[0] + 0x5C))->address = &portal_of_cluster[0];
+	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->count = 1;
+	((struct wii_tag_block *)(cluster_bytes[1] + 0x5C))->address = &portal_of_cluster[1];
+	portal.cluster_indices[0] = 0;
+	portal.cluster_indices[1] = 1;
+	portal.centroid[0] = 2.5f;
+	portal.bounding_radius = 3.f;
+	vertices[0][0] = 2.f; vertices[0][1] = -1.f;
+	vertices[1][0] = 3.f; vertices[1][1] = -1.f;
+	vertices[2][0] = 3.f; vertices[2][1] = 1.f;
+	vertices[3][0] = 2.f; vertices[3][1] = 1.f;
+	portal.vertices.count = 4;
+	portal.vertices.address = vertices;
+	clusters->count = 2;
+	clusters->address = cluster_bytes;
+	portals->count = 1;
+	portals->address = &portal;
+	point[0] = 2.5f;
+	point[1] = 0.f;
+	point[2] = 0.f;
+	count = structure_clusters_in_sphere(0, point, 1.f, 4, found);
+	clusters->count = 0;
+	portals->count = 0;
+	if (first)
+		*first = count > 0 ? found[0] : -1;
+	if (second)
+		*second = count > 1 ? found[1] : -1;
+	for (index = 0; index < count; index++) {
+		if (found[index] == 1)
+			return count;
+	}
+	return count;
+}
