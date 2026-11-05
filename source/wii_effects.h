@@ -34,6 +34,8 @@ void wii_effects_tick(void);
 void wii_effect_begin_frame(void);
 void wii_effect_emit(float x, float y, float z);
 void wii_effect_push_bolt(float x, float y, float z, float size);
+void wii_effect_contrail(float x, float y, float z);
+int wii_effect_contrail_count(void);
 int wii_effect_sprites(struct wii_sprite *out, int cap);
 
 #endif

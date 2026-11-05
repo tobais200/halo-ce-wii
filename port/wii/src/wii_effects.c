@@ -24,7 +24,7 @@ static struct wii_resident_effect decoded;
 static int live_effects;
 static int live_contrails;
 
-enum { WII_PARTICLES = 48, WII_BOLTS = 24 };
+enum { WII_PARTICLES = 48, WII_BOLTS = 24, WII_TRAIL = 32 };
 
 struct wii_particle {
 	float x, y, z;
@@ -37,6 +37,10 @@ struct wii_particle {
 static struct wii_particle particles[WII_PARTICLES];
 static struct wii_sprite bolts[WII_BOLTS];
 static int bolt_count;
+static struct wii_sprite trail[WII_TRAIL];
+static float trail_life[WII_TRAIL];
+static int trail_count;
+static int trail_next;
 static unsigned particle_seed = 1u;
 
 static float particle_rand(void)
@@ -204,6 +208,13 @@ void wii_effects_tick(void)
 		if (particles[index].life <= 0.f)
 			particles[index].alive = 0;
 	}
+	for (index = 0; index < WII_TRAIL; index++) {
+		if (trail_life[index] <= 0.f)
+			continue;
+		trail_life[index] -= 1.f;
+		if (trail_life[index] <= 0.f && trail_count > 0)
+			trail_count--;
+	}
 }
 
 void wii_effect_begin_frame(void)
@@ -214,6 +225,39 @@ void wii_effect_begin_frame(void)
 void wii_effect_emit(float x, float y, float z)
 {
 	emit_at(x, y, z);
+}
+
+void wii_effect_contrail(float x, float y, float z)
+{
+	if (trail_count > 0) {
+		int previous = (trail_next + WII_TRAIL - 1) % WII_TRAIL;
+		float dx = trail[previous].x - x;
+		float dy = trail[previous].y - y;
+		float dz = trail[previous].z - z;
+
+		if (dx * dx + dy * dy + dz * dz < 0.01f)
+			return;
+	}
+	trail[trail_next].x = x;
+	trail[trail_next].y = y;
+	trail[trail_next].z = z;
+	trail[trail_next].size = 0.16f;
+	trail_life[trail_next] = 45.f;
+	trail_next = (trail_next + 1) % WII_TRAIL;
+	if (trail_count < WII_TRAIL)
+		trail_count++;
+}
+
+int wii_effect_contrail_count(void)
+{
+	int index;
+	int count = 0;
+
+	for (index = 0; index < WII_TRAIL; index++) {
+		if (trail_life[index] > 0.f)
+			count++;
+	}
+	return count;
 }
 
 void wii_effect_push_bolt(float x, float y, float z, float size)
@@ -245,6 +289,11 @@ int wii_effect_sprites(struct wii_sprite *out, int cap)
 	}
 	for (index = 0; index < bolt_count && count < cap; index++)
 		out[count++] = bolts[index];
+	for (index = 0; index < WII_TRAIL && count < cap; index++) {
+		if (trail_life[index] <= 0.f)
+			continue;
+		out[count++] = trail[index];
+	}
 	return count;
 }
 

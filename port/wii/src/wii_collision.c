@@ -16,6 +16,7 @@
 #include "wii_collision.h"
 #include "wii_tag_cache.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -640,5 +641,15 @@ int wii_unit_eye(long unit_index, float *x, float *y, float *z)
 		*y = object->object.position.y;
 	if (z)
 		*z = object->object.position.z + (height > 0.f ? height : 0.62f);
+	return 1;
+}
+
+int wii_unit_facing(long unit_index, float *yaw)
+{
+	struct object_datum *object = object_get(unit_index);
+
+	if (!object || !yaw)
+		return 0;
+	*yaw = atan2f(object->object.forward.j, object->object.forward.i);
 	return 1;
 }

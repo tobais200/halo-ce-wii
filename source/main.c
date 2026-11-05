@@ -366,8 +366,12 @@ int main(int argc, char **argv)
 				view.triangle_count = preview.triangles;
 				view.eye = 0;
 				if (sim.have_player && wii_unit_eye(wii_game_player_unit(), &view.center[0], &view.center[1], &view.center[2])) {
+					float facing = wii_control_yaw();
+
 					view.eye = 1;
-					view.yaw = wii_control_yaw();
+					if (!wii_unit_facing(wii_game_player_unit(), &facing))
+						facing = wii_control_yaw();
+					view.yaw = facing;
 					view.pitch = wii_control_pitch();
 				} else if (sim.have_player) {
 					view.center[0] = sim.player_x;

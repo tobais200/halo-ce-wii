@@ -74,8 +74,8 @@ static void step_unit(long unit_index, float yaw, float forward_throttle, float 
 			+ (object->object.position.y - old_y) * (object->object.position.y - old_y);
 		if (record && travel > 0.01f)
 			moved = 1;
-		wii_effect_push_bolt(object->object.position.x, object->object.position.y,
-			object->object.position.z + 0.2f, 0.12f);
+		wii_effect_contrail(object->object.position.x, object->object.position.y,
+			object->object.position.z + 0.35f);
 	}
 }
 

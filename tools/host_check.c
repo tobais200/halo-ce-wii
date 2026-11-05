@@ -464,6 +464,14 @@ int main(void)
 			wii_play_after_tick();
 			if (!wii_play_moved() || !wii_play_grounded())
 				return fail("biped walk");
+			if (wii_effect_contrail_count() < 1)
+				return fail("contrail");
+			wii_effect_begin_frame();
+			if (wii_effect_contrail_count() < 1)
+				return fail("contrail");
+			wii_play_after_tick();
+			if (wii_effect_contrail_count() < 2)
+				return fail("contrail");
 			if (wii_play_shots() < 1)
 				return fail("player shot");
 			if (wii_play_ai_shots() < 1)

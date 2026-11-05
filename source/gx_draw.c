@@ -116,7 +116,7 @@ static void overlay_vertex(float x, float y, float z, uint8_t r, uint8_t g, uint
 
 static void draw_overlay(struct gx_mesh_view const *view)
 {
-	struct wii_sprite sprites[64];
+	struct wii_sprite sprites[104];
 	int count;
 	int index;
 	float yaw;
@@ -124,7 +124,7 @@ static void draw_overlay(struct gx_mesh_view const *view)
 	float ry;
 	int textured;
 
-	count = wii_effect_sprites(sprites, 64);
+	count = wii_effect_sprites(sprites, 104);
 	yaw = view->yaw;
 	rx = -sinf(yaw);
 	ry = cosf(yaw);
