@@ -21,10 +21,10 @@ The DOL in this repository is an engine stub. Nothing below is a claim that a ca
 
 ### Still blocking a campaign
 
-- Device calls from `devices.c` are linked, plus the zero-argument campaign calls whose bodies were already in the link. The host check requires at least 260 campaign entries. The rest of the 425-function table is still the unlinked evaluator.
-- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. The tag working set is 23 MiB. The bitmap group has three bitmaps. Scenery and vehicle placements are copied. A `vehi` tag with a `stand` seat is resident.
+- Device calls from `devices.c` are linked, plus scenery animation, recorded-animation playback, camera points, and the unit/vehicle script calls whose bodies are in this link (`scenery.c`, `recorded_animations.c`, `camera_scripting.c`, `cinematics.c`, `unit_scripting_commands.c`). The host check requires at least 284 campaign entries. The rest of the 425-function table is still the unlinked evaluator.
+- Up to thirty-two `snd!` tags decode into one 32768-sample buffer. Mount allocates and clears a 23 MiB tag arena. The bitmap group has eight bitmaps. Scenery and vehicle placements are copied. A `vehi` tag with a `stand` seat is resident.
 - Base, replacement, and overlay are applied in that order before the node matrices are built. The synthetic overlay and replacement each have four frames of translation keys, so the clock moves the node. The weapon mesh is parented to the `weapon` marker's node matrix.
-- `path_state_find` walks an edge from surface 0 onto surface 1. Firing positions use surface 0, so `actor_select_firing_position` keeps the path and does not take the outside-range pick. `unit_enter_vehicle` boards `stand` and starts the seat-enter animation. There are still no wheels or mass points. Props and pursuit search are not what the synthetic map runs.
+- `path_state_find` walks surface 0 to 1 to 2 (two edges, three nodes). Firing positions stay on surface 0, so the fight pick keeps the path. A second call uses pursue mode on that same graph. `unit_enter_vehicle` boards `stand` and starts the seat-enter animation. The synthetic vehicle is a jeep: `vehicle_update` rolls `wheel` from speed and runs one physics mass point (`airborne_ticks` changes). Cluster portals are not in that graph. `props.c` is linked, and `path_state_find` does not consult props.
 - Bink and the network stack are not linked. The OpenGL rasterizer is not compiled. Both would pull desktop GL, the Bink SDK, and a network stack that do not fit this GX build.
 
 ### Later, each one blocked until the previous exists

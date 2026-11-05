@@ -42,6 +42,12 @@ SOURCES = {
     "game_engine.o": "game/game_engine.c",
     "sort.o": "cseries/sort.c",
     "devices.o": "devices/devices.c",
+    "unit_scripting_commands.o": "units/unit_scripting_commands.c",
+    "scenery.o": "objects/scenery.c",
+    "recorded_animations.o": "cutscene/recorded_animations.c",
+    "camera_scripting.o": "camera/camera_scripting.c",
+    "cinematics.o": "cutscene/cinematics.c",
+    "hud_messaging.o": "interface/hud_messaging.c",
 }
 
 PORT = {
@@ -96,6 +102,9 @@ def main():
     ]
     for directory in includes(root):
         cmd.append("-I" + directory)
+    # cinematics.c defines draw_quad. The scoreboard still calls the stub.
+    if obj == "cinematics.o":
+        cmd.append("-Ddraw_quad=wii_cinematic_quad")
     cmd += ["-c", src, "-o", out]
     print("opence", rel)
     return subprocess.call(cmd)

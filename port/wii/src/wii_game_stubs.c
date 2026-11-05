@@ -122,10 +122,6 @@ int cache_files_precache_map_loaded(void) { return 0; }
 int cache_files_precache_map_queue_end(void) { return 0; }
 int cache_files_precache_map_status(void) { return 0; }
 int cache_files_precache_set_priority(void) { return 0; }
-int cinematic_dispose(void) { return 0; }
-int cinematic_dispose_from_old_map(void) { return 0; }
-int cinematic_initialize(void) { return 0; }
-int cinematic_initialize_for_new_map(void) { return 0; }
 int collision_log_begin_period(void) { return 0; }
 int collision_log_end_period(void) { return 0; }
 int collision_log_initialize(void) { return 0; }
@@ -224,11 +220,6 @@ int progress_bar_initialize(void) { return 0; }
 int rasterizer_dispose_from_old_map(void) { return 0; }
 int rasterizer_frame_update(void) { return 0; }
 int rasterizer_initialize_for_new_map(void) { return 0; }
-int recorded_animations_dispose(void) { return 0; }
-int recorded_animations_dispose_from_old_map(void) { return 0; }
-int recorded_animations_initialize(void) { return 0; }
-int recorded_animations_initialize_for_new_map(void) { return 0; }
-int recorded_animations_update(void) { return 0; }
 int render_dispose(void) { return 0; }
 int render_dispose_from_old_map(void) { return 0; }
 int render_initialize(void) { return 0; }

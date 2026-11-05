@@ -334,7 +334,7 @@ static void sample_shader(uint32_t model_va)
 			return;
 		if (read_u32(group + 0x60) < 1 || wii_tag_cache_pull(read_u32(group + 0x64), data, sizeof(data)) != 0)
 			return;
-		bitmap_count = read_u32(group + 0x60) > 3 ? 3 : (int)read_u32(group + 0x60);
+		bitmap_count = read_u32(group + 0x60) > 8 ? 8 : (int)read_u32(group + 0x60);
 		pixels_size = read_u32(data + 0x1c);
 		if (pixels_size < 1 || pixels_size > sizeof(encoded))
 			pixels_size = sizeof(encoded);

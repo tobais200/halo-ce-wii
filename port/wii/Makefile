@@ -35,7 +35,7 @@ opence:
 	@echo "  DeLa widget tags, string-list glyphs, event-handler flags"
 	@echo "  hs_runtime.c special forms on the scenario script-node array"
 	@echo "  game.c tick calls players, units, bipeds, weapons, ai, objects"
-	@echo "  tag cache working set is streamed; the 23 MiB Xbox cache is not mapped"
+	@echo "  tag arena is the 23 MiB Xbox cache size, allocated in MEM2; address 0x803A6000 is not mapped"
 	@echo "  ai_place spawns actors from squad starting locations"
 	@echo "  weapon magazines are resident; animation_get_node_orientations samples up to 64 KiB of frame data"
 	@echo "  collisions.c tests a streamed structure collision BSP (4 MiB cap)"
@@ -44,7 +44,7 @@ opence:
 	@echo "  game_engine.c is linked; a campaign leaves the multiplayer engine off"
 	@echo "  effect_new decodes a contrail bitmap; GX draws particles and the contrail"
 	@echo "  animation-graph skinning applies base, replacement, and overlay keys"
-	@echo "  path_state_find crosses one edge; unit_enter_vehicle starts the seat-enter animation"
+	@echo "  path_state_find walks three surfaces; the jeep wheel and one mass point run in vehicle_update"
 	@echo "Bink, networking, and the rasterizer are not compiled."
 
 clean:

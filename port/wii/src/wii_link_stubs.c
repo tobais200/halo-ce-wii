@@ -293,7 +293,6 @@ int breakable_surface_damage_area_of_effect(void) { return 0; }
 static unsigned char wii_breakable_surface_flags[256];
 void *breakable_surface_flags_get(void) { return wii_breakable_surface_flags; }
 void *cheat;
-int cinematic_in_progress(void) { return 0; }
 int cluster_partition_delete(void) { return 0; }
 int cluster_partition_disconnect(void) { return 0; }
 int cluster_partition_get_first_cluster(void) { return 0; }
@@ -384,10 +383,10 @@ struct wii_path_edge {
 	long surfaces[2];
 };
 struct wii_path_vertex { float x, y, z; long first_edge; };
-static struct wii_path_surface wii_path_surfaces[2];
-static struct wii_path_edge wii_path_edge;
-static struct wii_path_vertex wii_path_vertices[2];
-static unsigned char wii_path_flags[2];
+static struct wii_path_surface wii_path_surfaces[3];
+static struct wii_path_edge wii_path_edges[2];
+static struct wii_path_vertex wii_path_vertices[3];
+static unsigned char wii_path_flags[3];
 static struct wii_path_bsp wii_path_bsp;
 static unsigned char wii_structure_bsp[0x400];
 static int wii_path_bsp_ready;
@@ -401,29 +400,38 @@ void *global_structure_bsp_get(void)
 		memset(wii_structure_bsp, 0, sizeof(wii_structure_bsp));
 		memset(&wii_path_bsp, 0, sizeof(wii_path_bsp));
 		memset(wii_path_surfaces, 0, sizeof(wii_path_surfaces));
-		memset(&wii_path_edge, 0, sizeof(wii_path_edge));
+		memset(wii_path_edges, 0, sizeof(wii_path_edges));
 		memset(wii_path_vertices, 0, sizeof(wii_path_vertices));
-		/* Surface 0 and surface 1 share one edge. Bit 6 is walkable. */
+		/* Surface 0 links to 1, and 1 links on to 2. Bit 6 is walkable. */
 		wii_path_surfaces[0].first_edge = 0;
 		wii_path_surfaces[1].first_edge = 0;
-		wii_path_edge.vertices[0] = 0;
-		wii_path_edge.vertices[1] = 1;
-		wii_path_edge.next_edge[0] = 0;
-		wii_path_edge.next_edge[1] = 0;
-		wii_path_edge.surfaces[0] = 0;
-		wii_path_edge.surfaces[1] = 1;
+		wii_path_surfaces[2].first_edge = 1;
+		wii_path_edges[0].vertices[0] = 0;
+		wii_path_edges[0].vertices[1] = 1;
+		wii_path_edges[0].next_edge[0] = 0;
+		wii_path_edges[0].next_edge[1] = 1;
+		wii_path_edges[0].surfaces[0] = 0;
+		wii_path_edges[0].surfaces[1] = 1;
+		wii_path_edges[1].vertices[0] = 1;
+		wii_path_edges[1].vertices[1] = 2;
+		wii_path_edges[1].next_edge[0] = 0;
+		wii_path_edges[1].next_edge[1] = 1;
+		wii_path_edges[1].surfaces[0] = 1;
+		wii_path_edges[1].surfaces[1] = 2;
 		wii_path_vertices[1].x = 1.f;
+		wii_path_vertices[2].x = 2.f;
 		wii_path_flags[0] = 1u << 6;
 		wii_path_flags[1] = 1u << 6;
-		wii_path_bsp.surfaces.count = 2;
+		wii_path_flags[2] = 1u << 6;
+		wii_path_bsp.surfaces.count = 3;
 		wii_path_bsp.surfaces.address = wii_path_surfaces;
-		wii_path_bsp.edges.count = 1;
-		wii_path_bsp.edges.address = &wii_path_edge;
-		wii_path_bsp.vertices.count = 2;
+		wii_path_bsp.edges.count = 2;
+		wii_path_bsp.edges.address = wii_path_edges;
+		wii_path_bsp.vertices.count = 3;
 		wii_path_bsp.vertices.address = wii_path_vertices;
 		collision->count = 1;
 		collision->address = &wii_path_bsp;
-		paths->count = 2;
+		paths->count = 3;
 		paths->address = wii_path_flags;
 		wii_path_bsp_ready = 1;
 	}
@@ -662,7 +670,6 @@ int real_local_random(void) { return 0; }
 int real_local_random_range(void) { return 0; }
 int real_random_range(void) { return 0; }
 int real_rgb_color_brightness(void) { return 0; }
-int recorded_animation_controlling_unit(void) { return 0; }
 int reflect_vector3d(void) { return 0; }
 int render_debug_line(void) { return 0; }
 int render_debug_matrix(void) { return 0; }
@@ -787,8 +794,6 @@ float real_seed_random_range(unsigned long *seed, float lower, float upper)
 	return (lower + upper) * 0.5f;
 }
 int network_objects_new_object_index(void) { return -1; }
-static unsigned char wii_cinematic_globals_bytes[64];
-void *cinematic_globals = wii_cinematic_globals_bytes;
 int control_delete(void) { return 0; }
 int control_new(void) { return 0; }
 int control_place(void) { return 0; }
@@ -834,14 +839,6 @@ int placeholder_initialize(void) { return 0; }
 int placeholder_initialize_for_new_map(void) { return 0; }
 int placeholder_new(void) { return 0; }
 int placeholder_place(void) { return 0; }
-int scenery_delete(void) { return 0; }
-int scenery_dispose(void) { return 0; }
-int scenery_dispose_from_old_map(void) { return 0; }
-int scenery_initialize(void) { return 0; }
-int scenery_initialize_for_new_map(void) { return 0; }
-int scenery_new(void) { return 0; }
-int scenery_place(void) { return 0; }
-int scenery_update(void) { return 0; }
 int sound_scenery_delete(void) { return 0; }
 int sound_scenery_new(void) { return 0; }
 int unit_notify_impulse_sound(void) { return 0; }
@@ -1038,7 +1035,7 @@ void actor_path_input_new(long actor_index, void *input)
 	if (input) {
 		memset(input, 0, 72);
 		/* pathfinding radius, then start_surface_index at 0x20. Surface 0 is
-		   the one collision surface on the structure BSP. */
+		   surface 0, the first of the three walkable surfaces. */
 		*(float *)input = 0.4f;
 		*(long *)((char *)input + 0x20) = 0;
 	}
@@ -1082,3 +1079,33 @@ int actor_move_to_firing_position(long actor_index, short firing_position_index,
 	(void)position;
 	return 0;
 }
+
+/* Symbols referenced by the linked cutscene, camera, and scenery units.
+   The campaign tick does not call the rasterizer or the director. */
+int dead_camera_new(void) { return 0; }
+int dead_camera_update(void) { return 0; }
+int director_update(void) { return 0; }
+int display_errors_deferred_until_cinematic_stop(void) { return 0; }
+int first_person_camera_fake(void) { return 0; }
+int game_time_get_elapsed(void) { return 0; }
+int game_time_get_paused(void) { return 0; }
+float game_time_get_speed(void) { return 1.f; }
+float global_rasterizer_model_ambient_reflection_tint;
+int halo_screen_width(void) { return 640; }
+int hs_object_destroy(void) { return 0; }
+int network_coop_note_scenery_animation(void) { return 0; }
+int network_coop_note_title(void) { return 0; }
+int network_coop_set_players_vitality(void) { return 0; }
+int observer_update(void) { return 0; }
+int pixel32_to_real_argb_color(void) { return 0; }
+int rasterizer_globals;
+int rasterizer_psuedo_dynamic_screen_quad_draw(void) { return 0; }
+int rasterizer_screen_effects_initialize_for_new_map(void) { return 0; }
+int rasterizer_set_near_clip_distance(void) { return 0; }
+int rasterizer_text_set_shadow_color(void) { return 0; }
+int recorded_animation_apply_event_stream(void) { return 0; }
+int recorded_animation_apply_event_stream_v1(void) { return 0; }
+int recorded_animation_initialize_event_stream(void) { return 0; }
+int recorded_animation_initialize_event_stream_v1(void) { return 0; }
+int ui_widgets_active(void) { return 0; }
+int valid_real_vector3d(void) { return 1; }

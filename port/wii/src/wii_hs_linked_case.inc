@@ -405,3 +405,76 @@
 	case 308:
 		result = campaign_bool(game_is_cooperative());
 		break;
+
+	case 66:
+		result = campaign_bool(recorded_animation_play(arguments[0], arguments[1]));
+		break;
+	case 67:
+		result = campaign_bool(recorded_animation_play_and_delete(arguments[0], arguments[1]));
+		break;
+	case 68:
+		result = campaign_bool(recorded_animation_play_and_hover(arguments[0], arguments[1]));
+		break;
+	case 76:
+		objects_scripting_attach(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "", arguments[2], arguments[3] ? (char const *)(uintptr_t)arguments[3] : "");
+		break;
+	case 90:
+		scenery_animation_start(arguments[0], arguments[1], arguments[2] ? (char const *)(uintptr_t)arguments[2] : "");
+		break;
+	case 91:
+		scenery_animation_start_at_frame(arguments[0], arguments[1], arguments[2] ? (char const *)(uintptr_t)arguments[2] : "", (short)arguments[3]);
+		break;
+	case 101:
+		result = campaign_bool(unit_start_user_animation(arguments[0], arguments[1], arguments[2] ? (char const *)(uintptr_t)arguments[2] : "", (boolean)arguments[3]));
+		break;
+	case 102:
+		result = campaign_bool(unit_scripting_start_user_animation_list(arguments[0], arguments[1], arguments[2] ? (char const *)(uintptr_t)arguments[2] : "", (boolean)arguments[3]));
+		break;
+	case 108:
+		result = campaign_bool(unit_scripting_vehicle_test_seat_list(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "", arguments[2]));
+		break;
+	case 109:
+		result = campaign_bool(unit_scripting_vehicle_test_seat(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "", arguments[2]));
+		break;
+	case 116:
+		result = vehicle_scripting_load_magic(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "", arguments[2]);
+		break;
+	case 117:
+		result = vehicle_scripting_unload(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "");
+		break;
+	case 127:
+		result = campaign_bool(unit_scripting_has_weapon(arguments[0], arguments[1]));
+		break;
+	case 128:
+		result = campaign_bool(unit_scripting_has_weapon_readied(arguments[0], arguments[1]));
+		break;
+	case 130:
+		unit_scripting_impervious(arguments[0], (boolean)arguments[1]);
+		break;
+	case 141:
+		device_set_actual_position(arguments[0], (*(float *)&arguments[1]));
+		break;
+	case 144:
+		device_group_set_actual_value((unsigned short)arguments[0], (*(float *)&arguments[1]));
+		break;
+	case 147:
+		device_group_change_only_once_more_set((short)arguments[0], (boolean)arguments[1]);
+		break;
+	case 221:
+		if (actor_data) ai_scripting_vehicle_enterable_distance(arguments[0], (*(float *)&arguments[1]));
+		break;
+	case 233:
+		if (actor_data) ai_scripting_follow_distance(arguments[0], (*(float *)&arguments[1]));
+		break;
+	case 244:
+		if (actor_data) result = campaign_bool(ai_scripting_allegiance_broken((short)arguments[0], (short)arguments[1]));
+		break;
+	case 247:
+		scripted_camera_set((short)arguments[0], (short)arguments[1], arguments[2]);
+		break;
+	case 248:
+		scripted_camera_set_animation(arguments[0], arguments[1] ? (char const *)(uintptr_t)arguments[1] : "");
+		break;
+	case 355:
+		debug_player_teleport((short)arguments[0], (short)arguments[1]);
+		break;

@@ -18,6 +18,7 @@
 #include "objects/damage_effect_definitions.h"
 #include "physics/collision_model_definitions.h"
 #include "physics/collision_bsp_definitions.h"
+#include "physics/physics_definitions.h"
 #include "effects/effect_definitions.h"
 #include "effects/contrail_definitions.h"
 #include "effects/effects.h"
@@ -53,8 +54,8 @@ enum {
 	WII_TAG_CAP_LOCATIONS = 4,
 	WII_TAG_CAP_ANIMS = 8,
 	WII_TAG_CAP_MAGAZINES = 2,
-	/* One animation's default pose or frame blob. Four of these still fit
-	   in the 1 MiB arena with the scenario, biped, and weapon tags. */
+	/* One animation's default pose or frame blob. Four of these fit in the
+	   23 MiB arena with the scenario, biped, and weapon tags. */
 	WII_TAG_FRAME_BYTES = 65536
 };
 
@@ -86,6 +87,7 @@ static int encounter_published;
 static int location_published;
 static int scenery_published;
 static int vehicle_published;
+static int mass_point_count;
 static int magazine_rounds;
 static int grenade_count;
 static long grenade_projectile = -1;
@@ -747,6 +749,38 @@ static int load_vehicle(int slot)
 		memcpy(seat.label, "stand", 5);
 		unit->unit.seats.count = 1;
 		unit->unit.seats.address = &seat;
+	}
+	if ((sizeof(*unit) > 0x400 ? sizeof(*unit) : 0x400) > 0x310u) {
+		/* Jeep, so vehicle_update runs update_human_jeep_physics and rolls the wheel. */
+		*(short *)((char *)unit + 0x2f4) = 1;
+		*(float *)((char *)unit + 0x310) = 2.f;
+	}
+	{
+		static struct physics_definition physics;
+		static struct mass_point_definition point;
+
+		memset(&physics, 0, sizeof(physics));
+		memset(&point, 0, sizeof(point));
+		point.powered_mass_point_index = (short)NONE;
+		point.model_node_index = 0;
+		point.mass = 80.f;
+		point.relative_mass = 1.f;
+		point.radius = 0.35f;
+		physics.mass = 80.f;
+		physics.radius = 0.5f;
+		physics.gravity_scale = 1.f;
+		physics.mass_points.count = 1;
+		physics.mass_points.address = &point;
+		if (slot_count < WII_TAG_SLOTS) {
+			int phys = slot_count++;
+
+			slots[phys].group = FCC('p', 'h', 'y', 's');
+			slots[phys].datum = 0x12340012u;
+			slots[phys].base = &physics;
+			unit->object.physics.group_tag = slots[phys].group;
+			unit->object.physics.index = (long)slots[phys].datum;
+			mass_point_count = physics.mass_points.count;
+		}
 	}
 	slots[slot].base = unit;
 	return 0;
@@ -1758,6 +1792,16 @@ long wii_tag_cache_vehicle_definition(void)
 	return NONE;
 }
 
+int wii_tag_cache_mass_points(void)
+{
+	return mass_point_count;
+}
+
+uint32_t wii_tag_cache_arena(void)
+{
+	return arena ? (uint32_t)WII_TAG_ARENA : 0;
+}
+
 int wii_tag_cache_magazine_rounds(void)
 {
 	return magazine_rounds;
@@ -2143,9 +2187,9 @@ int wii_tag_cache_self_test(void)
 	bitm_at = cursor;
 	cursor += 0x6cu;
 	bitm_data_at = cursor;
-	cursor += 0x90u;
+	cursor += 0x180u;
 	pixels_at = cursor;
-	cursor += 48u;
+	cursor += 128u;
 	if (cursor > sizeof(file))
 		return -1;
 	for (index = 0; index < 18; index++)
@@ -2562,22 +2606,24 @@ int wii_tag_cache_self_test(void)
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 2] = 't';
 	file[cont_at + offsetof(struct contrail_definition, bitmap) + 3] = 'm';
 	put_u32(file + cont_at + offsetof(struct contrail_definition, bitmap) + 12, datum[16]);
-	put_u32(file + bitm_at + 0x60, 3);
+	put_u32(file + bitm_at + 0x60, 8);
 	put_u32(file + bitm_at + 0x64, TAG_BASE + bitm_data_at);
 	put_u32(file + bitm_at + 0x30 + 12, TAG_BASE + pixels_at);
 	put_u16(file + bitm_data_at + 0x04, 4);
 	put_u16(file + bitm_data_at + 0x06, 4);
 	put_u16(file + bitm_data_at + 0x0e, 1u << 4);
 	put_u32(file + bitm_data_at + 0x1c, 16);
-	memcpy(file + bitm_data_at + 0x30, file + bitm_data_at, 0x30);
-	memcpy(file + bitm_data_at + 0x60, file + bitm_data_at, 0x30);
-	put_u32(file + bitm_data_at + 0x30 + 0x18, 16);
-	put_u32(file + bitm_data_at + 0x30 + 0x1c, 16);
-	put_u32(file + bitm_data_at + 0x60 + 0x18, 32);
-	put_u32(file + bitm_data_at + 0x60 + 0x1c, 16);
+	{
+		int bitmap;
+
+		for (bitmap = 1; bitmap < 8; bitmap++) {
+			memcpy(file + bitm_data_at + (uint32_t)bitmap * 0x30u, file + bitm_data_at, 0x30);
+			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x18, (uint32_t)bitmap * 16u);
+			put_u32(file + bitm_data_at + (uint32_t)bitmap * 0x30u + 0x1c, 16);
+			memset(file + pixels_at + (uint32_t)bitmap * 16u, (uint8_t)(0x20u * (uint32_t)bitmap), 16);
+		}
+	}
 	memset(file + pixels_at, 0xff, 16);
-	memset(file + pixels_at + 16, 0x40, 16);
-	memset(file + pixels_at + 32, 0x80, 16);
 	put_u16(file + eqip_at + offsetof(struct equipment_definition, equipment.powerup_type), 1);
 	put_u32(file + model_at + offsetof(struct model, markers), 1);
 	put_u32(file + model_at + offsetof(struct model, markers) + 4, TAG_BASE + marker_at);

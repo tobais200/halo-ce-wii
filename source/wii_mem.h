@@ -64,8 +64,8 @@ void *wii_mem2_alloc(uint32_t size);
 void wii_mem_sample(struct wii_ram_sample *sample);
 
 /* 0 when a tag-data copy of this size would still fit the cap and the
-   measured MEM2 free space. The streamed working set is 1 MiB, not the
-   23 MiB Xbox cache. */
+   measured MEM2 free space. Mount allocates and clears the 23 MiB arena.
+   The Xbox mapping at 0x803A6000 is not used. */
 int wii_mem_tag_would_fit(uint32_t tag_bytes);
 
 #endif

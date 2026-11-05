@@ -106,3 +106,28 @@
 		fill_campaign(306, _hs_type_boolean, 0, _hs_type_void, "game_all_quiet");
 		fill_campaign(307, _hs_type_boolean, 0, _hs_type_void, "game_safe_to_speak");
 		fill_campaign(308, _hs_type_boolean, 0, _hs_type_void, "game_is_cooperative");
+
+		fill_campaign2(66, _hs_type_boolean, _hs_type_unit, _hs_type_cutscene_recording, "recording_play");
+		fill_campaign2(67, _hs_type_boolean, _hs_type_unit, _hs_type_cutscene_recording, "recording_play_and_delete");
+		fill_campaign2(68, _hs_type_boolean, _hs_type_vehicle, _hs_type_cutscene_recording, "recording_play_and_hover");
+		fill_campaign4(76, _hs_type_void, _hs_type_object, _hs_type_string, _hs_type_object, _hs_type_string, "objects_attach");
+		fill_campaign3(90, _hs_type_void, _hs_type_scenery, _hs_type_animation_graph, _hs_type_string, "scenery_animation_start");
+		fill_campaign4(91, _hs_type_void, _hs_type_scenery, _hs_type_animation_graph, _hs_type_string, _hs_type_short_integer, "scenery_animation_start_at_frame");
+		fill_campaign4(101, _hs_type_boolean, _hs_type_unit, _hs_type_animation_graph, _hs_type_string, _hs_type_boolean, "custom_animation");
+		fill_campaign4(102, _hs_type_boolean, _hs_type_object_list, _hs_type_animation_graph, _hs_type_string, _hs_type_boolean, "custom_animation_list");
+		fill_campaign3(108, _hs_type_boolean, _hs_type_vehicle, _hs_type_string, _hs_type_object_list, "vehicle_test_seat_list");
+		fill_campaign3(109, _hs_type_boolean, _hs_type_vehicle, _hs_type_string, _hs_type_unit, "vehicle_test_seat");
+		fill_campaign3(116, _hs_type_short_integer, _hs_type_unit, _hs_type_string, _hs_type_object_list, "vehicle_load_magic");
+		fill_campaign2(117, _hs_type_short_integer, _hs_type_unit, _hs_type_string, "vehicle_unload");
+		fill_campaign2(127, _hs_type_boolean, _hs_type_unit, _hs_type_object_definition, "unit_has_weapon");
+		fill_campaign2(128, _hs_type_boolean, _hs_type_unit, _hs_type_object_definition, "unit_has_weapon_readied");
+		fill_campaign2(130, _hs_type_void, _hs_type_object_list, _hs_type_boolean, "unit_impervious");
+		fill_campaign2(141, _hs_type_void, _hs_type_device, _hs_type_real, "device_set_position_immediate");
+		fill_campaign2(144, _hs_type_void, _hs_type_device_group, _hs_type_real, "device_group_set_immediate");
+		fill_campaign2(147, _hs_type_void, _hs_type_device_group, _hs_type_boolean, "device_group_change_only_once_more_set");
+		fill_campaign2(221, _hs_type_void, _hs_type_unit, _hs_type_real, "ai_vehicle_enterable_distance");
+		fill_campaign2(233, _hs_type_void, _hs_type_ai, _hs_type_real, "ai_follow_distance");
+		fill_campaign2(244, _hs_type_boolean, _hs_type_enum_team, _hs_type_enum_team, "ai_allegiance_broken");
+		fill_campaign3(247, _hs_type_void, _hs_type_cutscene_camera_point, _hs_type_short_integer, _hs_type_object, "camera_set_relative");
+		fill_campaign2(248, _hs_type_void, _hs_type_animation_graph, _hs_type_string, "camera_set_animation");
+		fill_campaign2(355, _hs_type_void, _hs_type_short_integer, _hs_type_short_integer, "debug_teleport_player");

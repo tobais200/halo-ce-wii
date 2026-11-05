@@ -7,6 +7,7 @@
 #include "ai/ai_scenario_definitions.h"
 #include "ai/path.h"
 #include "units/vehicles.h"
+#include "units/vehicle_datum.h"
 #include "objects/objects.h"
 #include "scenario/scenario_definitions.h"
 #include "sound/sound_definitions.h"
@@ -63,6 +64,9 @@ static int path_found;
 static int path_nodes;
 static int firing_on_path;
 static int enter_anim;
+static int mass_ran;
+static int wheel_ran;
+static int pursuit_ran;
 static long sound_tag;
 static int save_valid;
 static float save_x, save_y, save_z, save_yaw;
@@ -325,6 +329,9 @@ static void actors_fight(long player_unit)
 				picked = actor_select_firing_position(index, &firing_context, &chosen, &owner, &firing_path, &path_valid);
 				firing_real = picked;
 				firing_on_path = path_valid && picked >= 0;
+				firing_context.evaluation_mode = _firing_point_evaluation_mode_pursue;
+				actor_select_firing_position(index, &firing_context, &chosen, &owner, &firing_path, &path_valid);
+				pursuit_ran = 1;
 				if (picked >= 0) {
 					firing_index = picked;
 					if (chosen.evaluation > 0.f)
@@ -406,8 +413,20 @@ static void spawn_vehicle(void)
 		return;
 	vehicle_object = created;
 	object = object_get(created);
-	if (object && object->object.type == _object_type_vehicle)
+	if (object && object->object.type == _object_type_vehicle) {
+		struct vehicle_datum *vehicle = vehicle_datum_get(created);
+
+		object->object.flags &= ~FLAG(_object_at_rest_bit);
+		if (vehicle) {
+			vehicle->vehicle.airborne_ticks = 3;
+			vehicle->vehicle.speed = 1.f;
+			vehicle->vehicle.wheel = 0.f;
+		}
 		vehicle_updated = vehicle_update(created) ? 1 : 0;
+		vehicle = vehicle_datum_get(created);
+		mass_ran = vehicle && vehicle->vehicle.airborne_ticks != 3;
+		wheel_ran = vehicle && vehicle->vehicle.wheel != 0.f;
+	}
 }
 
 static void enter_vehicle_seat(void)
@@ -606,6 +625,21 @@ int wii_play_firing_on_path(void)
 int wii_play_enter_anim(void)
 {
 	return enter_anim;
+}
+
+int wii_play_mass_ran(void)
+{
+	return mass_ran;
+}
+
+int wii_play_wheel_ran(void)
+{
+	return wheel_ran;
+}
+
+int wii_play_pursuit_ran(void)
+{
+	return pursuit_ran;
 }
 
 float wii_play_firing_score(void)
